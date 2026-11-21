@@ -1,0 +1,1445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Technomancer · AI setup</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231C2B3A'/%3E%3Cg transform='translate(5 5) scale(.84375)'%3E%3Cpath d='M6 32Q32 2 58 32Q32 62 6 32Z' fill='none' stroke='%23F7ECDF' stroke-width='6.5' stroke-linejoin='round'/%3E%3Cpath d='M32 20.5Q33.95 30.05 43.5 32Q33.95 33.95 32 43.5Q30.05 33.95 20.5 32Q30.05 30.05 32 20.5Z' fill='%23E5743A'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+  /* The Technomancer: Desert Professional (warm off-white, navy ink, terracotta, teal). */
+  :root {
+    --bg: #FAF6F0; --card: #FFFFFF; --ink: #1C2B3A; --soft: #515D69; --line: #E5DACB;
+    --accent: #1E8C80; --accent-ink: #fff; --ok: #2E7A48; --bad: #B83A2A;
+    --spark: #C4552E; --spark-soft: #F8E7DE; --navy: #1C2B3A;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #152231; --card: #1E2E3F; --ink: #F3EDE4; --soft: #AEB7C0; --line: #2E4054; --ok: #6cc48a; --bad: #ff8a80;
+      --spark: #E5743A; --spark-soft: #3a2a22; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.5 Figtree, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  h1, h2, .kicker, .go, .brand { font-family: Archivo, Figtree, system-ui, sans-serif; }
+  .brand { display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 800; letter-spacing: -.01em; font-size: 17px; margin-bottom: 18px; }
+  .brand svg { width: 34px; height: 34px; flex: none; }
+  .eye { width: 92px; height: 92px; margin: 0 auto; display: block; filter: drop-shadow(0 14px 26px rgba(28, 43, 58, .28));
+    animation: pop .7s cubic-bezier(.2, 1.5, .4, 1) both; }
+  .sys { display: flex; align-items: center; gap: 12px; margin-top: 12px; padding: 12px 14px; border-radius: 12px;
+    border: 1px solid var(--edge); background: color-mix(in srgb, var(--bg) 55%, transparent); }
+  .sys .badge { flex: none; font-size: 12px; font-weight: 700; letter-spacing: .04em; padding: 4px 10px; border-radius: 999px; }
+  .sys .badge.live { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+  .sys .badge.pending { background: var(--spark-soft); color: var(--spark); }
+  .sys .badge.none { background: color-mix(in srgb, var(--soft) 14%, transparent); color: var(--soft); }
+  .sys p { margin: 0; font-size: 14.5px; color: var(--soft); }
+  .sys p b { color: var(--ink); display: block; font-size: 15.5px; }
+  optgroup { font-weight: 700; }
+  main { max-width: 620px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 28px; line-height: 1.2; margin: 0 0 6px; text-wrap: balance; }
+  h1 span { color: var(--accent); transition: color .4s; }
+  .lede { color: var(--soft); margin: 0 0 24px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; margin-bottom: 16px; }
+  h2 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--soft); margin: 0 0 14px; }
+  label { display: block; font-weight: 600; margin: 14px 0 6px; }
+  label:first-of-type { margin-top: 0; }
+  .hint { font-weight: 400; color: var(--soft); font-size: 14px; margin: 4px 0 0; }
+  select, input[type=text] {
+    width: 100%; padding: 11px 12px; font: inherit; color: var(--ink);
+    background: var(--bg); border: 1px solid var(--line); border-radius: 9px;
+  }
+  select:focus, input:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
+  .swatches { display: flex; gap: 10px; flex-wrap: wrap; }
+  .swatches button {
+    width: 44px; height: 44px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; padding: 0;
+  }
+  .swatches button[aria-pressed=true] { border-color: var(--ink); }
+  .check { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; font-weight: 400; }
+  .check input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); flex: none; }
+  .check b { display: block; }
+  .go {
+    width: 100%; padding: 15px; font: inherit; font-weight: 700; font-size: 17px; cursor: pointer;
+    color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 11px; transition: background .4s;
+  }
+  .go[disabled] { opacity: .6; cursor: progress; }
+  #begin[disabled] { opacity: .35; cursor: default; filter: saturate(.4); }
+  .path { font-family: ui-monospace, Consolas, monospace; font-size: 14px; color: var(--soft); overflow-wrap: anywhere; }
+  .error { color: var(--bad); margin-top: 12px; font-weight: 600; }
+  ul.done { list-style: none; padding: 0; margin: 0 0 16px; }
+  ul.done li { padding-left: 26px; position: relative; margin-bottom: 6px; }
+  ul.done li::before { content: "\2713"; position: absolute; left: 0; color: var(--ok); font-weight: 700; }
+  ol.next { padding-left: 22px; margin: 0; }
+  ol.next li { margin-bottom: 8px; }
+  a { color: var(--accent); }
+  .go.quiet { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  ol.steps li { margin-bottom: 14px; }
+  button.step {
+    display: block; margin: 0 0 6px; padding: 9px 14px; font: inherit; font-weight: 700; cursor: pointer;
+    color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 9px;
+  }
+  button.copy {
+    margin-left: 8px; padding: 2px 10px; font: inherit; font-size: 13px; cursor: pointer;
+    color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 7px;
+  }
+  button.step[disabled]:not(.done) { opacity: .45; cursor: default; }
+  button.step.done { background: transparent; color: var(--ok); border: 1px solid var(--line); }
+  table.cmds { border-collapse: collapse; width: 100%; }
+  table.cmds td { padding: 7px 0; vertical-align: top; border-top: 1px solid var(--line); }
+  table.cmds tr:first-child td { border-top: 0; }
+  table.cmds td:first-child { white-space: nowrap; padding-right: 16px; }
+  code { font-family: ui-monospace, Consolas, monospace; font-weight: 700; color: var(--accent); }
+  .stores { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  a.store {
+    display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px; text-decoration: none;
+    color: var(--ink); border: 1px solid var(--line); border-radius: 12px;
+  }
+  a.store .qr { background: #fff; padding: 6px; border-radius: 8px; line-height: 0; }
+  a.store .qr { display: block; margin: 0 auto; }
+  a.store .qr svg { display: block; width: 132px; height: 132px; }
+  .phones { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  @media (max-width: 520px) { .phones { grid-template-columns: 1fr; } .stores { grid-template-columns: 1fr; } }
+  .phones figure { margin: 0; text-align: center; }
+  .phones img { width: 100%; height: auto; border-radius: 16px; border: 1px solid var(--edge); display: block;
+    box-shadow: 0 14px 30px -18px rgba(0, 0, 0, .7); }
+  .phones figcaption { font-size: 14px; color: var(--soft); margin-top: 6px; }
+  .phones figcaption b { display: block; color: var(--ink); }
+  .ph { fill: var(--bg); stroke: var(--line); stroke-width: 2; }
+  .panel { fill: var(--card); stroke: var(--line); stroke-width: 1; }
+  .row { fill: none; stroke: var(--line); stroke-width: 1; }
+  .dim { fill: var(--line); }
+  .inkfill { fill: var(--ink); }
+  .ink { stroke: var(--accent-ink); stroke-width: 2; stroke-linecap: round; fill: none; }
+  .hl { fill: var(--accent); }
+  .dot { fill: var(--accent-ink); }
+  .lbl { fill: var(--accent-ink); font: 700 10px system-ui, sans-serif; }
+  .lbl.small { fill: var(--ink); }
+  .progress { color: var(--soft); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; margin: 0 0 10px; }
+  .nav { display: flex; gap: 12px; justify-content: space-between; margin-top: 4px; }
+  .nav .go { width: auto; min-width: 150px; padding: 13px 22px; }
+  .nav .go.next, .nav #go, .nav #finish { margin-left: auto; }
+  details.what { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 20px; margin-bottom: 16px; }
+  details.what summary { cursor: pointer; font-weight: 600; }
+  details.what ul.done { margin-top: 12px; }
+
+  /* ---- The look: the assistant's own aurora behind glass cards ---- */
+  :root { --h: 174; --glass: rgba(255, 255, 255, .78); --edge: rgba(28, 43, 58, .12); --base: #FAF6F0; }
+  @media (prefers-color-scheme: dark) {
+    :root { --glass: rgba(30, 46, 63, .66); --edge: rgba(255, 255, 255, .09); --base: #101a26; --bg: #152231; }
+  }
+  body { background: var(--base); min-height: 100vh; font-size: 16.500px; letter-spacing: -.003em; }
+  .aurora { position: fixed; inset: 0; overflow: hidden; z-index: 0; pointer-events: none; }
+  .aurora i {
+    position: absolute; width: 62vmax; height: 62vmax; border-radius: 50%; filter: blur(60px); opacity: .5;
+    background: radial-gradient(circle, hsl(var(--bh) 78% 58% / .9), hsl(var(--bh) 78% 58% / 0) 62%);
+    transition: background 1.2s ease; animation: drift 90s ease-in-out infinite alternate;
+  }
+  .aurora i:nth-child(1) { --bh: var(--h); left: -22vmax; top: -26vmax; }
+  .aurora i:nth-child(2) { --bh: 16; right: -24vmax; top: -18vmax; animation-duration: 110s; animation-direction: alternate-reverse; }
+  .aurora i:nth-child(3) { --bh: 30; left: -18vmax; bottom: -30vmax; animation-duration: 75s; }
+  .aurora i:nth-child(4) { --bh: calc(var(--h) + 20); right: -20vmax; bottom: -28vmax; animation-duration: 100s; animation-direction: alternate-reverse; }
+  @media (prefers-color-scheme: light) { .aurora i { opacity: .2; } }
+  @keyframes drift { from { transform: translate(0, 0) scale(1); } to { transform: translate(9vmax, 6vmax) scale(1.18); } }
+  main { position: relative; z-index: 1; max-width: 600px; padding: 40px 16px 72px; }
+
+  h1 { font-size: clamp(30px, 5vw, 38px); line-height: 1.12; letter-spacing: -.025em; font-weight: 750; margin: 0 0 8px; }
+  .lede { font-size: 18px; margin: 0 0 26px; }
+  section, details.what {
+    background: var(--glass); border: 1px solid var(--edge); border-radius: 20px; padding: 24px;
+    -webkit-backdrop-filter: blur(22px) saturate(1.3); backdrop-filter: blur(22px) saturate(1.3);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, .06) inset, 0 18px 40px -24px rgba(0, 0, 0, .45);
+  }
+  details.what { padding: 16px 24px; }
+  h2 { font-size: 12px; letter-spacing: .12em; }
+  label { margin: 20px 0 8px; }
+  select, input[type=text] {
+    padding: 13px 14px; border-radius: 12px; background: color-mix(in srgb, var(--bg) 70%, transparent);
+    border: 1px solid var(--edge); transition: border-color .2s, box-shadow .2s;
+  }
+  select:focus, input[type=text]:focus {
+    outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 28%, transparent);
+  }
+
+  .hero { display: flex; align-items: center; gap: 18px; margin-bottom: 8px; }
+  .orb {
+    flex: none; width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center;
+    font-weight: 800; font-size: 32px; color: #fff; letter-spacing: -.02em;
+    background: radial-gradient(circle at 30% 26%, hsl(calc(var(--h) + 40) 90% 72%), hsl(var(--h) 72% 48%) 58%, hsl(calc(var(--h) - 30) 70% 30%));
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, .18) inset, 0 12px 38px -6px hsl(var(--h) 80% 50% / .65);
+    transition: background 1s ease, box-shadow 1s ease; animation: breathe 6s ease-in-out infinite alternate;
+  }
+  @keyframes breathe { from { transform: scale(1); } to { transform: scale(1.045); } }
+  .hero h1 { margin: 0; }
+
+  .bar { display: flex; gap: 6px; margin: 0 0 22px; }
+  .bar i { flex: 1; height: 4px; border-radius: 4px; background: var(--edge); transition: background .4s; }
+  .bar i.on { background: var(--accent); }
+  .chat { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
+  .chat .said { align-self: flex-end; background: var(--accent); color: var(--accent-ink); padding: 8px 14px;
+    border-radius: 16px 16px 4px 16px; font-family: ui-monospace, Consolas, monospace; font-weight: 700; }
+  .chat .reply { align-self: flex-start; background: color-mix(in srgb, var(--bg) 60%, transparent); border: 1px solid var(--edge);
+    padding: 10px 14px; border-radius: 16px 16px 16px 4px; max-width: 92%; animation: arrive .3s ease; }
+  .chat .reply b { color: var(--ok); }
+  ul.conn { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 8px; }
+  ul.conn li { display: flex; align-items: center; gap: 10px; margin: 0; padding: 10px 14px; border: 1px solid var(--edge);
+    border-radius: 12px; background: color-mix(in srgb, var(--bg) 55%, transparent); }
+  ul.conn .mark { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--edge); flex: none; display: grid; place-items: center; font-size: 13px; font-weight: 800; }
+  ul.conn li.on .mark { background: var(--ok); border-color: var(--ok); color: #fff; }
+  ul.conn li.on .mark::before { content: "\2713"; }
+  .vs { display: grid; grid-template-columns: 1fr 1.5fr; gap: 14px; padding: 11px 0; border-top: 1px solid var(--edge); align-items: start; }
+  .vs > span:first-child { color: var(--soft); font-size: 15px; }
+  .vs b { color: var(--accent); }
+  .vs.head { border-top: 0; padding-top: 0; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; }
+  .vs.head > span:first-child { color: var(--soft); }
+  .vs.head > span:last-child { color: var(--accent); }
+  @media (max-width: 520px) { .vs { grid-template-columns: 1fr; gap: 2px; } .vs.head > span:first-child { display: none; } }
+  .finale { position: relative; text-align: center; padding: 18px 0 6px; }
+  .finale h1 { margin-top: 18px; }
+  .orb.big { width: 108px; height: 108px; font-size: 52px; margin: 0 auto; animation: pop .7s cubic-bezier(.2, 1.5, .4, 1) both, breathe 6s ease-in-out .7s infinite alternate; }
+  @keyframes pop { from { transform: scale(.2); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .burst { position: absolute; left: 50%; top: 72px; width: 0; height: 0; }
+  .burst i { position: absolute; width: 10px; height: 10px; border-radius: 3px; opacity: 0; animation: fly 1.5s cubic-bezier(.1, .7, .3, 1) .25s both; }
+  .page:not([hidden]) .burst i { background: hsl(calc(var(--h) + var(--k) * 26) 85% 62%); }
+  @keyframes fly { 0% { transform: translate(0, 0) rotate(0); opacity: 1; } 100% { transform: translate(var(--x), var(--y)) rotate(320deg); opacity: 0; } }
+  ul.ready { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+  ul.ready li { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border: 1px solid var(--edge); border-radius: 12px;
+    background: color-mix(in srgb, var(--bg) 55%, transparent); }
+  ul.ready .mark { width: 24px; height: 24px; border-radius: 50%; flex: none; display: grid; place-items: center; font-size: 14px; font-weight: 800;
+    border: 2px solid var(--edge); color: var(--soft); }
+  ul.ready li.on .mark { background: var(--ok); border-color: var(--ok); color: #fff; }
+  ul.ready .what-it-is { flex: 1; }
+  ul.ready .what-it-is small { display: block; color: var(--soft); font-size: 14px; }
+  ul.ready button { flex: none; }
+  .tries { display: grid; gap: 8px; }
+  .try { text-align: left; padding: 13px 16px; font: inherit; cursor: pointer; color: var(--ink); border-radius: 14px;
+    background: color-mix(in srgb, var(--bg) 60%, transparent); border: 1px solid var(--edge); transition: transform .12s, border-color .2s; }
+  .try:hover { transform: translateY(-1px); border-color: var(--accent); }
+  .try small { display: block; color: var(--accent); font-weight: 700; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; margin-top: 4px; }
+  .intro { text-align: center; padding-top: 0; }
+  .intro .orb.big { width: 84px; height: 84px; font-size: 40px; }
+  .intro .kicker { margin-top: 14px; }
+  .intro .lede { margin-bottom: 0; }
+  .intro .orb.big { animation: pop .7s cubic-bezier(.2, 1.5, .4, 1) both, breathe 6s ease-in-out .7s infinite alternate; }
+  .kicker { margin: 22px 0 6px; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  .stage { display: grid; gap: 8px; margin: 22px 0 22px; text-align: left; }
+  /* One row per difference: what a regular LLM does on the left, then what yours does on the right. */
+  .versus { display: grid; grid-template-columns: 5fr 7fr; gap: 8px; }
+  .versus > div {
+    display: flex; gap: 10px; align-items: flex-start; padding: 11px 14px; border-radius: 14px;
+    background: var(--glass); border: 1px solid var(--edge);
+    -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+    opacity: 0; transform: translateY(10px); animation: rise .4s cubic-bezier(.2, .7, .2, 1) forwards;
+  }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  .versus .plain { color: var(--soft); font-size: 14.5px; animation-delay: calc(var(--i) * .95s + .35s); }
+  .versus .yours { border-color: var(--accent); font-size: 14.5px; animation-delay: calc(var(--i) * .95s + .8s); }
+  .versus .yours b { display: block; font-size: 18px; font-weight: 760; letter-spacing: -.01em; color: var(--accent); line-height: 1.25; }
+  .versus .mark { flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center;
+    font-size: 11px; font-weight: 700; margin-top: 1px; border: 1px solid currentColor; opacity: .7; }
+  .versus .yours .mark { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); opacity: 1; }
+  .versus .who { display: none; }
+  .versus.head > div { background: none; border-color: transparent; padding: 0 14px 0 44px; opacity: 1; transform: none; animation: none;
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+    font-size: 12px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; }
+  .versus.head .yours { color: var(--accent); }
+  @media (max-width: 520px) {
+    .versus { grid-template-columns: 1fr; gap: 4px; margin-bottom: 6px; }
+    .versus.head { display: none; }
+    .versus .who { display: inline; }
+    .versus .plain .who { font-weight: 700; }
+  }
+  .dots { display: none; }
+  .intro .go { max-width: 320px; margin: 0 auto; display: block; }
+  .static .versus > div { animation: none; opacity: 1; transform: none; }
+  .dock { position: fixed; right: 18px; bottom: 18px; z-index: 5; width: min(340px, calc(100vw - 36px));
+    background: var(--glass); border: 1px solid var(--edge); border-radius: 18px; overflow: hidden;
+    -webkit-backdrop-filter: blur(24px) saturate(1.3); backdrop-filter: blur(24px) saturate(1.3);
+    box-shadow: 0 24px 50px -20px rgba(0, 0, 0, .7); }
+  .dock-head { display: flex; align-items: center; gap: 10px; width: 100%; padding: 13px 16px; font: inherit; font-weight: 700;
+    color: var(--ink); background: transparent; border: 0; cursor: pointer; text-align: left; }
+  .dock-head .count { margin-left: auto; color: var(--soft); font-weight: 600; font-size: 14px; }
+  .spin { width: 16px; height: 16px; border-radius: 50%; border: 2.500px solid var(--edge); border-top-color: var(--accent); animation: turn .9s linear infinite; flex: none; }
+  .spin.done { animation: none; border-color: var(--ok); background: var(--ok); }
+  @keyframes turn { to { transform: rotate(360deg); } }
+  .dock ul { list-style: none; margin: 0; padding: 0 16px 12px; display: grid; gap: 9px; }
+  .dock[data-open=false] ul { display: none; }
+  .dock li { display: grid; grid-template-columns: 20px 1fr; gap: 10px; align-items: start; font-size: 15px; }
+  .dock li .state { width: 18px; height: 18px; margin-top: 2px; border-radius: 50%; border: 2px solid var(--edge); display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #fff; }
+  .dock li.working .state { border-top-color: var(--accent); animation: turn .9s linear infinite; }
+  .dock li.done .state { background: var(--ok); border-color: var(--ok); }
+  .dock li.failed .state { background: var(--bad); border-color: var(--bad); }
+  .dock li small { display: block; color: var(--soft); font-size: 13px; line-height: 1.35; }
+  .dock li.waiting { opacity: .6; }
+  @media (max-width: 1000px) { main { padding-bottom: 260px; } }
+  @media (prefers-reduced-motion: reduce) { .spin, .dock li.working .state { animation: none; } }
+  .progress { margin: 0 0 8px; font-size: 12px; letter-spacing: .12em; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    padding: 9px 16px; font: inherit; font-weight: 600; cursor: pointer; color: var(--ink);
+    background: color-mix(in srgb, var(--bg) 60%, transparent); border: 1px solid var(--edge); border-radius: 999px;
+    transition: transform .12s, background .2s, border-color .2s, color .2s;
+  }
+  .chip:hover { transform: translateY(-1px); border-color: var(--accent); }
+  .chip[aria-pressed=true] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .voices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 520px) { .voices { grid-template-columns: 1fr; } }
+  .voice {
+    text-align: left; padding: 14px 16px; font: inherit; cursor: pointer; color: var(--ink);
+    background: color-mix(in srgb, var(--bg) 60%, transparent); border: 1px solid var(--edge); border-radius: 14px;
+    transition: transform .12s, border-color .2s, box-shadow .2s;
+  }
+  .voice:hover { transform: translateY(-1px); }
+  .voice b { display: block; margin-bottom: 2px; }
+  .voice span { color: var(--soft); font-size: 14px; font-style: italic; }
+  .voice[aria-pressed=true] { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+
+  .swatches { gap: 12px; }
+  .swatches button { width: 46px; height: 46px; border: 0; transition: transform .15s, box-shadow .2s; box-shadow: 0 0 0 1px rgba(255, 255, 255, .15) inset; }
+  .swatches button:hover { transform: scale(1.08); }
+  .swatches button[aria-pressed=true] { box-shadow: 0 0 0 3px var(--base), 0 0 0 6px var(--ink); }
+
+  .go {
+    border-radius: 14px; padding: 16px; letter-spacing: -.01em;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 88%, #fff), var(--accent));
+    box-shadow: 0 1px 0 rgba(255, 255, 255, .25) inset, 0 12px 28px -10px color-mix(in srgb, var(--accent) 80%, transparent);
+    transition: transform .12s, box-shadow .2s, filter .2s;
+  }
+  .go:hover:not([disabled]) { transform: translateY(-1px); filter: brightness(1.06); }
+  .go:active:not([disabled]) { transform: translateY(0); }
+  .go.quiet { background: color-mix(in srgb, var(--bg) 50%, transparent); box-shadow: none; border: 1px solid var(--edge); }
+  .nav { margin-top: 8px; }
+  button.step { border-radius: 11px; padding: 10px 16px; transition: transform .12s, filter .2s; }
+  button.step:hover:not([disabled]) { transform: translateY(-1px); filter: brightness(1.08); }
+  a.store { background: color-mix(in srgb, var(--bg) 55%, transparent); border-color: var(--edge); border-radius: 16px; transition: transform .15s, border-color .2s; }
+  a.store:hover { transform: translateY(-2px); border-color: var(--accent); }
+  table.cmds td { border-top-color: var(--edge); padding: 11px 0; }
+  code { background: color-mix(in srgb, var(--accent) 16%, transparent); padding: 2px 8px; border-radius: 7px; }
+  .path { background: color-mix(in srgb, var(--bg) 55%, transparent); padding: 3px 8px; border-radius: 7px; }
+  p.path { display: inline-block; margin: 0 0 14px; }
+
+  .page:not([hidden]) { animation: arrive .38s cubic-bezier(.2, .7, .2, 1); }
+  @keyframes arrive { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  h1:focus { outline: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .aurora i, .orb, .orb.big, .burst i, .page:not([hidden]) { animation: none; }
+    .slide { animation: none; opacity: 1; transform: none; }
+    * { transition: none !important; }
+  }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+<main>
+  <p class="progress" id="progress" aria-live="polite"></p>
+  <div class="bar" id="bar" aria-hidden="true"></div>
+
+  <div class="page" data-page="0">
+    <div class="intro">
+      <svg class="eye" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="tmsun" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFC066"/><stop offset=".45" stop-color="#FF8A3C"/><stop offset="1" stop-color="#D9472C"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="#1C2B3A"/><g transform="translate(5 5) scale(.84375)"><path d="M6 32Q32 2 58 32Q32 62 6 32Z" fill="none" stroke="#F7ECDF" stroke-width="6.5" stroke-linejoin="round"/><path d="M32 20.5Q33.95 30.05 43.5 32Q33.95 33.95 32 43.5Q30.05 33.95 20.5 32Q30.05 30.05 32 20.5Z" fill="url(#tmsun)"/></g></svg>
+      <p class="kicker">The Technomancer</p>
+      <h1><span id="intro-company">Your business</span>, with its own AI assistant</h1>
+      <p class="lede">Claude, ChatGPT or Gemini, set up for your trade, your systems and your job.</p>
+      <div class="stage" id="stage">
+        <div class="versus head">
+          <div class="plain">A regular LLM</div>
+          <div class="yours">Your assistant</div>
+        </div>
+        <div class="versus">
+          <div class="plain"><span class="mark" aria-hidden="true">&#10005;</span><span><span class="who">A regular LLM </span>Starts every chat from zero.</span></div>
+          <div class="yours"><span class="mark" aria-hidden="true">&#10003;</span><span><b><span class="who">Yours </span>Remembers.</b>It keeps notes on your work and picks up where you left off, even days later.</span></div>
+        </div>
+        <div class="versus">
+          <div class="plain"><span class="mark" aria-hidden="true">&#10005;</span><span><span class="who">A regular LLM </span>Knows nothing about your business.</span></div>
+          <div class="yours"><span class="mark" aria-hidden="true">&#10003;</span><span><b><span class="who">Yours </span>Knows your trade.</b>Your services, your process, your tools, and who to ask.</span></div>
+        </div>
+        <div class="versus">
+          <div class="plain"><span class="mark" aria-hidden="true">&#10005;</span><span><span class="who">A regular LLM </span>Only knows what you paste in.</span></div>
+          <div class="yours"><span class="mark" aria-hidden="true">&#10003;</span><span><b><span class="who">Yours </span>Looks things up.</b>Jobs in your CRM, calls on your phone system, your email and your calendar.</span></div>
+        </div>
+        <div class="versus">
+          <div class="plain"><span class="mark" aria-hidden="true">&#10005;</span><span><span class="who">A regular LLM </span>Tells you what to click.</span></div>
+          <div class="yours"><span class="mark" aria-hidden="true">&#10003;</span><span><b><span class="who">Yours </span>Does the clicking.</b>It works in your web tools for you, in your own sign-in, after you say yes.</span></div>
+        </div>
+        <div class="versus">
+          <div class="plain"><span class="mark" aria-hidden="true">&#10005;</span><span><span class="who">A regular LLM </span>Stays on the screen you opened it on.</span></div>
+          <div class="yours"><span class="mark" aria-hidden="true">&#10003;</span><span><b><span class="who">Yours </span>Goes with you.</b>Start something at your desk and check on it from your phone.</span></div>
+        </div>
+      </div>
+      <button class="go" id="begin" data-go="0.5" disabled>Get started</button>
+      <p class="hint" id="begin-note" style="text-align:center;margin-top:12px">&nbsp;</p>
+    </div>
+  </div>
+
+  <div class="page" data-page="0.5" hidden>
+    <h1>What is your primary agent?</h1>
+    <p class="lede">The one you use most. Setup is built around it: its app, signing in, and a shortcut on your desktop.</p>
+    <section>
+      <div id="main-list"></div>
+    </section>
+    <section>
+      <h2>What others do you use?</h2>
+      <p class="hint" style="margin:0 0 6px">They work beside your primary agent, in the same folder, reading the same notes. Ticked ones were found on this computer or are suggested by your company.</p>
+      <div id="tool-list"></div>
+      <label class="check" id="extras-bypass-row" hidden><input type="checkbox" id="extras-bypass" checked>
+        <span><b>The others never stop to ask</b>The same as Bypass for your primary agent, which you choose on a later page. Untick it to have them ask before they change files or run commands.</span></label>
+    </section>
+    <div class="nav"><button class="go quiet back" data-go="0">Back</button><button class="go next" data-go="1">Next</button></div>
+  </div>
+
+  <div class="page" data-page="1" hidden>
+    <div class="hero">
+      <div class="orb" id="orb" aria-hidden="true">J</div>
+      <h1>Meet <span id="title-name">Jarvis</span>,<br>your AI assistant</h1>
+    </div>
+    <p class="lede">A few quick choices and it is yours. Everything can be changed later.</p>
+    <section>
+      <h2>Your assistant</h2>
+      <label id="name-label">What should it be called?</label>
+      <div class="chips" id="name-chips" role="group" aria-labelledby="name-label"></div>
+      <select id="name" hidden></select>
+      <input type="text" id="custom" placeholder="Type a name" maxlength="30" hidden aria-label="Custom name" style="margin-top:8px">
+
+      <label>Its color</label>
+      <div class="swatches" id="colors" role="group" aria-label="Assistant color"></div>
+      <p class="hint">Chats about the assistant itself use this color. Work chats are orange, personal chats green.</p>
+
+      <label id="style-label">How should it talk to you?</label>
+      <div class="voices" id="style-cards" role="group" aria-labelledby="style-label"></div>
+      <select id="style" hidden></select>
+    </section>
+    <div class="nav"><button class="go quiet back" data-go="0.5">Back</button><button class="go next" data-go="2">Next</button></div>
+  </div>
+
+  <div class="page" data-page="2" hidden>
+    <h1>About you</h1>
+    <p class="lede">So <span class="the-name">Jarvis</span> knows who it works for.</p>
+    <section>
+      <label for="user">Your first name</label>
+      <input type="text" id="user" autocomplete="given-name" maxlength="40">
+
+      <label for="role">Your role</label>
+      <select id="role"></select>
+    </section>
+    <div class="nav"><button class="go quiet back" data-go="1">Back</button><button class="go next" data-go="2.5">Next</button></div>
+  </div>
+
+  <div class="page" data-page="2.5" hidden>
+    <h1>Your business</h1>
+    <p class="lede">Pick the systems you already run on, and <span class="the-name">Jarvis</span> works inside them.</p>
+    <section>
+      <h2>The company</h2>
+      <label for="company">Company name</label>
+      <input type="text" id="company" maxlength="60" autocomplete="organization" placeholder="Your company's name">
+
+      <label for="industry">What kind of company are you?</label>
+      <select id="industry"></select>
+    </section>
+    <section>
+      <h2>Your systems</h2>
+      <label for="crm">Which CRM do you use?</label>
+      <select id="crm"></select>
+      <input type="text" id="crm-other" maxlength="40" placeholder="Which one?" aria-label="CRM name" style="margin-top:8px" hidden>
+      <div class="sys" id="crm-card" hidden></div>
+      <div id="crm-key-row" hidden>
+        <label for="crm-key" id="crm-key-label">API key</label>
+        <input type="text" id="crm-key" autocomplete="off" placeholder="Paste it here, or leave blank">
+        <p class="hint" id="crm-key-hint"></p>
+      </div>
+      <div id="crm-name-row" hidden>
+        <label for="crm-name">Your name as it appears in <span class="crm-label">the CRM</span> <span class="hint" style="display:inline">(optional)</span></label>
+        <input type="text" id="crm-name" maxlength="60" placeholder="First and last name">
+        <p class="hint">With this, "show me my jobs" works from day one.</p>
+      </div>
+
+      <label for="phone">What do you use for phones and call tracking?</label>
+      <select id="phone"></select>
+      <input type="text" id="phone-other" maxlength="40" placeholder="Which one?" aria-label="Phone system name" style="margin-top:8px" hidden>
+      <div class="sys" id="phone-card" hidden></div>
+      <div id="phone-key-row" hidden>
+        <label for="phone-key" id="phone-key-label">API key</label>
+        <input type="text" id="phone-key" autocomplete="off" placeholder="Paste it here, or leave blank">
+        <p class="hint" id="phone-key-hint"></p>
+      </div>
+    </section>
+    <div class="nav"><button class="go quiet back" data-go="2">Back</button><button class="go next" data-go="3">Next</button></div>
+  </div>
+
+  <div class="page" data-page="3" hidden>
+    <h1>How it works</h1>
+    <p class="lede">These are the settings we recommend. Leave them unless you have a reason.</p>
+    <section>
+      <label for="mode">Permissions</label>
+      <select id="mode"></select>
+      <p class="hint">Bypass means it never stops mid-task to ask "is this OK?". It still checks with you before sending messages or deleting things.</p>
+
+      <label class="check"><input type="checkbox" id="remote" checked>
+        <span><b>Remote control</b>Pick up any chat from the Claude app on your phone.</span></label>
+      <label class="check"><input type="checkbox" id="tint" checked>
+        <span><b>Color modes</b>Each chat gets a background color and a colored shape on its title, by topic.</span></label>
+    </section>
+    <p class="path">Folder: <span id="folder"></span></p>
+    <div class="nav"><button class="go quiet back" data-go="2.5">Back</button><button class="go" id="go">Set up Jarvis</button></div>
+    <p class="error" id="error" role="alert" hidden></p>
+  </div>
+
+  <div class="page" data-page="4" hidden>
+    <h1><span id="done-name">Jarvis</span> is ready</h1>
+    <p class="lede">Now open Claude and say hello.</p>
+    <section id="account">
+      <h2>Your Claude account</h2>
+      <p id="acct-text" style="margin:0">Checking whether you are already signed in…</p>
+      <button class="step" id="acct-login" style="margin-top:12px" hidden>Sign in to Claude</button>
+    </section>
+    <button class="go" id="open" disabled>Checking for the Claude app…</button>
+    <p class="hint" id="open-note" style="text-align:center;margin:12px 0 20px"></p>
+    <section>
+      <h2>Once Claude is open</h2>
+      <ol class="next">
+        <li>Sign in with your work email.</li>
+        <li>It should open on your assistant's folder. If it asks, click the <b>Code</b> tab, then <b>Select folder</b>, and choose:<br><span class="path" id="done-folder"></span>
+          <button type="button" class="copy" id="copy-folder">Copy</button></li>
+        <li>Open <b>Settings</b>, then <b>Claude Code</b>, and turn on <b>Connect new sessions to Remote Control</b>. That is what lets your phone see your chats.</li>
+        <li>Type <b>/start</b> and press Enter.</li>
+      </ol>
+    </section>
+    <details class="what">
+      <summary>What was set up</summary>
+      <ul class="done" id="log"></ul>
+    </details>
+    <div class="nav"><span></span><button class="go next" data-go="5">Next: connect Chrome</button></div>
+  </div>
+
+  <div class="page" data-page="4.5" hidden>
+    <h1><span class="the-name">Jarvis</span> is ready</h1>
+    <p class="lede">Now open ChatGPT and say hello.</p>
+    <section>
+      <h2>Your ChatGPT account</h2>
+      <p id="cx-text" style="margin:0">Checking whether you are already signed in…</p>
+      <button class="step" id="cx-login" style="margin-top:12px" hidden>Sign in to ChatGPT</button>
+    </section>
+    <button class="go" id="cx-open">Open ChatGPT</button>
+    <p class="hint" id="cx-note" style="text-align:center;margin:12px 0 20px">If the ChatGPT app is not on this computer yet, this opens its installer first.</p>
+    <section>
+      <h2>Once ChatGPT is open</h2>
+      <ol class="next">
+        <li>Sign in if it asks.</li>
+        <li>Point it at your assistant's folder. Under the message box, click <b>Choose project</b>, add a project, and select this folder:<br><span class="path the-folder"></span>
+          <button type="button" class="copy" id="cx-copy">Copy</button></li>
+        <li>You will know it worked when it greets you by name and knows your company.</li>
+        <li>Type <b>$start</b> and press Enter. Your commands are skills here, so they begin with a dollar sign: <b>$start</b>, <b>$save</b>, <b>$update</b>, <b>$help</b>.</li>
+      </ol>
+    </section>
+    <section>
+      <h2>Two things to set up inside ChatGPT</h2>
+      <ul class="done">
+        <li><b>Chrome.</b> In ChatGPT's settings, add its Chrome extension so it can work in your web tools.</li>
+        <li><b>Email, calendar and files.</b> Under Plugins, connect Gmail, Google Calendar and Google Drive.</li>
+      </ul>
+      <p class="hint">Setup cannot do these two for you yet.</p>
+    </section>
+    <details class="what">
+      <summary>What was set up</summary>
+      <ul class="done" id="log-codex"></ul>
+    </details>
+    <div class="nav"><span></span><button class="go next" data-go="7">Next: four commands</button></div>
+  </div>
+
+  <div class="page" data-page="5" hidden>
+    <h1>Connect Chrome</h1>
+    <p class="lede">This lets <span class="the-name">Jarvis</span> work in web pages for you. Three clicks, in order.</p>
+    <section>
+      <ol class="next steps">
+        <li><button class="step" data-page="google">Sign in to Google</button>
+          Use your work email. If Chrome offers to sign you in to Chrome too, say yes.</li>
+        <li><button class="step" data-page="extension">Add Claude to Chrome</button>
+          Click <b>Add to Chrome</b> on the page that opens. If Chrome already asked you to turn on "Claude", click <b>Enable</b> instead.</li>
+        <li><button class="step" data-page="claude">Sign in to Claude</button>
+          Use the same work email. Then click the puzzle piece at the top right of Chrome and pin <b>Claude</b>.</li>
+      </ol>
+    </section>
+    <div class="nav"><button class="go quiet back" data-go="4">Back</button><button class="go next" data-go="6">Next</button></div>
+  </div>
+
+  <div class="page" data-page="6" hidden>
+    <h1>Claude on your phone</h1>
+    <p class="lede">Start something at your desk, then check on it from anywhere.</p>
+    <section>
+      <h2>1. Get the app</h2>
+      <p class="hint" style="margin:0 0 12px">Point your phone's camera at the code for your phone.</p>
+      <div class="stores">
+        <a class="store" href="https://apps.apple.com/us/app/claude-by-anthropic/id6473753684" target="_blank" rel="noopener">
+          <span class="qr"><svg viewBox="0 0 111 111" class="segno"><g transform="scale(3)"><path fill="#fff" d="M0 0h37v37h-37z"/><path class="qrline" stroke="#111" d="M2 2.5h7m4 0h6m1 0h2m2 0h2m2 0h7m-33 1h1m5 0h1m2 0h1m1 0h1m3 0h2m1 0h1m1 0h1m1 0h2m2 0h1m5 0h1m-33 1h1m1 0h3m1 0h1m2 0h1m1 0h1m4 0h5m1 0h1m3 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m2 0h1m5 0h2m3 0h1m1 0h1m1 0h1m1 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m3 0h3m2 0h1m1 0h1m2 0h1m2 0h1m2 0h1m1 0h3m1 0h1m-33 1h1m5 0h1m1 0h3m1 0h1m2 0h1m2 0h4m4 0h1m5 0h1m-33 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-24 1h2m3 0h1m2 0h2m1 0h2m1 0h1m-24 1h1m2 0h1m1 0h2m1 0h2m1 0h4m3 0h1m2 0h1m2 0h2m1 0h1m-28 1h6m2 0h1m1 0h4m2 0h2m2 0h1m1 0h1m2 0h3m4 0h1m-33 1h2m2 0h1m1 0h1m2 0h2m1 0h2m5 0h1m1 0h2m2 0h1m1 0h2m1 0h1m1 0h1m-33 1h2m1 0h3m1 0h1m1 0h1m1 0h1m1 0h3m4 0h4m2 0h1m1 0h2m2 0h1m-33 1h3m1 0h4m1 0h3m2 0h1m2 0h2m1 0h2m2 0h1m1 0h2m1 0h1m2 0h1m-33 1h1m4 0h1m2 0h1m1 0h4m2 0h1m1 0h4m2 0h1m1 0h1m1 0h1m2 0h2m-33 1h1m3 0h5m4 0h2m5 0h1m1 0h5m3 0h2m-30 1h1m1 0h2m1 0h2m2 0h1m5 0h3m1 0h1m1 0h2m1 0h2m3 0h1m-31 1h1m2 0h4m1 0h3m1 0h2m1 0h2m2 0h3m3 0h1m1 0h1m2 0h1m-32 1h1m1 0h1m2 0h1m1 0h4m2 0h1m2 0h1m1 0h1m2 0h5m1 0h1m1 0h1m1 0h1m-32 1h1m2 0h5m2 0h1m1 0h1m4 0h1m2 0h1m1 0h1m1 0h2m4 0h3m-33 1h1m1 0h2m1 0h1m2 0h3m2 0h1m1 0h9m1 0h1m1 0h1m-26 1h1m3 0h1m5 0h3m3 0h2m1 0h1m1 0h1m1 0h1m5 0h2m-30 1h1m1 0h1m2 0h1m1 0h2m1 0h1m3 0h2m1 0h2m2 0h3m4 0h2m-33 1h3m1 0h1m1 0h1m1 0h4m1 0h2m1 0h1m2 0h1m4 0h4m2 0h1m1 0h1m-32 1h2m2 0h1m1 0h3m3 0h4m1 0h1m2 0h1m1 0h2m1 0h1m1 0h2m1 0h1m-32 1h1m1 0h3m1 0h1m1 0h1m2 0h3m2 0h2m1 0h3m1 0h6m2 0h1m-24 1h1m4 0h2m2 0h3m2 0h1m1 0h1m3 0h2m2 0h1m-33 1h7m3 0h3m5 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h4m-32 1h1m5 0h1m1 0h1m1 0h2m4 0h7m1 0h1m3 0h1m3 0h1m-33 1h1m1 0h3m1 0h1m4 0h12m1 0h6m1 0h2m-33 1h1m1 0h3m1 0h1m1 0h2m1 0h4m3 0h1m1 0h1m5 0h1m1 0h2m-30 1h1m1 0h3m1 0h1m2 0h1m4 0h1m2 0h2m5 0h2m2 0h3m1 0h1m-33 1h1m5 0h1m2 0h1m2 0h2m3 0h3m1 0h4m4 0h1m-30 1h7m1 0h5m1 0h1m1 0h1m1 0h1m2 0h1m2 0h2m2 0h2m1 0h1"/></g></svg></span>
+          <b>iPhone</b><span class="hint">App Store</span></a>
+        <a class="store" href="https://play.google.com/store/apps/details?id=com.anthropic.claude" target="_blank" rel="noopener">
+          <span class="qr"><svg viewBox="0 0 123 123" class="segno"><g transform="scale(3)"><path fill="#fff" d="M0 0h41v41h-41z"/><path class="qrline" stroke="#111" d="M2 2.5h7m1 0h2m7 0h3m1 0h4m1 0h1m3 0h7m-37 1h1m5 0h1m3 0h1m1 0h1m2 0h1m1 0h1m1 0h1m1 0h1m3 0h2m1 0h1m1 0h1m5 0h1m-37 1h1m1 0h3m1 0h1m1 0h4m1 0h2m2 0h1m3 0h1m1 0h3m1 0h2m1 0h1m1 0h3m1 0h1m-37 1h1m1 0h3m1 0h1m2 0h2m2 0h2m1 0h2m1 0h4m1 0h4m2 0h1m1 0h3m1 0h1m-37 1h1m1 0h3m1 0h1m4 0h2m1 0h5m6 0h2m3 0h1m1 0h3m1 0h1m-37 1h1m5 0h1m1 0h1m1 0h3m2 0h2m4 0h2m1 0h2m2 0h1m1 0h1m5 0h1m-37 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-27 1h3m2 0h1m2 0h1m2 0h1m1 0h2m1 0h3m-29 1h1m1 0h1m3 0h2m1 0h1m3 0h7m1 0h1m2 0h1m1 0h1m1 0h1m2 0h1m2 0h1m1 0h1m-37 1h1m2 0h2m6 0h1m1 0h1m2 0h3m8 0h2m1 0h2m1 0h1m1 0h2m-34 1h1m2 0h2m1 0h1m2 0h2m2 0h1m2 0h1m1 0h1m1 0h1m3 0h4m1 0h3m1 0h1m-37 1h1m1 0h1m5 0h2m1 0h1m2 0h3m1 0h1m5 0h1m1 0h1m-26 1h2m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m4 0h1m3 0h2m2 0h2m1 0h1m5 0h1m-36 1h2m1 0h2m1 0h2m5 0h4m1 0h2m2 0h1m1 0h1m1 0h2m1 0h2m1 0h1m2 0h1m-31 1h1m1 0h4m3 0h2m2 0h5m3 0h1m5 0h2m1 0h1m-36 1h1m1 0h1m1 0h1m2 0h2m1 0h1m1 0h2m1 0h2m4 0h1m1 0h1m2 0h2m1 0h4m1 0h1m-33 1h2m1 0h1m4 0h4m2 0h1m1 0h4m1 0h1m2 0h1m2 0h2m3 0h1m-34 1h1m5 0h1m2 0h3m6 0h6m1 0h5m1 0h4m-37 1h2m2 0h3m4 0h3m1 0h1m1 0h1m2 0h1m2 0h3m1 0h1m3 0h1m2 0h1m1 0h1m-37 1h3m1 0h1m2 0h2m3 0h1m6 0h2m1 0h1m1 0h1m2 0h2m2 0h3m-33 1h1m4 0h6m2 0h3m6 0h2m3 0h1m1 0h2m1 0h1m1 0h1m-36 1h1m3 0h2m2 0h1m2 0h6m2 0h6m2 0h2m1 0h1m5 0h1m-34 1h1m2 0h3m1 0h1m2 0h1m1 0h1m1 0h3m3 0h1m2 0h3m1 0h1m2 0h2m1 0h1m-34 1h2m6 0h1m1 0h2m3 0h1m2 0h1m1 0h2m1 0h3m2 0h3m1 0h2m-35 1h3m1 0h2m1 0h5m2 0h4m1 0h1m2 0h1m3 0h1m1 0h2m-29 1h1m5 0h1m1 0h1m2 0h1m1 0h1m1 0h1m4 0h2m2 0h2m1 0h1m5 0h1m-37 1h2m1 0h2m1 0h1m1 0h2m4 0h1m1 0h2m1 0h1m2 0h2m1 0h1m1 0h4m1 0h1m3 0h1m-35 1h1m1 0h1m4 0h3m1 0h1m1 0h2m1 0h1m5 0h1m1 0h2m1 0h1m1 0h3m2 0h1m-37 1h3m1 0h4m2 0h2m2 0h1m1 0h1m2 0h2m2 0h2m1 0h8m1 0h2m-29 1h5m1 0h7m2 0h3m2 0h1m3 0h1m2 0h2m-37 1h7m1 0h4m2 0h2m3 0h1m1 0h3m1 0h1m2 0h1m1 0h1m1 0h1m2 0h2m-37 1h1m5 0h1m2 0h1m2 0h3m2 0h1m1 0h2m1 0h2m4 0h1m3 0h1m2 0h2m-37 1h1m1 0h3m1 0h1m2 0h1m1 0h3m1 0h1m1 0h1m2 0h4m3 0h6m2 0h2m-37 1h1m1 0h3m1 0h1m2 0h3m1 0h2m5 0h1m1 0h4m1 0h1m1 0h1m2 0h3m-35 1h1m1 0h3m1 0h1m1 0h1m3 0h1m2 0h1m1 0h1m2 0h2m1 0h1m3 0h1m3 0h2m3 0h1m-37 1h1m5 0h1m5 0h3m4 0h2m1 0h1m4 0h2m1 0h1m1 0h2m-34 1h7m1 0h1m3 0h1m1 0h3m3 0h1m1 0h3m3 0h4m1 0h1m2 0h1"/></g></svg></span>
+          <b>Android</b><span class="hint">Google Play</span></a>
+      </div>
+      <p class="hint">Sign in with the same work email you use on this computer.</p>
+    </section>
+    <section>
+      <h2>2. Find your chats</h2>
+      <div class="phones">
+        <figure><img src="/img/phone-1.png" alt="The Claude app's home screen with the menu button at the top left circled" loading="lazy">
+          <figcaption><b>Tap the menu</b>The lines at the top left.</figcaption></figure>
+        <figure><img src="/img/phone-2.png" alt="The Claude app's menu with Code circled" loading="lazy">
+          <figcaption><b>Tap Code</b>It is near the top of the menu.</figcaption></figure>
+        <figure><img src="/img/phone-3.png" alt="The Code screen listing chats from the computer, the first one circled" loading="lazy">
+          <figcaption><b>Tap a chat</b>Your computer's chats are under Sessions.</figcaption></figure>
+      </div>
+      <p class="hint">A chat shows on your phone while this computer is on with Claude open. These are real screens from an Android phone with example chat names; an iPhone looks nearly the same.</p>
+    </section>
+    <div class="nav"><button class="go quiet back" data-go="5">Back</button><button class="go next" data-go="7">Next</button></div>
+  </div>
+
+  <div class="page" data-page="7" hidden>
+    <h1>Four commands to know</h1>
+    <p class="lede">Type each one below, the way you will in <span id="drill-where">Claude</span>. It takes twenty seconds.</p>
+    <section>
+      <div class="chat" id="drill-log" aria-live="polite"></div>
+      <label for="drill" id="drill-ask">Type <code>/start</code> and press Enter</label>
+      <input type="text" id="drill" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="/start">
+      <p class="hint" id="drill-hint">Start with the slash.</p>
+    </section>
+    <div class="nav"><button class="go quiet back" data-go="6">Back</button><button class="go next" id="drill-next" data-go="8" disabled>Next</button></div>
+  </div>
+
+  <div class="page" data-page="8" hidden>
+    <h1>Connect your email and calendar</h1>
+    <p class="lede">So <span class="the-name">Jarvis</span> can read your inbox, check your calendar and find files. It only sees what you can see.</p>
+    <section>
+      <ol class="next steps">
+        <li><button class="step" id="conn-open">Open Claude's connectors page</button>
+          It opens in Chrome. Sign in with your work email if it asks.</li>
+        <li>On that page, click <b>Connect</b> next to each of these, and choose your work Google account when Google asks:
+          <ul class="conn" id="conn-list">
+            <li data-conn="Gmail"><span class="mark"></span><b>Gmail</b></li>
+            <li data-conn="Google Calendar"><span class="mark"></span><b>Google Calendar</b></li>
+            <li data-conn="Google Drive"><span class="mark"></span><b>Google Drive</b></li>
+          </ul></li>
+      </ol>
+      <p class="hint" id="conn-note">Each one gets a tick here once it is connected.</p>
+      <button type="button" class="copy" id="conn-check" style="margin:10px 0 0">Check again</button>
+    </section>
+    <p class="hint" style="margin:0 0 14px">Don't see one of them on that page? Tell <span class="the-contact">your manager</span>; it may need switching on for the company.</p>
+    <div class="nav"><button class="go quiet back" data-go="7">Back</button><button class="go next" data-go="9">Next</button></div>
+  </div>
+
+  <div class="page" data-page="9" hidden>
+    <h1>Company GitHub</h1>
+    <p class="lede">GitHub keeps a private copy of <span class="the-name">Jarvis</span>'s notes, and links everyone at <span class="the-company">your company</span>, so each new person starts with the same systems.</p>
+    <section id="github">
+      <p id="gh-missing" class="hint" hidden>Setup could not get the GitHub tool onto this computer, so this step has to wait. Tell <span class="the-contact">your manager</span>, then click Next.</p>
+      <ol class="next steps" id="gh-steps">
+        <li><b>Do you already have your own GitHub account?</b>
+          <div class="chips" style="margin:8px 0 4px">
+            <button type="button" class="chip" id="gh-have">Yes, I have one</button>
+            <button type="button" class="chip" id="gh-signup">No, make me one</button>
+          </div>
+          <span class="hint" id="gh-signup-note" hidden>GitHub's sign-up page opened in Chrome. Use your work email, pick any username, then come back here.</span></li>
+        <li><button class="step" id="gh-connect">Connect my GitHub</button>
+          <span id="gh-note">A GitHub page opens. Sign in, then type the code shown here.</span>
+          <div id="gh-code" hidden>Your code: <code id="gh-code-value" style="font-size:22px;letter-spacing:.08em"></code>
+            <button type="button" class="copy" id="gh-code-copy">Copy</button></div></li>
+        <li id="org-step"><b>Your company's GitHub</b>
+          <div id="org-box"><span class="hint">Connect your own GitHub first.</span></div></li>
+        <li><button class="step" id="gh-backup" disabled>Back up my assistant</button>
+          <span id="gh-backup-note">Makes a private copy. Your keys and tokens are never included.</span></li>
+      </ol>
+    </section>
+    <div class="nav"><button class="go quiet back" data-go="8">Back</button><button class="go next" id="gh-next" data-go="10" disabled>Next</button></div>
+  </div>
+
+  <div class="page" data-page="10" hidden>
+    <div class="finale">
+      <div class="burst" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="orb big" aria-hidden="true">&#10003;</div>
+      <h1>You are all set<span id="final-user"></span></h1>
+      <p class="lede"><span class="the-name">Jarvis</span> is ready to work.</p>
+    </div>
+
+    <section>
+      <h2>What is ready</h2>
+      <ul class="ready" id="ready"></ul>
+    </section>
+
+    <section>
+      <h2>Try one of these first</h2>
+      <p class="hint" id="tries-hint" style="margin:0 0 12px">Click one to copy it, then paste it into Claude after <code>/start</code>.</p>
+      <div class="tries" id="tries"></div>
+    </section>
+
+    <button class="go" id="final-open">Open Claude</button>
+    <p class="hint" id="final-hint" style="text-align:center;margin:12px 0 22px">Pick your folder in the <b>Code</b> tab and type <code>/start</code>.</p>
+
+    <details class="what">
+      <summary>Where to find things later</summary>
+      <ul class="done" style="margin-top:12px">
+        <li><b>START-HERE.md</b> in your folder lists every command and things to try.</li>
+        <li>Run the install file again any time to get updates. Your notes are kept.</li>
+        <li>Stuck? Type "I'm stuck" in a chat, or send <span class="the-contact">your manager</span> a screenshot.</li>
+      </ul>
+    </details>
+    <div class="nav"><button class="go quiet back" data-go="9">Back</button><button class="go quiet" id="finish">Close setup</button></div>
+    <p class="hint" id="finish-note" style="text-align:center;margin-top:12px"></p>
+  </div>
+</main>
+<aside class="dock" id="dock" hidden>
+  <button type="button" class="dock-head" id="dock-head" aria-expanded="true" aria-controls="dock-list">
+    <span class="spin" id="dock-spin" aria-hidden="true"></span>
+    <span id="dock-title">Getting your computer ready</span>
+    <span class="count" id="dock-count"></span>
+  </button>
+  <ul id="dock-list"></ul>
+</aside>
+<script>
+const $ = id => document.getElementById(id)
+let options = {}, color = 'Teal'
+
+const fill = (select, items) => {
+  for (const [value, text] of items) select.add(new Option(text, value))
+}
+const slug = name => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'assistant'
+const chosenName = () => ($('name').value === '__custom' ? $('custom').value.trim() : $('name').value) || 'Marvin'
+
+// One page at a time. Pages 0.5, 1, 2 and 3 are the choices, 4-7 come after setup has run.
+let page = 1
+// The software this computer needs, installing while they go through the screens.
+const SAY = { waiting: 'Waiting its turn', working: 'Installing…', done: 'Installed', failed: 'Not installed' }
+let dockTouched = false
+function showInstalls(st) {
+  if (!st.rows || !st.rows.length) return
+  $('dock').hidden = false
+  $('dock-count').textContent = `${st.settled} of ${st.total}`
+  $('dock-title').textContent = st.busy ? 'Getting your computer ready' : 'Your computer is ready'
+  $('dock-spin').classList.toggle('done', !st.busy)
+  $('dock-list').replaceChildren(...st.rows.map(row => {
+    const li = Object.assign(document.createElement('li'), { className: row.state })
+    const mark = row.state === 'done' ? '\u2713' : row.state === 'failed' ? '!' : ''
+    const state = Object.assign(document.createElement('span'), { className: 'state', textContent: mark })
+    const text = document.createElement('span')
+    const detail = row.state === 'done' ? (row.note === 'already here' ? 'Already on this computer' : SAY.done)
+      : row.note || (row.state === 'working' ? `Installing now (${row.why})` : SAY[row.state])
+    text.append(row.label, Object.assign(document.createElement('small'), { textContent: detail }))
+    li.append(state, text)
+    return li
+  }))
+  // Open by default where there is room beside the page; a pill elsewhere, unless something needs them.
+  const needsThem = st.rows.some(r => r.state === 'failed' || (r.state === 'working' && r.note))
+  if (!dockTouched) $('dock').dataset.open = String(needsThem || (st.busy && innerWidth >= 1040))
+  if (st.busy) setTimeout(async () => showInstalls(await post('/installs/status')), 2000)
+}
+$('dock-head').onclick = () => {
+  dockTouched = true
+  const open = $('dock').dataset.open !== 'false'
+  $('dock').dataset.open = String(!open)
+  $('dock-head').setAttribute('aria-expanded', String(!open))
+}
+
+// What each later step ended up as, for the last screen.
+const done = { chrome: 0, drill: false, connectors: 0, connectorsKnown: false, github: false }
+const doneState = done
+
+// The primary agent, and the others ticked beside it.
+const mainTool = () => (document.querySelector('#main-list input:checked') || {}).value || options.main || 'claude'
+const pickedTools = () => [...new Set([mainTool(),
+  ...[...document.querySelectorAll('#tool-list input:checked')].map(box => box.value)])]
+function refreshTools() {
+  const main = mainTool()
+  // The primary one is not also offered as an "other".
+  for (const row of document.querySelectorAll('#tool-list label')) row.hidden = row.querySelector('input').value === main
+  $('extras-bypass-row').hidden = !pickedTools().some(id => id !== 'claude' && id !== main)
+  // Remote control and color modes are Claude's.
+  $('remote').closest('label').hidden = $('tint').closest('label').hidden = !pickedTools().includes('claude')
+}
+const codexMain = () => Boolean(result && result.main === 'codex')
+
+// Codex as the main assistant: is it signed in, and open the ChatGPT app on the folder.
+function showCodex(a) {
+  const words = $('cx-text'), button = $('cx-login')
+  button.hidden = true
+  done.codexIn = a.state === 'signed-in'
+  if (a.state === 'signed-in') {
+    words.textContent = '\u2713 Already signed in to ChatGPT on this computer.'
+  } else if (a.state === 'signed-out') {
+    words.textContent = a.waiting ? 'A sign-in page opened in your browser. Finish it there.' : 'You are not signed in to ChatGPT yet.'
+    button.hidden = a.waiting
+  } else {
+    words.textContent = 'Codex is still installing. This checks again by itself.'
+  }
+  if ((a.waiting || a.state === 'no-codex') && page === 4.5) setTimeout(async () => showCodex(await post('/codex/status')), 3000)
+}
+const opened = {}
+async function openTool(tool) {
+  const reply = await post('/tool/open', { tool: tool.id, folder: result ? result.folder : '' })
+  if (reply.opened) opened[tool.id] = true
+  showFinale()
+  if (!reply.opened) {
+    const row = $('ready').querySelector(`li[data-tool="${tool.id}"] small`)
+    if (row) row.textContent = reply.installed
+      ? `It could not be opened from here. In your folder, double-click the "Open" file for ${tool.label}.`
+      : 'Still installing, or it could not be installed. Look at the installs panel, then try again.'
+  }
+}
+
+function showFinale() {
+  $('final-user').textContent = result && result.user ? `, ${result.user}` : ''
+  if (codexMain()) {
+    $('tries-hint').textContent = 'Click one to copy it, then paste it into ChatGPT after $start.'
+    $('final-hint').textContent = 'Choose your folder as the project, then type $start.'
+    if (!$('final-open').dataset.clicked) $('final-open').textContent = 'Open ChatGPT'
+  }
+  const sys = ((result && result.systems) || [])
+  const sysWords = sys.length ? ' ' + sys.map(s => `${s.label} ${s.state === 'live' ? 'connected' : 'pending'}`).join(', ') + '.' : ''
+  const setUp = `Its folder, notes and company profile.${sysWords}`
+  const rows = codexMain() ? [
+    [true, `${result.assistant} is set up`, setUp, 0],
+    [Boolean(done.codexIn), 'ChatGPT account', done.codexIn ? 'Signed in on this computer.' : 'Not signed in yet.', 4.5],
+    [Boolean(opened.codex), 'The ChatGPT app', opened.codex ? 'Opened.' : 'Not opened yet.', 4.5],
+    [done.drill, 'The four commands', done.drill ? 'You typed all four.' : 'Not practised yet.', 7],
+    [done.github, 'GitHub backup', done.github ? 'Connected.' : 'Not connected yet.', 9],
+  ] : [
+    [true, `${result ? result.assistant : 'Your assistant'} is set up`, setUp, 0],
+    [appState === 'installed', 'The Claude app', appState === 'installed' ? 'On this computer.' : 'Not installed yet.', 4],
+    [done.chrome >= 3, 'Chrome', done.chrome >= 3 ? 'Signed in, with Claude added.' : 'Not finished: this is what lets it work in your web tools for you.', 5],
+    [done.drill, 'The four commands', done.drill ? 'You typed all four.' : 'Not practised yet.', 7],
+    [done.connectors >= 3, 'Email, calendar and files',
+      done.connectors >= 3 ? 'Gmail, Calendar and Drive are connected.'
+        : done.connectorsKnown ? `${done.connectors} of 3 connected.` : 'Could not be checked from here.', 8],
+    [done.github, 'Company GitHub', done.github ? (done.org ? `Joined ${done.org}.` : 'Connected.') : 'Not connected yet.', 9],
+  ]
+  for (const tool of ((result && result.tools) || []).filter(tool => !(codexMain() && tool.id === 'codex'))) rows.push([Boolean(opened[tool.id]), tool.label,
+    opened[tool.id] ? `Opened in a terminal. Sign in there with ${tool.account}.` : `Set up. Open it once to sign in with ${tool.account}.`, tool])
+  $('ready').replaceChildren(...rows.map(([on, title, detail, go]) => {
+    const li = document.createElement('li')
+    if (on) li.className = 'on'
+    const mark = Object.assign(document.createElement('span'), { className: 'mark', textContent: on ? '\u2713' : '' })
+    const text = Object.assign(document.createElement('span'), { className: 'what-it-is' })
+    text.append(Object.assign(document.createElement('b'), { textContent: title }),
+      Object.assign(document.createElement('small'), { textContent: detail }))
+    li.append(mark, text)
+    const tool = typeof go === 'object' ? go : null
+    if (tool) li.dataset.tool = tool.id
+    if (!on && go) {
+      const fix = Object.assign(document.createElement('button'), { type: 'button', className: 'copy', textContent: tool ? 'Open it' : 'Finish it' })
+      fix.onclick = tool ? () => openTool(tool) : () => show(go)
+      li.append(fix)
+    }
+    return li
+  }))
+  $('tries').replaceChildren(...((result && result.try) || []).map(line => {
+    const card = Object.assign(document.createElement('button'), { type: 'button', className: 'try', textContent: line })
+    const tag = Object.assign(document.createElement('small'), { textContent: 'Click to copy' })
+    card.append(tag)
+    card.onclick = async () => {
+      try { await navigator.clipboard.writeText(line); tag.textContent = codexMain() ? 'Copied. Paste it into ChatGPT.' : 'Copied. Paste it into Claude.' } catch (error) { tag.textContent = 'Select the text and copy it' }
+    }
+    return card
+  }))
+  let k = 0
+  for (const dot of document.querySelectorAll('.burst i')) {
+    const angle = (k / 14) * Math.PI * 2, far = 110 + (k % 3) * 34
+    dot.style.setProperty('--x', `${Math.round(Math.cos(angle) * far)}px`)
+    dot.style.setProperty('--y', `${Math.round(Math.sin(angle) * far)}px`)
+    dot.style.setProperty('--k', String(k % 5 - 2))
+    k += 1
+  }
+}
+
+// The intro: each difference arrives as a pair, the regular LLM first and then yours, and stays.
+let slideTimer
+function startIntro() {
+  const rows = [...$('stage').querySelectorAll('.versus:not(.head)')]
+  rows.forEach((row, i) => row.style.setProperty('--i', String(i)))
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (still) $('stage').closest('.intro').classList.add('static')
+  const ready = () => { $('begin').disabled = false; $('begin-note').textContent = 'About five minutes from here.' }
+  if (still) ready()
+  else slideTimer = setTimeout(ready, rows.length * 950 + 600)
+}
+
+function show(n) {
+  page = n
+  if (n === 10) showFinale()
+  if (n === 7) setTimeout(() => $('drill').focus(), 60)
+  if (n === 8) post('/connectors/status').then(showConnectors)
+  if (n === 9) post('/github/status').then(showGithub)
+  for (const el of document.querySelectorAll('.page')) el.hidden = Number(el.dataset.page) !== n
+  $('progress').hidden = $('bar').hidden = n === 0
+  const choices = [0.5, 1, 2, 2.5, 3]
+  const after = codexMain() ? [4.5, 7, 9, 10] : [4, 5, 6, 7, 8, 9, 10]
+  $('progress').textContent = n <= 3 ? `Step ${choices.indexOf(n) + 1} of ${choices.length}` : `Almost there: ${after.indexOf(n) + 1} of ${after.length}`
+  const total = n <= 3 ? 4 : after.length, at = (n <= 3 ? choices : after).indexOf(n) + 1
+  $('bar').replaceChildren(...Array.from({ length: total }, (_, i) =>
+    Object.assign(document.createElement('i'), { className: i < at ? 'on' : '' })))
+  window.scrollTo(0, 0)
+  const first = document.querySelector(`.page[data-page="${n}"] h1`)
+  if (first) { first.tabIndex = -1; first.focus({ preventScroll: true }) }
+}
+for (const button of document.querySelectorAll('button[data-go]')) {
+  // With Codex as the main assistant, the Claude-only pages are skipped: GitHub's Back goes to the ChatGPT page.
+  button.onclick = () => {
+    const to = Number(button.dataset.go)
+    // Leaving the first question: if they use Claude, its pieces start installing now.
+    if (page === 0.5 && to === 1 && pickedTools().includes('claude')) post('/installs/start', { claude: true }).then(showInstalls)
+    // With Codex as the primary agent the flow is 4.5, 7, 9, 10: the Claude-only pages are stepped over.
+    if (codexMain() && to === 6) show(4.5)
+    else if (codexMain() && to === 8) show(page === 7 ? 9 : 7)
+    else show(to)
+  }
+}
+
+function refresh() {
+  const name = chosenName()
+  for (const el of document.querySelectorAll('.the-name')) el.textContent = name
+  $('custom').hidden = $('name').value !== '__custom'
+  $('title-name').textContent = name
+  $('go').textContent = `Set up ${name}`
+  $('folder').textContent = options.home + options.sep + slug(name)
+  document.documentElement.style.setProperty('--accent', options.colors[color])
+  document.documentElement.style.setProperty('--h', hueOf(options.colors[color]))
+  $('orb').textContent = (name.match(/[A-Za-z0-9]/) || ['A'])[0].toUpperCase()
+  for (const chip of $('name-chips').children) {
+    chip.setAttribute('aria-pressed', String(chip.dataset.value === $('name').value))
+  }
+  for (const card of $('style-cards').children) {
+    card.setAttribute('aria-pressed', String(card.dataset.value === $('style').value))
+  }
+  for (const b of $('colors').children) b.setAttribute('aria-pressed', String(b.dataset.color === color))
+  if (options.integrations) refreshSystems()
+}
+
+// A color's hue, so the background light can follow the chosen color.
+function hueOf(hex) {
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min
+  if (d === 0) return 0
+  const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4
+  return Math.round((h * 60 + 360) % 360)
+}
+
+// How each way of talking sounds, in one line.
+const VOICE = {
+  Professional: 'Three jobs moved stage today. Two need a call back.',  Casual: 'Nice, three jobs moved today! Two folks still need a ring.',
+  Sarcastic: 'Three jobs moved. Thrilling. Two still want a call, naturally.',
+  Coach: 'Three jobs moved, good work. Which of the two call-backs first?',
+}
+
+async function load() {
+  options = await (await fetch('/options')).json()
+  fill($('name'), [...options.names.map(n => [n, n]), ['__custom', 'Something else…']])
+  fill($('style'), options.styles.map(s => [s, s]))
+  fill($('role'), options.roles.map(r => [r, r]))
+  fill($('mode'), Object.entries(options.modes))
+  $('user').value = options.user
+  for (const el of document.querySelectorAll('.the-contact')) el.textContent = options.contact || 'your manager'
+  setupBusiness()
+  for (const tool of options.tools || []) {
+    const add = (type, list, checked) => {
+      const row = Object.assign(document.createElement('label'), { className: 'check' })
+      const box = Object.assign(document.createElement('input'), { type, value: tool.id, checked })
+      if (type === 'radio') box.name = 'main'
+      const words = document.createElement('span')
+      words.append(Object.assign(document.createElement('b'), { textContent: tool.label }),
+        `${tool.maker}. Needs ${tool.account}.`
+        + (tool.here ? (tool.signedIn ? ' Already on this computer, and signed in.' : ' Already on this computer.') : ''))
+      row.append(box, words)
+      box.onchange = refreshTools
+      list.append(row)
+    }
+    if (tool.canMain) add('radio', $('main-list'), tool.id === options.main)
+    add('checkbox', $('tool-list'), tool.on)
+  }
+  refreshTools()
+  for (const [name, hex] of Object.entries(options.colors)) {
+    const b = document.createElement('button')
+    b.type = 'button'; b.dataset.color = name; b.style.background = hex; b.title = name
+    b.setAttribute('aria-label', name)
+    b.onclick = () => { color = name; refresh() }
+    $('colors').append(b)
+  }
+  for (const [value, text] of [...options.names.map(n => [n, n]), ['__custom', 'Something else…']]) {
+    const chip = Object.assign(document.createElement('button'), { type: 'button', className: 'chip', textContent: text })
+    chip.dataset.value = value
+    chip.onclick = () => { $('name').value = value; refresh(); if (value === '__custom') $('custom').focus() }
+    $('name-chips').append(chip)
+  }
+  for (const style of options.styles) {
+    const card = Object.assign(document.createElement('button'), { type: 'button', className: 'voice' })
+    card.dataset.value = style
+    card.append(Object.assign(document.createElement('b'), { textContent: style }),
+      Object.assign(document.createElement('span'), { textContent: `\u201c${VOICE[style] || ''}\u201d` }))
+    card.onclick = () => { $('style').value = style; refresh() }
+    $('style-cards').append(card)
+  }
+  $('name').onchange = () => { refresh(); if ($('name').value === '__custom') $('custom').focus() }
+  $('custom').oninput = refresh
+  refresh()
+}
+
+let result
+$('go').onclick = async () => {
+  $('error').hidden = true
+  $('go').disabled = true
+  $('go').textContent = 'Setting up…'
+  try {
+    const response = await fetch('/apply', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        assistant: chosenName(), color, style: $('style').value, user: $('user').value, role: $('role').value,
+        company: $('company').value, industry: $('industry').value,
+        crm: $('crm').value, crm_other: $('crm-other').value, crm_name: $('crm-name').value,
+        phone: $('phone').value, phone_other: $('phone-other').value,
+        keys: { crm: $('crm-key').value, phone: $('phone-key').value },
+        mode: $('mode').value, remote: $('remote').checked, colors: $('tint').checked,
+        tools: pickedTools(), main: mainTool(), extrasBypass: $('extras-bypass').checked,
+      }),
+    })
+    result = await response.json()
+    if (!result.ok) throw new Error(result.error || 'Setup did not finish.')
+    $('done-name').textContent = result.assistant
+    $('done-folder').textContent = result.folder
+    for (const list of [$('log'), $('log-codex')]) {
+      list.replaceChildren(...result.log.map(line => Object.assign(document.createElement('li'), { textContent: line })))
+    }
+    for (const el of document.querySelectorAll('.the-folder')) el.textContent = result.folder
+    for (const el of document.querySelectorAll('.the-name')) el.textContent = result.assistant
+    drillAt = 0
+    askDrill()  // the practice follows the primary agent
+    show(codexMain() ? 4.5 : 4)
+    post('/installs/status').then(showInstalls)
+    post('/github/status').then(showGithub)
+    if (codexMain()) {
+      post('/codex/status').then(showCodex)
+    } else {
+      post('/app/status').then(showApp)
+      post('/account/status').then(showAccount)
+    }
+  } catch (error) {
+    $('error').textContent = `${error.message} Nothing is broken: fix it and click again, or send ${options.contact || 'your manager'} a screenshot.`
+    $('error').hidden = false
+    $('go').disabled = false
+    refresh()
+  }
+}
+
+// Is there already a Claude account on this computer, and is it the work one?
+function showAccount(a) {
+  const text = $('acct-text'), button = $('acct-login')
+  button.hidden = true
+  if (a.state === 'work') {
+    text.textContent = `\u2713 Already signed in as ${a.email}${a.org ? ` (${a.org})` : ''}. Use this same account in the Claude app.`
+  } else if (a.state === 'other') {
+    text.textContent = `This computer is signed in to Claude as ${a.email}, which is not your work email. `
+      + `Sign in with your ${workEmail()} so you are on the company plan.`
+    button.hidden = false
+    button.textContent = 'Sign in with my work email'
+  } else if (a.state === 'signed-out') {
+    text.textContent = a.waiting
+      ? 'A sign-in page opened in your browser. Finish it there, with your work email.'
+      : `You are not signed in to Claude yet. Use your ${workEmail()}.`
+    button.hidden = a.waiting
+    button.textContent = 'Sign in to Claude'
+  } else {
+    text.textContent = `You will sign in when the Claude app opens. Use your ${workEmail()}.`
+  }
+  if (a.waiting && page === 4) setTimeout(async () => showAccount(await post('/account/status')), 3000)
+}
+$('acct-login').onclick = async () => showAccount(await post('/account/login'))
+
+// The one big button: get the Claude app if it is missing, then open it.
+let appState = 'unknown'
+function showApp(status) {
+  appState = status.state
+  const where = status.system === 'mac' ? 'your Applications folder' : 'your Start menu'
+  const open = $('open')
+  if (status.state === 'installed') {
+    open.disabled = false
+    open.textContent = 'Open Claude'
+    if (!$('open-note').dataset.opened) $('open-note').textContent = '✓ The Claude app is on this computer. Open it, then follow the steps below.'
+  } else if (status.state === 'installing') {
+    open.disabled = true
+    open.textContent = 'Getting the Claude app…'
+    $('open-note').textContent = 'It is a large download, so give it a few minutes. The button turns into "Open Claude" when it is ready.'
+    setTimeout(async () => showApp(await post('/app/status')), 3000)
+  } else {
+    open.disabled = false
+    open.textContent = status.state === 'failed' ? 'Download Claude' : 'Install Claude'
+    $('open-note').textContent = status.state === 'failed'
+      ? `Setup could not install it by itself${status.error ? ` (${status.error})` : ''}. This opens the download page: install it there and this button will change to "Open Claude".`
+      : 'The Claude app is not on this computer yet. One click installs it.'
+    // Notice when the person has installed it by hand.
+    if (status.state === 'failed') setTimeout(async () => { if (appState === 'failed') showApp(await post('/app/status')) }, 5000)
+  }
+}
+
+$('open').onclick = async () => {
+  if (appState === 'installed') {
+    const opened = await post('/open', { folder: result ? result.folder : '' })
+    $('open-note').dataset.opened = '1'
+    $('open-note').textContent = opened.claude
+      ? 'Claude is opening. Follow the steps below, then come back here and click Next.'
+      : 'Claude did not open by itself. Find it in your Applications folder or Start menu.'
+  } else if (appState === 'failed') {
+    await post('/chrome', { page: 'claude-download' })
+    showApp(await post('/app/status'))
+  } else {
+    showApp(await post('/app/install'))
+  }
+}
+
+const post = async (path, data = {}) => (await fetch(path, {
+  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
+})).json()
+
+const workEmail = () => (options.workDomain ? `${options.workDomain} email` : 'work email')
+
+// --- The business: trade, CRM and phone system --------------------------------------
+const el = (tag, props = {}, ...kids) => { const n = Object.assign(document.createElement(tag), props); n.append(...kids); return n }
+const findSystem = (kind, id) => ((options.integrations || {})[kind] || []).find(row => row.id === id)
+
+// One dropdown per kind: the systems common in their trade first, then the rest.
+function fillSystems(kind) {
+  const select = $(kind), keep = select.value, industry = $('industry').value
+  const rows = (options.integrations || {})[kind] || []
+  const fits = row => row.for === '*' || row.for.includes(industry)
+  const special = row => row.nokey || row.named
+  const top = rows.filter(row => !special(row) && row.for !== '*' && row.for.includes(industry))
+  const rest = rows.filter(row => !special(row) && !top.includes(row))
+  select.replaceChildren(el('option', { value: '', textContent: 'Choose one…' }))
+  const group = (label, list) => {
+    if (!list.length) return
+    const g = el('optgroup', { label })
+    for (const row of list) g.append(el('option', { value: row.id, textContent: row.label }))
+    select.append(g)
+  }
+  const trade = (options.industries || {})[industry]
+  group(trade ? `Popular for ${trade.toLowerCase()}` : 'Popular', top)
+  group(top.length ? 'More' : 'All', rest.filter(fits).concat(rest.filter(row => !fits(row))))
+  group('Other', rows.filter(special))
+  select.value = [...select.options].some(o => o.value === keep) ? keep : ''
+}
+
+function refreshSystems() {
+  const company = $('company').value.trim()
+  for (const n of document.querySelectorAll('.the-company')) n.textContent = company || 'your company'
+  $('intro-company').textContent = company || 'Your business'
+  for (const kind of ['crm', 'phone']) {
+    const row = findSystem(kind, $(kind).value), card = $(`${kind}-card`)
+    $(`${kind}-other`).hidden = !(row && row.named)
+    const label = row ? (row.named ? ($(`${kind}-other`).value.trim() || 'It') : row.label) : ''
+    const state = !row ? '' : row.nokey ? 'none' : (row.live && options.bridge) ? 'live' : 'pending'
+    card.hidden = !row
+    $(`${kind}-key-row`).hidden = state !== 'pending'
+    if (row) {
+      const [badge, title, words] = state === 'live'
+        ? ['Connected', `${label} is ready`, `${chosenName()} can look things up in ${label} as soon as setup finishes. Read-only.`]
+        : state === 'pending'
+          ? ['Pending', `${label} integration`, `Paste an API key if you have one. The Technomancer finishes this connection, and nothing else is needed from you.`]
+          : ['Nothing to connect', label, `${chosenName()} works with what you paste in or describe.`]
+      card.replaceChildren(el('span', { className: `badge ${state}`, textContent: badge }),
+        el('p', {}, el('b', { textContent: title }), words))
+      $(`${kind}-key-label`).textContent = `${label} API key (optional)`
+      $(`${kind}-key-hint`).textContent = `Usually under Settings, then API or Integrations, in ${label}. Saved only on this computer.`
+    }
+    if (kind === 'crm') {
+      $('crm-name-row').hidden = state !== 'live'
+      for (const n of document.querySelectorAll('.crm-label')) n.textContent = label || 'the CRM'
+    }
+  }
+}
+
+function setupBusiness() {
+  const p = options.preset || {}
+  fill($('industry'), [['', 'Choose one…'], ...Object.entries(options.industries || {})])
+  $('company').value = p.company || ''
+  $('industry').value = p.industry || ''
+  fillSystems('crm'); fillSystems('phone')
+  if (p.crm) $('crm').value = p.crm
+  if (p.phone) $('phone').value = p.phone
+  $('industry').onchange = () => { fillSystems('crm'); fillSystems('phone'); refreshSystems() }
+  for (const id of ['company', 'crm-other', 'phone-other']) $(id).oninput = refreshSystems
+  // A key typed for one system must not ride along to the next one picked.
+  for (const id of ['crm', 'phone']) $(id).onchange = () => { $(`${id}-key`).value = ''; refreshSystems() }
+  refreshSystems()
+}
+
+// --- The company's GitHub organization ------------------------------------------------
+let orgTimer, orgAsked = false
+const joinTried = {}
+function orgButton(text, onclick, quiet) {
+  return el('button', { type: 'button', className: quiet ? 'copy' : 'step', textContent: text, onclick })
+}
+function orgNameInput(value) {
+  return el('input', { type: 'text', id: 'org-name', value: value || '', maxLength: 39, placeholder: 'the-company-name',
+    autocomplete: 'off', spellcheck: false, style: 'margin:8px 0' })
+}
+async function loadOrg(org) { showOrg(await post('/github/org/status', { org: org || '' })) }
+
+function showOrg(s) {
+  clearTimeout(orgTimer)
+  const box = $('org-box'), company = s.company || $('company').value.trim() || 'your company'
+  const say = text => el('p', { className: 'hint', style: 'margin:6px 0' }, text)
+  if (s.ok === false) { box.append(say(s.error || 'That did not work. Try again.')); return }
+  if (s.state === 'signed-out') { box.replaceChildren(say('Connect your own GitHub first.')); return }
+  if (s.state === 'unknown' || s.state === 'missing') {
+    const kids = [say(s.state === 'missing' ? `No GitHub organization called ${s.org} was found.` : `Does ${company} already have a company GitHub?`)]
+    const guesses = (s.guesses || []).concat((s.mine || []).map(m => m.org)).filter((v, i, a) => a.indexOf(v) === i)
+    const chips = el('div', { className: 'chips', style: 'margin:8px 0' })
+    for (const g of guesses) chips.append(el('button', { type: 'button', className: 'chip', textContent: `Yes: ${g}`, onclick: () => loadOrg(g) }))
+    chips.append(el('button', { type: 'button', className: 'chip', textContent: 'Yes, a different one', onclick: () => {
+      box.replaceChildren(say('Type its name, as it shows in github.com/<name>.'), orgNameInput(''),
+        orgButton('Find it', () => loadOrg($('org-name').value.trim())))
+    } }))
+    chips.append(el('button', { type: 'button', className: 'chip', textContent: 'No, create one', onclick: () => createOrg(company) }))
+    box.replaceChildren(...kids, chips)
+    return
+  }
+  done.org = s.state === 'active' ? s.org : ''
+  if (s.state === 'none') {
+    box.replaceChildren(
+      say(`Found ${s.org}. An owner has to add you: send them your GitHub username.`),
+      el('div', {}, el('code', { textContent: s.user }), orgButton('Copy', async e => {
+        try { await navigator.clipboard.writeText(s.user); e.target.textContent = 'Copied' } catch (err) { e.target.textContent = 'Select it and copy' }
+      }, true)),
+      say('Owners can ask their own assistant: "Add this person to our company GitHub." Setup accepts the invite for you.'),
+      orgButton('Check again', () => loadOrg(s.org), true))
+    if (page === 9) orgTimer = setTimeout(() => loadOrg(s.org), 15000)
+    return
+  }
+  if (s.state === 'pending') {
+    // Accept it for them once. If GitHub will not take it from here, its own page is opened
+    // once, and the person clicks Join there: never a loop of tabs.
+    if (joinTried[s.org]) {
+      box.replaceChildren(say(`You are invited to ${s.org}. GitHub's invitation page is open in Chrome: click Join there, then Check again.`),
+        orgButton('Check again', () => loadOrg(s.org), true))
+      return
+    }
+    joinTried[s.org] = true
+    box.replaceChildren(say(`You are invited to ${s.org}. Joining…`))
+    post('/github/org/join', { org: s.org }).then(showOrg)
+    return
+  }
+  // A member.
+  const kids = [el('p', { style: 'margin:6px 0', textContent: `✓ ${s.role === 'admin' ? 'You own' : 'You are in'} ${s.org}.` })]
+  if (s.settings) {
+    kids.push(say(`Company settings: ${s.summary || 'saved'}.`))
+    if (s.differs) kids.push(orgButton('Use the company’s settings', async () => {
+      const r = await post('/github/org/apply')
+      if (r.systems && result) result.systems = r.systems
+      showOrg(r)
+    }))
+  } else if (s.role === 'admin') {
+    kids.push(say(`Save ${company}'s systems here, so everyone you add next is set up the same way.`),
+      orgButton('Save company settings', async () => showOrg(await post('/github/org/claim', { org: s.org }))))
+  } else {
+    kids.push(say('No company settings are saved here yet. An owner saves them when they run setup.'))
+  }
+  $('gh-backup-note').textContent = `Makes a private copy in ${s.org}, where its owners can see it. Your keys and tokens are never included.`
+  box.replaceChildren(...kids)
+}
+
+function createOrg(company) {
+  post('/chrome', { page: 'github-new-org' })
+  $('org-box').replaceChildren(
+    el('p', { className: 'hint', style: 'margin:6px 0' },
+      `GitHub's page opened in Chrome. Choose the Free plan, name it after ${company}, and use your work email. Then come back.`),
+    el('label', { htmlFor: 'org-name', textContent: 'What did you name it?' }), orgNameInput(slugify(company)),
+    orgButton('I made it', async () => showOrg(await post('/github/org/claim', { org: $('org-name').value.trim() }))))
+}
+const slugify = text => (text || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 39)
+
+function showGithub(s) {
+  $('gh-missing').hidden = s.installed
+  $('gh-steps').hidden = !s.installed
+  if (!s.installed) $('gh-next').disabled = false  // nothing they can do here; do not trap them
+  if (s.state === 'connected') {
+    $('gh-connect').classList.add('done')
+    $('gh-connect').textContent = `\u2713 Connected as ${s.user}`
+    $('gh-connect').disabled = true
+    $('gh-note').hidden = true
+    $('gh-code').hidden = true
+    $('gh-backup').disabled = false
+    $('gh-next').disabled = false
+    done.github = true
+    $('gh-have').setAttribute('aria-pressed', 'true')
+    if (!orgAsked) { orgAsked = true; loadOrg() }
+  } else if (s.state === 'waiting') {
+    $('gh-code').hidden = !s.code
+    $('gh-code-value').textContent = s.code
+    $('gh-connect').textContent = 'Waiting for GitHub…'
+    setTimeout(async () => showGithub(await post('/github/status')), 2500)
+  } else {
+    $('gh-connect').textContent = 'Connect my GitHub'
+    $('gh-code').hidden = true
+    if (s.error) $('gh-note').textContent = s.error
+  }
+}
+$('gh-connect').onclick = async () => showGithub(await post('/github/connect'))
+$('gh-code-copy').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText($('gh-code-value').textContent)
+    $('gh-code-copy').textContent = 'Copied'
+    setTimeout(() => { $('gh-code-copy').textContent = 'Copy' }, 2500)
+  } catch (error) {
+    $('gh-code-copy').textContent = 'Select it and copy'
+  }
+}
+$('gh-have').onclick = () => { $('gh-have').setAttribute('aria-pressed', 'true'); $('gh-signup').setAttribute('aria-pressed', 'false') }
+$('gh-signup').onclick = () => {
+  $('gh-signup').setAttribute('aria-pressed', 'true'); $('gh-have').setAttribute('aria-pressed', 'false')
+  $('gh-signup-note').hidden = false
+  post('/chrome', { page: 'github-signup' })
+}
+
+// The four commands, typed once each.
+const DRILL_CODEX = [
+  ['$start', n => `Begins your day. ${n} reads its notes and tells you where things stand.`],
+  ['$save', n => `Ends your session. ${n} writes down what you did, so tomorrow picks up from here.`],
+  ['$update', () => 'A quick checkpoint in the middle of work, so nothing is lost.'],
+  ['$help', n => `Lists every command and what ${n} can do.`],
+]
+const drillList = () => (codexMain() ? DRILL_CODEX : DRILL)
+const DRILL = [
+  ['/start', n => `Begins your day. ${n} reads its notes and tells you where things stand.`],
+  ['/save', n => `Ends your session. ${n} writes down what you did, so tomorrow picks up from here.`],
+  ['/compact', n => `For when a chat gets long. It shrinks the chat to a summary so ${n} stays quick and keeps going.`],
+  ['/clear', () => 'Wipes this chat for a fresh start. Run /save first if you want it remembered.'],
+]
+let drillAt = 0
+function askDrill() {
+  const list = drillList(), sign = codexMain() ? 'dollar sign' : 'slash'
+  const done = drillAt >= list.length
+  $('drill-where').textContent = codexMain() ? 'ChatGPT' : 'Claude'
+  $('drill').hidden = done
+  $('drill-hint').textContent = done ? '' : `Start with the ${sign}.`
+  $('drill-next').disabled = !done
+  if (done) {
+    window.setTimeout(() => { doneState.drill = true }, 0)
+    $('drill-ask').textContent = `That is all four. You will use ${list[0][0]} and ${list[1][0]} every day.`
+    return
+  }
+  $('drill-ask').innerHTML = `Type <code>${list[drillAt][0]}</code> and press Enter`
+  $('drill').placeholder = list[drillAt][0]
+  $('drill').value = ''
+}
+$('drill').onkeydown = event => {
+  if (event.key !== 'Enter') return
+  const typed = $('drill').value.trim().toLowerCase()
+  const [command, explain] = drillList()[drillAt]
+  if (typed !== command) {
+    $('drill-hint').textContent = typed.replace(/^[\/$]/, '') === command.slice(1)
+      ? `Close. Put the ${codexMain() ? 'dollar sign' : 'slash'} in front, with no space.`
+      : `Not quite. Type ${command} exactly.`
+    return
+  }
+  const said = Object.assign(document.createElement('div'), { className: 'said', textContent: command })
+  const reply = document.createElement('div')
+  reply.className = 'reply'
+  reply.append(Object.assign(document.createElement('b'), { textContent: '\u2713 ' }), explain(result ? result.assistant : chosenName()))
+  $('drill-log').append(said, reply)
+  drillAt += 1
+  askDrill()
+}
+askDrill()
+
+// Connectors: open the page for them, then watch for each one to connect.
+let connTimer
+function showConnectors(c) {
+  let on = 0
+  for (const row of $('conn-list').children) {
+    const yes = (c.connected || []).includes(row.dataset.conn)
+    row.classList.toggle('on', yes)
+    if (yes) on += 1
+  }
+  done.connectors = on
+  done.connectorsKnown = c.state !== 'unknown'
+  $('conn-note').textContent = c.state === 'unknown'
+    ? 'Setup cannot see your connectors from here, so there are no ticks. If the page shows "Connected" for all three, you are done.'
+    : on === 3 ? 'All three are connected.' : c.checking ? 'Checking…' : 'Each one gets a tick here once it is connected.'
+  clearTimeout(connTimer)
+  if (page === 8 && on < 3 && c.state !== 'unknown') {
+    connTimer = setTimeout(async () => showConnectors(await post('/connectors/status')), 6000)
+  }
+}
+$('conn-open').onclick = async () => {
+  await post('/chrome', { page: 'connectors' })
+  $('conn-open').classList.add('done')
+  showConnectors(await post('/connectors/status'))
+}
+$('conn-check').onclick = async () => showConnectors(await post('/connectors/status', { fresh: true }))
+
+$('gh-backup').onclick = async () => {
+  $('gh-backup').disabled = true
+  $('gh-backup').textContent = 'Backing up…'
+  const done = await post('/github/backup', { folder: result.folder })
+  if (done.ok) {
+    $('gh-backup').classList.add('done')
+    $('gh-backup').textContent = '✓ Backed up'
+    $('gh-backup-note').textContent = `Private copy: ${done.url}`
+  } else {
+    $('gh-backup').disabled = false
+    $('gh-backup').textContent = 'Back up my assistant'
+    $('gh-backup-note').textContent = done.error
+  }
+}
+
+for (const button of document.querySelectorAll('button.step[data-page]')) {
+  button.onclick = async () => {
+    await fetch('/chrome', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ page: button.dataset.page }),
+    })
+    if (!button.classList.contains('done')) done.chrome += 1
+    button.classList.add('done')
+    button.textContent = '✓ ' + button.textContent.replace(/^✓ /, '')
+  }
+}
+
+$('copy-folder').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(result.folder)
+    $('copy-folder').textContent = 'Copied'
+  } catch (error) {
+    $('copy-folder').textContent = 'Select it and copy'
+  }
+}
+
+async function openChatGPT() {
+  const reply = await post('/tool/open', { tool: 'codex', folder: result ? result.folder : '' })
+  if (reply.opened) opened.codex = true
+  $('cx-note').textContent = reply.opened ? 'ChatGPT is opening. Follow the steps below, then come back here and click Next.'
+    : reply.installed ? 'It did not open by itself. In your folder, double-click "Open Codex".'
+      : 'Codex is still installing. Watch the installs panel, then click again.'
+  return reply.opened
+}
+$('cx-open').onclick = openChatGPT
+$('cx-copy').onclick = async () => {
+  try { await navigator.clipboard.writeText(result.folder); $('cx-copy').textContent = 'Copied' } catch (error) { $('cx-copy').textContent = 'Select it and copy' }
+}
+$('cx-login').onclick = async () => showCodex(await post('/codex/login'))
+
+$('final-open').onclick = async () => {
+  $('final-open').dataset.clicked = '1'
+  if (codexMain()) {
+    $('final-open').textContent = (await openChatGPT()) ? 'ChatGPT is opening…' : 'In your folder, double-click "Open Codex"'
+    return
+  }
+  const opened = await post('/open', { folder: result ? result.folder : '' })
+  $('final-open').textContent = opened.claude ? 'Claude is opening…' : 'Open Claude from your Applications or Start menu'
+}
+
+$('finish').onclick = async () => {
+  await fetch('/quit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+  $('finish').disabled = true
+  $('finish-note').textContent = 'Setup is finished. You can close this tab and the setup window.'
+  for (const el of document.querySelectorAll('.page[data-page="10"] .back')) el.disabled = true
+}
+
+load().then(() => { show(0); startIntro(); post('/installs/status').then(showInstalls) })
+</script>
+</body>
+</html>

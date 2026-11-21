@@ -1,0 +1,17 @@
+{
+  "assistant": "Sol",
+  "user": "Pat",
+  "role": "Sales / Estimator",
+  "style": "Casual",
+  "color": "Teal",
+  "mode": "bypassPermissions",
+  "company": "Example Plumbing",
+  "industry": "plumbing",
+  "crm": "jobber",
+  "phone": "callrail",
+  "keys": {"crm": "test_jobber_key_not_real_123"},
+  "main": "codex",
+  "tools": [
+    "codex"
+  ]
+}

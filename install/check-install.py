@@ -1,0 +1,199 @@
+#!/usr/bin/env python3
+"""Checks what the installer built, for the automated test.
+
+    python check-install.py first    after the first run
+    python check-install.py again    after a second run over a changed workspace
+    python check-install.py codex    after a run with Codex as the main assistant (folder ~/sol)
+"""
+import json
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+home = Path.home()
+work = home / "friday"
+failed = []
+notes = []
+
+
+def check(label, ok):
+    print(("  ok    " if ok else "  FAIL  ") + label)
+    if not ok:
+        failed.append(label)
+
+
+def note(label, ok):
+    """Something worth knowing that the test machine may not be able to do."""
+    print(("  ok    " if ok else "  note  ") + label)
+    if not ok:
+        notes.append(label)
+
+
+def read(path):
+    return path.read_text(encoding="utf-8") if path.exists() else ""
+
+
+def finish():
+    print()
+    if notes:
+        print("Not done on this test machine: " + "; ".join(notes))
+    if failed:
+        print(str(len(failed)) + " check(s) failed: " + "; ".join(failed))
+        sys.exit(1)
+    print("All checks passed.")
+    sys.exit(0)
+
+
+def codex_settings():
+    text = read(home / ".codex" / "config.toml")
+    return text, text.split("\n[", 1)[0]
+
+
+if sys.argv[1:] == ["codex"]:
+    sol = home / "sol"
+    ending = ".cmd" if os.name == "nt" else ".command"
+    print("Codex as the main assistant")
+    check("workspace folder ~/sol", (sol / "CLAUDE.md").exists() and "SOL" in read(sol / "CLAUDE.md"))
+    check("Codex is pointed at the notes", "CLAUDE.md" in read(sol / "AGENTS.md"))
+    check("skills copied where Codex looks", (sol / ".agents" / "skills" / "github-team" / "SKILL.md").exists())
+    start = read(sol / ".agents" / "skills" / "start" / "SKILL.md")
+    check("/start and /save are skills", start.startswith("---\nname: start\ndescription:")
+          and (sol / ".agents" / "skills" / "save" / "SKILL.md").exists())
+    check("the folder's Open file opens the ChatGPT app", "codex app ." in read(sol / f"Open Codex{ending}"))
+    desktops = [home / "Desktop"] + sorted(home.glob("OneDrive*/Desktop"))
+    check("desktop shortcut opens the ChatGPT app", any("codex app ." in read(d / f"Sol{ending}") for d in desktops))
+    whole, top = codex_settings()
+    check("Codex never asks", 'approval_policy = "never"' in top and 'sandbox_mode = "danger-full-access"' in top)
+    check("Codex's settings are written once", whole.count("approval_policy") == 1)
+    check("Codex trusts the folder", ("sol']" in whole.lower() or 'sol"]' in whole.lower()) and 'trust_level = "trusted"' in whole)
+    check("Claude's color modes left out", not (sol / ".mods").exists())
+    check("START-HERE teaches the dollar-sign commands", "`$start`" in read(sol / "START-HERE.md") and "/compact" not in read(sol / "START-HERE.md"))
+    check("pending CRM key saved", "JOBBER_API_KEY=test_jobber_key_not_real_123" in read(sol / ".env"))
+    check("pending systems marked in CLAUDE.md", "Jobber" in read(sol / "CLAUDE.md") and "finishing this connection" in read(sol / "CLAUDE.md"))
+    check("no live skill for a pending CRM", not (sol / ".claude" / "skills" / "crm-roofr").exists())
+    spot = (Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "OpenAI" / "Codex" / "bin" / "codex.exe") if os.name == "nt" \
+        else (home / ".local" / "bin" / "codex")
+    note("Codex installed", shutil.which("codex") is not None or spot.exists())
+    finish()
+
+print("Workspace")
+check("setup downloaded to ~/.technomancer-setup", (home / ".technomancer-setup" / "install" / "wizard.py").exists())
+check("workspace folder ~/friday", work.is_dir())
+check("CLAUDE.md names the assistant and the person", "FRIDAY" in read(work / "CLAUDE.md") and "Pat" in read(work / "CLAUDE.md"))
+check("START-HERE.md written", "/save" in read(work / "START-HERE.md") and "/compact" in read(work / "START-HERE.md"))
+check("/save command present, /end gone",
+      (work / ".claude" / "commands" / "save.md").exists() and not (work / ".claude" / "commands" / "end.md").exists())
+check("Roofr and CTM skills present", all((work / ".claude" / "skills" / s / "SKILL.md").exists() for s in ("crm-roofr", "phone-ctm")))
+check("github-team skill present", (work / ".claude" / "skills" / "github-team" / "SKILL.md").exists())
+check("swarm layer left out", not (work / ".claude" / "agents" / "the-boys.md").exists())
+check("bridge token in .env", "TM_BRIDGE_TOKEN=test_token_not_real_0000000000" in read(work / ".env"))
+check("bridge address in .env", "TM_BRIDGE_URL=https://bridge.example.com/api" in read(work / ".env"))
+check("token not in CLAUDE.md or START-HERE.md",
+      "test_token" not in read(work / "CLAUDE.md") + read(work / "START-HERE.md"))
+
+print("Role kit, business and company knowledge")
+claude_md = read(work / "CLAUDE.md")
+check("role focus in CLAUDE.md", "Running appointments and closing jobs" in claude_md)
+check("CRM name in CLAUDE.md", "Pat Example" in claude_md)
+check("company and trade in CLAUDE.md", "Example Roofing Co" in claude_md and "**Trade:** Roofing" in claude_md)
+check("live systems in CLAUDE.md", "crm-roofr" in claude_md and "phone-ctm" in claude_md)
+check("company settings saved", json.loads(read(work / ".company.json") or "{}").get("crm") == "roofr")
+check("role examples in START-HERE.md", "Show me my open jobs" in read(work / "START-HERE.md"))
+check("knowledge pack unpacked", (work / "company" / "README.md").exists() and (work / "company" / "sops" / "example.md").exists())
+check("CLAUDE.md points at the pack", "company/README.md" in claude_md)
+
+print("Color modes")
+topics = read(work / ".mods" / "session-tint" / "hooks" / "topics.js")
+check("mod copied into the workspace", (work / ".mods" / "session-tint" / "hooks" / "register.ts").exists())
+check("topics hold the assistant and the company", '"label": "Friday"' in topics and '"label": "Example Roofing Co"' in topics)
+check("assistant color is teal", "#1e8c80" in topics)
+
+print("Claude settings")
+try:
+    settings = json.loads(read(home / ".claude" / "settings.json") or "{}")
+except ValueError:
+    settings = {}
+check("bypass permissions on", settings.get("permissions", {}).get("defaultMode") == "bypassPermissions")
+check("remote control on", settings.get("remoteControlAtStartup") is True)
+check("starting model set for the role", settings.get("model") == "sonnet")
+check("chat history kept", settings.get("cleanupPeriodDays") == 3650)
+check("mod folder registered", "session-tint" in settings.get("env", {}).get("CLAUDE_CODE_PLUGIN_DIRS", ""))
+
+print("Antigravity")
+try:
+    agy = json.loads(read(home / ".gemini" / "antigravity-cli" / "settings.json") or "{}")
+except ValueError:
+    agy = {}
+check("Antigravity never asks", agy.get("toolPermission") == "always-proceed")
+check("Antigravity trusts the assistant's folder", str(work) in agy.get("trustedWorkspaces", []))
+check("Antigravity is pointed at CLAUDE.md", "CLAUDE.md" in read(work / "GEMINI.md"))
+
+print("Other assistants")
+check("Codex and Grok are pointed at CLAUDE.md", "CLAUDE.md" in read(work / "AGENTS.md"))
+check("all three are pointed at the skills", all(".claude/skills/" in read(work / f) for f in ("AGENTS.md", "GEMINI.md")))
+local = Path(os.environ.get("LOCALAPPDATA", ""))
+ending = ".cmd" if os.name == "nt" else ".command"
+for label, command, flag, windows_spot, other_spot in (
+        ("Antigravity", "agy", "", local / "agy" / "bin" / "agy.exe", home / ".local" / "bin" / "agy"),
+        ("Codex", "codex app .", "",
+         local / "Programs" / "OpenAI" / "Codex" / "bin" / "codex.exe", home / ".local" / "bin" / "codex"),
+        ("Grok", "grok", "--always-approve", home / ".grok" / "bin" / "grok.exe", home / ".grok" / "bin" / "grok")):
+    opener = read(work / f"Open {label}{ending}")
+    check(f"{label} has a file that opens it in the folder", command in opener and "cd " in opener)
+    if flag:
+        check(f"{label} never asks", flag in opener)
+    if os.name != "nt":
+        check(f"{label}'s file can be run", os.access(work / f"Open {label}{ending}", os.X_OK))
+    note(f"{label} installed", shutil.which(command.split()[0]) is not None or (windows_spot if os.name == "nt" else other_spot).exists())
+whole, top = codex_settings()
+check("Codex never asks, in the app too", 'approval_policy = "never"' in top and 'sandbox_mode = "danger-full-access"' in top)
+check("Codex trusts the assistant's folder", ("friday']" in whole.lower() or 'friday"]' in whole.lower()) and 'trust_level = "trusted"' in whole)
+check("Codex's settings are written once", whole.count("approval_policy") == 1)
+check("Codex has the skills too", (work / ".agents" / "skills" / "crm-roofr" / "SKILL.md").exists())
+
+print("Shortcut and tools")
+desktops = [home / "Desktop"] + sorted(home.glob("OneDrive*/Desktop"))
+check("desktop shortcut made", any((d / n).exists() for d in desktops for n in ("Friday.cmd", "Friday.command")))
+os.environ["PATH"] = str(home / ".local" / "bin") + os.pathsep + os.environ.get("PATH", "")
+claude = shutil.which("claude")
+check("Claude Code installed", claude is not None)
+if claude:
+    version = subprocess.run([claude, "--version"], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    check("Claude Code runs (" + version.stdout.strip()[:40] + ")", version.returncode == 0)
+    valid = subprocess.run([claude, "plugin", "validate", str(work / ".mods" / "session-tint")],
+                           capture_output=True, text=True, encoding="utf-8", errors="replace")
+    check("Claude accepts the color mod", valid.returncode == 0)
+check("git on this machine", shutil.which("git") is not None)
+note("GitHub tool on this machine", shutil.which("gh") is not None or (home / ".local" / "bin" / ("gh.exe" if os.name == "nt" else "gh")).exists())
+note("node on this machine", shutil.which("node") is not None)
+if sys.platform == "darwin":
+    note("Claude desktop app installed", Path("/Applications/Claude.app").exists())
+    note("Chrome installed", Path("/Applications/Google Chrome.app").exists())
+elif os.name == "nt":
+    local = Path(os.environ.get("LOCALAPPDATA", ""))
+    note("Claude desktop app installed", (local / "AnthropicClaude" / "claude.exe").exists())
+
+print("Chrome")
+EXT = "fcoeoabgfenejglbffodgkkbkcdhcgfn"
+if os.name == "nt":
+    import winreg
+    try:
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Google\Chrome\Extensions" + "\\" + EXT)
+        offered = "clients2.google.com" in winreg.QueryValueEx(key, "update_url")[0]
+    except OSError:
+        offered = False
+else:
+    offered = "clients2.google.com" in read(
+        home / "Library" / "Application Support" / "Google" / "Chrome" / "External Extensions" / (EXT + ".json"))
+check("Claude extension offered to Chrome", offered)
+
+if sys.argv[1:] == ["again"]:
+    print("Second run")
+    check("the person's own note survived", "my own note" in read(work / "state" / "goals.md"))
+    check("settings backup kept", (home / ".claude" / "settings.json.before-setup").exists())
+    check("token still there once", read(work / ".env").count("TM_BRIDGE_TOKEN=") == 1)
+    check("systems section written once", read(work / "CLAUDE.md").count("<!-- systems:start -->") == 1)
+
+finish()

@@ -1,0 +1,85 @@
+name: Installer
+
+# Runs the real install scripts on a fresh Windows machine and a fresh Mac, with
+# the setup page's answers supplied from a file, then checks what they built.
+
+on:
+  push:
+    branches: [main, next]
+    paths: ['install/**', 'integrations/**', 'mods/**', '.claude/**', '.github/workflows/installer.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      TM_BRIDGE_TOKEN: test_token_not_real_0000000000
+      TM_BRIDGE_URL: https://bridge.example.com/api
+      ASSISTANT_ANSWERS_FILE: ${{ github.workspace }}/install/test-answers.json
+      ASSISTANT_PACK_DIR: ${{ github.workspace }}/install/test-pack
+      ASSISTANT_STARTER_REF: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run the installer (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          Get-Content install\install.ps1 -Raw | Invoke-Expression
+
+      - name: Run the installer (Mac)
+        if: runner.os == 'macOS'
+        run: bash install/install.sh < /dev/null
+
+      - name: Check what it built
+        shell: bash
+        run: python3 install/check-install.py first || python install/check-install.py first
+
+      - name: Change a note, then run the installer again (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          Add-Content "$HOME\friday\state\goals.md" "my own note"
+          # the second run uses the small fetched Python, the path a computer with none takes
+          $env:ASSISTANT_FORCE_UV = "1"
+          Get-Content install\install.ps1 -Raw | Invoke-Expression
+
+      - name: Change a note, then run the installer again (Mac)
+        if: runner.os == 'macOS'
+        run: |
+          echo "my own note" >> "$HOME/friday/state/goals.md"
+          # the second run uses the small fetched Python, the path a Mac without developer tools takes
+          ASSISTANT_FORCE_UV=1 bash install/install.sh < /dev/null
+
+      - name: Check the second run kept everything
+        shell: bash
+        run: python3 install/check-install.py again || python install/check-install.py again
+
+      - name: Set up a second assistant with Codex as the main one
+        shell: bash
+        run: |
+          python3 install/wizard.py --answers install/test-answers-codex.json || python install/wizard.py --answers install/test-answers-codex.json
+          python3 install/check-install.py codex || python install/check-install.py codex
+
+      - name: The setup page can install the Claude app by itself (Mac)
+        if: runner.os == 'macOS'
+        run: |
+          rm -rf /Applications/Claude.app "$HOME/Applications/Claude.app"
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0, "install")
+          import wizard
+          assert not wizard.claude_app_installed(), "app should be gone before the test"
+          wizard._install_claude_app()
+          assert wizard.claude_app_installed(), "app was not installed"
+          print("Claude app installed by the setup page's own installer")
+          PY
+          ls -d /Applications/Claude.app
