@@ -650,49 +650,28 @@ questions about your work, so it knows what to help with. Give it about ten minu
 
 
 def first_chat(name, a, main="claude"):
-    """The one-time first chat: `/start` follows this file instead of its briefing, then deletes it.
+    """The one-time first chat: the start command follows this file instead of its briefing, once.
 
     It checks for real that what setup installed works, then asks about the person's work and
-    writes the answers into the notes, so later chats know what to work on.
+    writes the answers into the notes, so later chats know what to work on. Nothing in it is
+    tied to choices that can change after it is written (company GitHub can swap the systems,
+    and Claude and ChatGPT read the same file): it points at `CLAUDE.md` and covers both apps.
     """
-    user, company = a["user"], company_name(a)
-    codex = main == "codex"
-    checks = []
-    if a.get("chrome", True):
-        checks.append("- **Chrome.** " + (
-            "Use the ChatGPT Chrome extension (`@Chrome` in the message box) to open the company's "
-            "website (or google.com if you do not know it) and read the page title. If it is not set "
-            "up: in the ChatGPT app, Settings, then Computer use, then Google Chrome."
-            if codex else
-            "Use Claude in Chrome to open the company's website (or google.com if you do not know it) "
-            "and read the page title. If it is not set up: add the Claude extension to Chrome and sign "
-            "in to it."))
-    checks.append("- **Email, calendar and files.** Count today's unread emails in Gmail, list today's "
-                  "events in Google Calendar, and name the three most recently changed files in Google "
-                  "Drive. " + ("If they are not connected: in the ChatGPT app, Plugins, then Gmail, "
-                               "Google Calendar and Google Drive, with the work Google account."
-                               if codex else
-                               "If they are not connected: claude.ai, Settings, then Connectors."))
-    for row in systems_summary(a):
-        if row["state"] == "live":
-            checks.append(f"- **{row['label']}** ({row['kind']}). Pull one recent "
-                          f"{'job' if row['kind'] == 'CRM' else 'call'} with the matching skill in "
-                          "`.claude/skills/` and say what you found in one line.")
-        else:
-            checks.append(f"- **{row['label']}** ({row['kind']}). Not connected yet: {BRAND} finishes "
-                          "this connection. Just say it is on its way.")
-    checks.append("- **Company GitHub.** Only if this folder has a `.company-github` file (setup writes "
-                  "it once the GitHub step is done): run `gh auth status` and say whether it is signed in. "
-                  "Otherwise skip this line.")
-    save = "`$save`" if codex else "`/save`"
+    user = a["user"]
+    chrome = ("- **Chrome.** Open the company's website (or google.com if you do not know it) and read\n"
+              "  the page title. In Claude, use Claude in Chrome; if it is not set up, add the Claude\n"
+              "  extension to Chrome and sign in to it. In ChatGPT, use the Chrome extension (`@Chrome`\n"
+              "  in the message box); if it is not set up, in the ChatGPT app go to Settings, then\n"
+              "  Computer use, then Google Chrome.\n") if a.get("chrome", True) else ""
     return f"""# First chat
 
-This is {user}'s first chat with you. The start command follows this file instead of its usual
-briefing, once. Keep it warm, plain and short: about ten minutes in all.
+This is {user}'s first chat with you. The start command (`/start`, or `$start` in ChatGPT)
+follows this file instead of its usual briefing, once. Keep it warm, plain and short: about
+ten minutes in all.
 
 ## 1. Say hello
 
-Greet {user} by name. In two or three sentences, show that you already know {company}:
+Greet {user} by name. In two or three sentences, show that you already know the company:
 what it does and the problems {user} said are big (both are in `CLAUDE.md`). Then say this
 first chat has two parts: a quick check that your tools work, and a few questions so you
 know what to work on.
@@ -703,7 +682,16 @@ Try each one for real, quickly, and show a list with a check mark or a cross for
 For a cross, add one plain sentence on how to fix it. Do not stop at a failure: finish the
 list. This check only reads: never send, change or delete anything.
 
-{chr(10).join(checks)}
+{chrome}- **Email, calendar and files.** Count today's unread emails in Gmail, list today's events
+  in Google Calendar, and name the three most recently changed files in Google Drive. If they
+  are not connected: in Claude, claude.ai, then Settings, then Connectors; in ChatGPT, the
+  app's Plugins, then Gmail, Google Calendar and Google Drive, with the work Google account.
+- **The company's systems.** For each system in Part 3 of `CLAUDE.md`: if it is connected,
+  pull one recent record (a job from the CRM, a call from the phone system) with the skill it
+  names, and say what you found in one line. If it is still being connected, just say it is
+  on its way.
+- **Company GitHub.** Only if this folder has a `.company-github` file: run `gh auth status`
+  and say whether it is signed in. Otherwise leave this line out.
 
 ## 3. Ask about the work
 
@@ -715,6 +703,8 @@ then move on: this is a conversation, not a form.
 3. What takes up your time, or keeps coming back, that you wish someone else handled?
 4. Who do you work with most, inside the company and outside it?
 5. What would make the next 90 days a win?
+
+If {user} wants to stop partway, write down what you have (step 4) and finish (step 5).
 
 ## 4. Write it down
 
@@ -728,13 +718,13 @@ then move on: this is a conversation, not a form.
 
 Show {user} a short summary of what you wrote, and fix anything they correct.
 
-## 5. Get going
+## 5. Finish, then get going
 
-Suggest three specific things you can do for {user} right now, based on their answers and
-the tools that passed the check. Ask which one to start.
+Delete this file (`state/first-chat.md`) now, whatever happens next, and do what
+`.claude/commands/save.md` says, so every chat after this one opens with the normal briefing.
 
-Before starting it, delete this file (`state/first-chat.md`) and do what {save} does
-(`.claude/commands/save.md`), so every chat after this one opens with the normal briefing.
+Then suggest three specific things you can do for {user} right now, based on their answers
+and the tools that passed the check, and ask which one to start.
 """
 
 
@@ -1244,11 +1234,11 @@ def open_in_chrome(page, new_window=False):
     extra = ["--new-window"] if new_window else []
     try:
         if IS_WINDOWS and chrome_path():
-            subprocess.Popen([chrome_path(), *extra, url])
+            subprocess.Popen([chrome_path(), *_profile_args(), *extra, url])
             return True
         if IS_MAC:
-            command = (["open", "-na", "Google Chrome", "--args", *extra, url] if new_window
-                       else ["open", "-a", "Google Chrome", url])
+            command = (["open", "-na", "Google Chrome", "--args", *_profile_args(), *extra, url]
+                       if new_window or _profile_args() else ["open", "-a", "Google Chrome", url])
             if subprocess.run(command, check=False, capture_output=True).returncode == 0:
                 return True
     except OSError:
@@ -1289,9 +1279,19 @@ def chrome_status(extension_id=CLAUDE_EXTENSION):
     someone is signed in inside the extension cannot be seen from here.
     """
     data = chrome_data_dir()
-    profiles = _dict(_read_json(data / "Local State"), "profile")
+    state = _read_json(data / "Local State")
+    if not state and (data / "Local State").exists():
+        # Chrome is writing it, or it is locked: keep what the last good read found.
+        return {"ok": False, "error": "busy"}
+    profiles = _dict(state, "profile")
     cache = _dict(profiles, "info_cache")
     last = str(profiles.get("last_used") or "Default")
+
+    def used(folder_name):
+        try:
+            return float(_dict(cache, folder_name).get("active_time") or 0)
+        except (TypeError, ValueError):
+            return 0.0
 
     def signed_in(folder_name):
         email = str(_dict(cache, folder_name).get("user_name") or "")
@@ -1300,7 +1300,10 @@ def chrome_status(extension_id=CLAUDE_EXTENSION):
     def is_work(email):
         return bool(email) and (not WORK_DOMAIN or email.lower().endswith("@" + WORK_DOMAIN))
 
-    names = [n for n in [last] + sorted(cache) if re.fullmatch(r"[A-Za-z0-9 _-]{1,40}", n)]
+    # The one used last first, then the rest by when they were last used. A profile Chrome
+    # still lists but whose folder is gone does not count.
+    names = [n for n in [last] + sorted(cache, key=used, reverse=True)
+             if re.fullmatch(r"[A-Za-z0-9 _-]{1,40}", n) and (data / n).is_dir()]
     names = list(dict.fromkeys(names)) or ["Default"]
     name = (next((n for n in names if WORK_DOMAIN and is_work(signed_in(n))), None)
             or next((n for n in names if signed_in(n)), None) or names[0])
@@ -1886,9 +1889,11 @@ def open_url(url):
         return False
     try:
         if IS_WINDOWS and chrome_path():
-            subprocess.Popen([chrome_path(), url])
+            subprocess.Popen([chrome_path(), *_profile_args(), url])
             return True
-        if IS_MAC and subprocess.run(["open", "-a", "Google Chrome", url], check=False).returncode == 0:
+        mac = (["open", "-na", "Google Chrome", "--args", *_profile_args(), url] if _profile_args()
+               else ["open", "-a", "Google Chrome", url])
+        if IS_MAC and subprocess.run(mac, check=False).returncode == 0:
             return True
     except OSError:
         pass

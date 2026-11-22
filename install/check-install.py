@@ -86,7 +86,7 @@ if sys.argv[1:] == ["codex"]:
     check("START-HERE teaches ChatGPT's commands ($start, $save, /compact, /new)",
           all(c in guide for c in ("`$start`", "`$save`", "`/compact`", "`/new`")) and "`/start`" not in guide)
     first = read(sol / "state" / "first-chat.md")
-    check("first chat written for ChatGPT", "@Chrome" in first and "Plugins" in first and "`$save`" in first)
+    check("first chat covers ChatGPT", "@Chrome" in first and "Plugins" in first and "`$start`" in first)
     check("ChatGPT's $start runs the first chat", "state/first-chat.md" in start)
     check("pending CRM key saved", "JOBBER_API_KEY=test_jobber_key_not_real_123" in read(sol / ".env"))
     check("pending systems marked in CLAUDE.md", "Jobber" in read(sol / "CLAUDE.md") and "finishing this connection" in read(sol / "CLAUDE.md"))
@@ -108,7 +108,8 @@ check("Roofr and CTM skills present", all((work / ".claude" / "skills" / s / "SK
 check("github-team skill present", (work / ".claude" / "skills" / "github-team" / "SKILL.md").exists())
 first = read(work / "state" / "first-chat.md")
 check("first chat checks the tools and asks about the work",
-      "Check the tools" in first and "Ask about the work" in first and "Roofr" in first and "{" not in first)
+      "Check the tools" in first and "Ask about the work" in first and "Part 3 of `CLAUDE.md`" in first
+      and "@Chrome" in first and "{" not in first)
 check("/start runs the first chat once", "state/first-chat.md" in read(work / ".claude" / "commands" / "start.md"))
 check("swarm layer left out", not (work / ".claude" / "agents" / "the-boys.md").exists())
 check("bridge token in .env", "TM_BRIDGE_TOKEN=test_token_not_real_0000000000" in read(work / ".env"))
