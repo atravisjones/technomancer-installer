@@ -1131,8 +1131,14 @@ def _read_json(path):
     try:
         data = json.loads(path.read_text(encoding="utf-8-sig"))
         return data if isinstance(data, dict) else {}
-    except (OSError, ValueError):
+    except (OSError, ValueError, RecursionError):
         return {}
+
+
+def _dict(value, key):
+    """value[key] when both are dicts, else {}: profile files can hold anything."""
+    found = value.get(key) if isinstance(value, dict) else None
+    return found if isinstance(found, dict) else {}
 
 
 def chrome_status():
@@ -1144,13 +1150,11 @@ def chrome_status():
     in to Claude inside the extension cannot be seen from here.
     """
     data = chrome_data_dir()
-    profiles = _read_json(data / "Local State").get("profile", {})
-    profiles = profiles if isinstance(profiles, dict) else {}
+    profiles = _dict(_read_json(data / "Local State"), "profile")
     name = str(profiles.get("last_used") or "Default")
     if not re.fullmatch(r"[A-Za-z0-9 _-]{1,40}", name):
         name = "Default"
-    info = (profiles.get("info_cache") or {}).get(name) or {}
-    info = info if isinstance(info, dict) else {}
+    info = _dict(_dict(profiles, "info_cache"), name)
     email = str(info.get("user_name") or "")
     email = email if re.fullmatch(r"[^@\s]{1,64}@[A-Za-z0-9.-]{1,190}", email) else ""
 
@@ -1158,8 +1162,7 @@ def chrome_status():
     extension = False
     if (folder / "Extensions" / CLAUDE_EXTENSION).is_dir():
         for prefs in ("Secure Preferences", "Preferences"):
-            row = (((_read_json(folder / prefs).get("extensions") or {}).get("settings") or {})
-                   .get(CLAUDE_EXTENSION))
+            row = _dict(_dict(_read_json(folder / prefs), "extensions"), "settings").get(CLAUDE_EXTENSION)
             if isinstance(row, dict):
                 # Turned off shows as state 0 (older Chrome) or a list of reasons (newer).
                 extension = row.get("state", 1) != 0 and not row.get("disable_reasons")
@@ -1167,6 +1170,186 @@ def chrome_status():
     return {"ok": True, "chrome": _has_chrome(), "google": email,
             "work": bool(email) and (not WORK_DOMAIN or email.lower().endswith("@" + WORK_DOMAIN)),
             "extension": extension}
+
+
+# --- Windows of their own: every outside page opens in a small Chrome window that setup
+# closes again once its step is done, so the setup page never gets lost among tabs.
+# Windows: setup notes the window Chrome made and closes it (no permission needed).
+# Mac: Chrome is driven by AppleScript, which macOS allows only after the person clicks
+# Allow once ("Terminal wants to control Google Chrome"); without it, windows stay open
+# and the page says when to close them.
+
+OPENED = {}            # step -> the window(s) opened for it: hwnds (Windows) or Chrome window ids (Mac)
+MAC_CONTROL = {"state": "unknown"}   # unknown / allowed / denied
+WINDOW_SIZE = (600, 780)
+
+
+def _chrome_windows():
+    """Visible top-level windows belonging to chrome.exe (Windows only)."""
+    import ctypes
+    from ctypes import wintypes
+    user32, kernel32 = ctypes.windll.user32, ctypes.windll.kernel32
+    found = []
+
+    def chrome_owned(hwnd):
+        pid = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        handle = kernel32.OpenProcess(0x1000, False, pid.value)  # query limited information
+        if not handle:
+            return False
+        try:
+            size = wintypes.DWORD(1024)
+            buf = ctypes.create_unicode_buffer(1024)
+            ok = kernel32.QueryFullProcessImageNameW(handle, 0, buf, ctypes.byref(size))
+            return bool(ok) and buf.value.lower().endswith("\\chrome.exe")
+        finally:
+            kernel32.CloseHandle(handle)
+
+    @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    def each(hwnd, _):
+        name = ctypes.create_unicode_buffer(64)
+        user32.GetClassNameW(hwnd, name, 64)
+        if name.value == "Chrome_WidgetWin_1" and user32.IsWindowVisible(hwnd) and chrome_owned(hwnd):
+            found.append(int(hwnd))
+        return True
+
+    user32.EnumWindows(each, 0)
+    return set(found)
+
+
+def _osascript(script):
+    done = subprocess.run(["osascript", "-e", script], capture_output=True, text=True, timeout=60)
+    if done.returncode != 0 and re.search(r"-1743|not allowed|Not authori[sz]ed", done.stderr, re.I):
+        MAC_CONTROL["state"] = "denied"
+    elif done.returncode == 0:
+        MAC_CONTROL["state"] = "allowed"
+    return done.returncode == 0, done.stdout.strip()
+
+
+def open_setup_window(url):
+    """The setup page as an app window (no tabs, its own taskbar or Dock icon), so it is
+    never lost among tabs. Chrome, then Edge on Windows, else the default browser."""
+    size = "--window-size=1040,940"
+    try:
+        if IS_WINDOWS:
+            edge = next((p for p in (Path(os.environ.get(v, "")) / "Microsoft" / "Edge" / "Application" / "msedge.exe"
+                                     for v in ("ProgramFiles(x86)", "ProgramFiles")) if p.exists()), None)
+            exe = chrome_path() or (str(edge) if edge else None)
+            if exe:
+                subprocess.Popen([exe, f"--app={url}", size])
+                return
+        if IS_MAC and _has_chrome():
+            if subprocess.run(["open", "-na", "Google Chrome", "--args", f"--app={url}", size],
+                              check=False).returncode == 0:
+                return
+    except OSError:
+        pass
+    webbrowser.open(url)
+
+
+def open_window(step, url):
+    """Open `url` in a small Chrome window of its own and remember it under `step`.
+
+    Returns "tracked" (setup can close it), "opened" (open, but the person closes it)
+    or "browser" (no Chrome: the default browser has it).
+    """
+    import time
+    close_window(step)  # a second click replaces the first window rather than piling up
+    w, h = WINDOW_SIZE
+    try:
+        if IS_WINDOWS and chrome_path():
+            before = _chrome_windows()
+            subprocess.Popen([chrome_path(), f"--app={url}", f"--window-size={w},{h}", "--window-position=80,60"])
+            for _ in range(30):
+                time.sleep(0.2)
+                new = _chrome_windows() - before
+                if new:
+                    OPENED[step] = sorted(new)
+                    return "tracked"
+            return "opened"
+        if IS_MAC and _has_chrome():
+            if MAC_CONTROL["state"] != "denied":
+                quoted = url.replace("\\", "\\\\").replace('"', '\\"')
+                worked, out = _osascript(
+                    'tell application "Google Chrome"\n'
+                    '  set w to make new window\n'
+                    f'  set URL of active tab of w to "{quoted}"\n'
+                    f'  set bounds of w to {{80, 60, {80 + w}, {60 + h}}}\n'
+                    '  activate\n'
+                    '  return id of w\n'
+                    'end tell')
+                if worked and out.isdigit():
+                    OPENED[step] = [int(out)]
+                    return "tracked"
+            subprocess.run(["open", "-na", "Google Chrome", "--args", "--new-window", url], check=False)
+            return "opened"
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    webbrowser.open(url)
+    return "browser"
+
+
+def close_window(step):
+    """Close the window opened for `step`, if setup still knows it. True when it did."""
+    handles = OPENED.pop(step, [])
+    if not handles:
+        return False
+    try:
+        if IS_WINDOWS:
+            import ctypes
+            alive = _chrome_windows()
+            for hwnd in handles:
+                if hwnd in alive:  # still Chrome's: a reused handle must not close someone else's window
+                    ctypes.windll.user32.PostMessageW(hwnd, 0x0010, 0, 0)  # WM_CLOSE
+            return True
+        if IS_MAC:
+            ids = ", ".join(str(int(i)) for i in handles)
+            worked, _ = _osascript(f'tell application "Google Chrome" to close (every window whose id is in {{{ids}}})')
+            return worked
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        pass
+    return False
+
+
+# The Claude tool's sign-in opens its page through $BROWSER: point that at a small helper
+# that hands the address to this server, which opens it in a window of its own.
+HOOK = {"path": ""}
+HOOK_HOSTS = ("claude.ai", "claude.com", "anthropic.com")
+
+
+def make_browser_hook(port):
+    import tempfile
+    folder = Path(tempfile.mkdtemp(prefix="setup-hook-"))
+    script = folder / "open_page.py"
+    script.write_text(
+        "import json, sys, urllib.request\n"
+        f"origin = 'http://127.0.0.1:{port}'\n"
+        "url = sys.argv[-1] if len(sys.argv) > 1 else ''\n"
+        "req = urllib.request.Request(origin + '/window/hook', data=json.dumps({'url': url}).encode(),\n"
+        "    headers={'Content-Type': 'application/json', 'Origin': origin})\n"
+        "try:\n"
+        "    urllib.request.urlopen(req, timeout=20).read()\n"
+        "except Exception:\n"
+        "    import webbrowser; webbrowser.open(url)\n", encoding="utf-8")
+    if IS_WINDOWS:
+        hook = folder / "open_page.cmd"
+        hook.write_text(f'@echo off\r\n"{sys.executable}" "{script}" %*\r\n', encoding="utf-8")
+    else:
+        hook = folder / "open_page"
+        hook.write_text(f'#!/bin/sh\nexec "{sys.executable}" "{script}" "$@"\n', encoding="utf-8")
+        hook.chmod(0o755)
+    HOOK["path"] = str(hook)
+
+
+def hooked_page(url):
+    """An address the Claude tool asked to show: in a tracked window if it is one of Anthropic's."""
+    url = str(url or "")
+    host = re.match(r"https://([^/:?#]+)", url)
+    if host and (host.group(1) in HOOK_HOSTS or host.group(1).endswith(tuple("." + h for h in HOOK_HOSTS))):
+        return open_window("claude-login", url)
+    if re.match(r"https?://", url):
+        webbrowser.open(url)
+    return "browser"
 
 
 # --- GitHub (optional): sign in and keep a private backup of the workspace ---------
@@ -1282,11 +1465,14 @@ def github_connect():
             match = re.search(r"\b([A-Z0-9]{4}-[A-Z0-9]{4})\b", line)
             if match and not GITHUB["code"]:
                 GITHUB["code"] = match.group(1)
-                open_in_chrome("github-device")
+                open_window("github-device", CHROME_PAGES["github-device"])
         proc.wait()
         if proc.returncode == 0:
             GITHUB["state"] = "none"
             github_refresh()
+        if GITHUB["state"] == "connected":
+            close_window("github-device")
+            close_window("github-signup")
         if GITHUB["state"] != "connected":
             GITHUB.update(state="none", code="", error="GitHub sign-in did not finish. Click Connect to try again.")
 
@@ -1765,10 +1951,12 @@ def claude_login():
 
     def work():
         try:
+            env = dict(plain_env(), BROWSER=HOOK["path"]) if HOOK["path"] else plain_env()
             subprocess.run([exe, "auth", "login", "--claudeai"], stdin=subprocess.DEVNULL,
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=600)
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=600, env=env)
         except (OSError, subprocess.TimeoutExpired):
             pass
+        close_window("claude-login")
         LOGIN["running"] = False
 
     threading.Thread(target=work, daemon=True).start()
@@ -2688,6 +2876,7 @@ class Handler(BaseHTTPRequestHandler):
                 "bridge": bridge_ready(), "workDomain": WORK_DOMAIN, "brand": BRAND,
                 "preset": PRESET, "industries": {k: v[0] for k, v in INDUSTRIES.items()},
                 "integrations": INTEGRATIONS, "chromePages": CHROME_PAGES,
+                "system": "mac" if IS_MAC else "windows" if IS_WINDOWS else "other",
                 "user": os.environ.get("ASSISTANT_USER_NAME", ""),
                 "contact": CONTACT,
                 "main": default_main(),
@@ -2753,7 +2942,19 @@ class Handler(BaseHTTPRequestHandler):
             self.send({"ok": body.get("page") in CHROME_PAGES,
                        "chrome": open_in_chrome(body.get("page"), body.get("window") is True)})
         elif self.path == "/chrome/status":
-            self.send(chrome_status())
+            try:
+                self.send(chrome_status())
+            except Exception as error:  # an odd profile must not stop the page checking
+                self.send({"ok": False, "error": f"{type(error).__name__}"})
+        elif self.path == "/window/open":
+            page = body.get("page")
+            self.send({"ok": page in CHROME_PAGES, "how": open_window(page, CHROME_PAGES[page]) if page in CHROME_PAGES else "",
+                       "mac": MAC_CONTROL["state"]})
+        elif self.path == "/window/close":
+            page = str(body.get("page") or "")
+            self.send({"ok": True, "closed": page in CHROME_PAGES and close_window(page)})
+        elif self.path == "/window/hook":
+            self.send({"ok": True, "how": hooked_page(body.get("url"))})
         elif self.path == "/company/research":
             self.send(start_research())
         elif self.path == "/company/research/status":
@@ -2813,8 +3014,9 @@ def main():
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     url = f"http://127.0.0.1:{server.server_address[1]}/"
     print(f"\n  Setup is open in your browser: {url}\n  Leave this window open until setup says it is done.\n", flush=True)
+    make_browser_hook(server.server_address[1])
     if not args.no_browser:
-        webbrowser.open(url)
+        open_setup_window(url)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

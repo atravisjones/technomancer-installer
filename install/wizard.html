@@ -498,6 +498,7 @@
       <h2>Your Claude account</h2>
       <p id="acct-text" style="margin:0">Checking whether you are already signed in…</p>
       <button class="step" id="acct-login" style="margin-top:12px" hidden>Sign in to Claude</button>
+      <p class="hint mac-only" hidden>Sign-ins open in a small window that setup closes when you are done. The first time, your Mac asks whether Terminal may control Google Chrome: click <b>OK</b> (or <b>Allow</b>). Setup uses it only to close the windows it opened.</p>
     </section>
     <button class="go" id="open" disabled>Checking for the Claude app…</button>
     <p class="hint" id="open-note" style="text-align:center;margin:12px 0 20px"></p>
@@ -575,6 +576,7 @@
   <div class="page" data-page="5" hidden>
     <h1>Connect Chrome</h1>
     <p class="lede">This lets <span class="the-name">Jarvis</span> work in web pages for you. Three clicks, in order. Each one opens a small window of its own.</p>
+    <p class="hint mac-only" hidden>If your Mac asks whether Terminal may control Google Chrome, click <b>OK</b> (or <b>Allow</b>): that is how setup closes each window when its step is done.</p>
     <p class="note" id="cs-summary" hidden></p>
     <section>
       <ol class="next steps">
@@ -583,6 +585,7 @@
         <li><button class="step" data-page="extension">Add Claude to Chrome</button>
           <span id="cs-extension">Click <b>Add to Chrome</b> in the window that opens. If Chrome already asked you to turn on "Claude", click <b>Enable</b> instead. This page ticks it when Chrome has it; then close that window.</span></li>
         <li><button class="step" data-page="claude">Sign in to Claude in Chrome</button>
+          <button type="button" class="copy" id="cs-claude-done" hidden>Done: close that window</button>
           <span id="cs-claude">Adding it is not enough: Claude in Chrome only works once you sign in to it. Sign in with the same work email in the window that opens, and close it. Then click the puzzle piece at the top right of Chrome, pin <b>Claude</b>, and click it: if it asks you to sign in, do that too. It is ready when it shows a box to type in.</span></li>
       </ol>
     </section>
@@ -976,6 +979,7 @@ const VOICE = {
 
 async function load() {
   options = await (await fetch('/options')).json()
+  for (const n of document.querySelectorAll('.mac-only')) n.hidden = options.system !== 'mac'
   fill($('name'), [...options.names.map(n => [n, n]), ['__custom', 'Something else…']])
   fill($('style'), options.styles.map(s => [s, s]))
   fill($('role'), options.roles.map(r => [r, r]))
@@ -1075,7 +1079,7 @@ $('go').onclick = async () => {
 // Is there already a Claude account on this computer, and is it the work one?
 // A sign-in the tool itself opened in the browser: once it is done, say the tab can go.
 const waited = {}
-const closeTab = id => (waited[id] ? ' You can close the sign-in tab in your browser.' : '')
+const closeTab = id => (waited[id] ? ' If its sign-in window or tab is still open, you can close it.' : '')
 function showAccount(a) {
   const text = $('acct-text'), button = $('acct-login')
   button.hidden = true
@@ -1085,7 +1089,7 @@ function showAccount(a) {
     text.textContent = `\u2713 Already signed in as ${a.email}${a.org ? ` (${a.org})` : ''}. Use this same account in the Claude app.${closeTab('claude')}`
   } else if (a.state === 'other') {
     text.textContent = `This computer is signed in to Claude as ${a.email}, which is not your work email. `
-      + `Sign in with your ${workEmail()} so you are on the company plan.`
+      + `Sign in with your ${workEmail()} so you are on the company plan.${closeTab('claude')}`
     button.hidden = false
     button.textContent = 'Sign in with my work email'
   } else if (a.state === 'signed-out') {
@@ -1313,6 +1317,7 @@ function showOrg(s) {
     return
   }
   done.org = s.state === 'active' ? s.org : ''
+  if (done.org) closeSite('github-new-org')
   if (s.state === 'none') {
     box.replaceChildren(
       say(`Found ${s.org}. An owner has to add you: send them your GitHub username.`),
@@ -1375,7 +1380,7 @@ function showGithub(s) {
     $('gh-connect').textContent = `\u2713 Connected as ${s.user}`
     $('gh-connect').disabled = true
     $('gh-note').hidden = !waited.github
-    if (waited.github) $('gh-note').textContent = 'Connected. You can close the GitHub tab in your browser.'
+    if (waited.github) $('gh-note').textContent = 'Connected. If the GitHub window is still open, you can close it.'
     $('gh-code').hidden = true
     $('gh-backup').disabled = false
     $('gh-next').disabled = false
@@ -1471,6 +1476,7 @@ function showConnectors(c) {
     row.classList.toggle('on', yes)
     if (yes) on += 1
   }
+  if (on >= 3 && done.connectors < 3) closeSite('connectors')
   done.connectors = on
   done.connectorsKnown = c.state !== 'unknown'
   $('conn-note').textContent = c.state === 'unknown'
@@ -1503,12 +1509,9 @@ $('gh-backup').onclick = async () => {
   }
 }
 
-// Connect Chrome. Each sign-in opens in a small window of its own (a pop-up when this page
-// is itself in Chrome, else a new Chrome window), so it is plain what to close afterwards.
-// Google, the Web Store and claude.ai cut the link back to the page that opened them, so
-// the page cannot close those windows itself; it says when they can go instead. Steps
+// Connect Chrome. Every outside page opens in a small Chrome window of its own, which
+// setup closes once its step is done (on a Mac, after the person allows it once). Steps
 // Chrome already has (its Google account, the Claude extension) are ticked by themselves.
-const inChrome = Boolean(navigator.userAgentData && navigator.userAgentData.brands.some(b => b.brand === 'Google Chrome'))
 const chromeSteps = { google: false, extension: false, claude: false }
 let chromeTimer = null
 function tickStep(page, words) {
@@ -1519,23 +1522,23 @@ function tickStep(page, words) {
   button.textContent = '✓ ' + button.textContent.replace(/^✓ /, '')
   if (words) $('cs-' + page).textContent = words
 }
-function openPopup(page) {
-  const url = (options.chromePages || {})[page]
-  if (!inChrome || !url) return false
-  const w = 560, h = 760
-  const left = Math.max(0, window.screenX + window.outerWidth - w - 40), top = Math.max(0, window.screenY + 60)
-  return Boolean(window.open(url, 'tm-' + page, `popup,width=${w},height=${h},left=${left},top=${top}`))
-}
-// Any other site page: a small window of its own, the same way.
-const openSite = page => openPopup(page) || post('/chrome', { page, window: true })
+const openSite = page => post('/window/open', { page }).catch(() => ({}))
+const closeSite = page => post('/window/close', { page }).then(r => Boolean(r.closed)).catch(() => false)
 let lastChrome = null
-const doneWhileOpen = {}
+const doneWhileOpen = {}, clickedDone = {}
 function showChrome(s) {
   if (!s || !s.ok) return
-  // Done while its window was open (not already done when the page loaded): say it can go.
+  // Done while its window was open (not already done when the page loaded): setup closes
+  // the window; if it could not, the step says the person can.
   const gone = key => {
-    if (lastChrome !== null && s[key] && s[key] !== lastChrome[key]) doneWhileOpen[key] = true
-    return doneWhileOpen[key] ? ' You can close that window now.' : ''
+    if (lastChrome !== null && s[key] && s[key] !== lastChrome[key] && !doneWhileOpen[key]) {
+      doneWhileOpen[key] = 'closing'
+      closeSite(key).then(closed => { doneWhileOpen[key] = closed ? 'closed' : 'open'; showChrome(lastChrome) })
+    }
+    // Clicked when it was already done (say, to add another account): setup cannot tell
+    // when they are finished, so the person closes that window.
+    if (clickedDone[key]) return ' Close that window when you are finished there.'
+    return doneWhileOpen[key] === 'open' ? ' You can close that window now.' : ''
   }
   if (s.google) {
     const work = s.work ? '' : ` That is not your ${workEmail()}: if this Chrome is for work, click the button and add your work account.`
@@ -1553,18 +1556,26 @@ function showChrome(s) {
 async function watchChrome() {
   clearTimeout(chromeTimer)
   if (page !== 5) return
-  showChrome(await post('/chrome/status'))
-  chromeTimer = setTimeout(watchChrome, 2500)
+  try { showChrome(await post('/chrome/status')) } catch (error) {}  // a failed check must not end the checking
+  if (page === 5) chromeTimer = setTimeout(watchChrome, 2500)
 }
 for (const button of document.querySelectorAll('button.step[data-page]')) {
   button.onclick = async () => {
     const step = button.dataset.page
-    if (!openPopup(step)) await post('/chrome', { page: step, window: true })
+    if (lastChrome && lastChrome[step]) clickedDone[step] = true
+    await openSite(step)
+    if (step === 'claude') $('cs-claude-done').hidden = false
+    if (lastChrome) showChrome(lastChrome)
     // The click counts (Claude's sign-in inside the extension cannot be seen from here, and
     // someone may say no to signing in to Chrome itself); a check that sees it done adds the detail.
     tickStep(step)
     watchChrome()
   }
+}
+
+$('cs-claude-done').onclick = async () => {
+  $('cs-claude-done').hidden = true
+  if (!(await closeSite('claude'))) $('cs-claude').textContent = 'Close the Claude window yourself: setup could not close it.'
 }
 
 $('copy-folder').onclick = async () => {
