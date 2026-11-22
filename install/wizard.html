@@ -344,7 +344,7 @@
       <svg class="eye" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="tmsun" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFC066"/><stop offset=".45" stop-color="#FF8A3C"/><stop offset="1" stop-color="#D9472C"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="#1C2B3A"/><g transform="translate(5 5) scale(.84375)"><path d="M6 32Q32 2 58 32Q32 62 6 32Z" fill="none" stroke="#F7ECDF" stroke-width="6.5" stroke-linejoin="round"/><path d="M32 20.5Q33.95 30.05 43.5 32Q33.95 33.95 32 43.5Q30.05 33.95 20.5 32Q30.05 30.05 32 20.5Z" fill="url(#tmsun)"/></g></svg>
       <p class="kicker">The Technomancer</p>
       <h1><span id="intro-company">Your business</span>, with its own AI assistant</h1>
-      <p class="lede">Claude, ChatGPT or Gemini, set up for your trade, your systems and your job.</p>
+      <p class="lede">Claude or ChatGPT, set up for your business, your systems and your job.</p>
       <div class="stage" id="stage">
         <div class="versus head">
           <div class="plain">A regular LLM</div>
@@ -377,17 +377,17 @@
   </div>
 
   <div class="page" data-page="0.5" hidden>
-    <h1>What is your primary agent?</h1>
-    <p class="lede">The one you use most. Setup is built around it: its app, signing in, and a shortcut on your desktop.</p>
+    <h1>Which assistant will you use most?</h1>
+    <p class="lede">Setup is built around it: its app, signing in, and a shortcut on your desktop.</p>
     <section>
       <div id="main-list"></div>
     </section>
     <section>
       <h2>What others do you use?</h2>
-      <p class="hint" style="margin:0 0 6px">They work beside your primary agent, in the same folder, reading the same notes. Ticked ones were found on this computer or are suggested by your company.</p>
+      <p class="hint" style="margin:0 0 6px">They work beside your main assistant, in the same folder, reading the same notes. Ticked ones were found on this computer or are suggested by your company.</p>
       <div id="tool-list"></div>
       <label class="check" id="extras-bypass-row" hidden><input type="checkbox" id="extras-bypass" checked>
-        <span><b>The others never stop to ask</b>The same as Bypass for your primary agent, which you choose on a later page. Untick it to have them ask before they change files or run commands.</span></label>
+        <span><b>The others never stop to ask</b>Untick it to have them ask before they change files or run commands. Your main assistant has its own setting on a later page.</span></label>
     </section>
     <div class="nav"><button class="go quiet back" data-go="0">Back</button><button class="go next" data-go="1">Next</button></div>
   </div>
@@ -407,7 +407,7 @@
 
       <label>Its color</label>
       <div class="swatches" id="colors" role="group" aria-label="Assistant color"></div>
-      <p class="hint">Chats about the assistant itself use this color. Work chats are orange, personal chats green.</p>
+      <p class="hint" id="color-hint">Chats about the assistant itself use this color. Work chats are orange, personal chats green.</p>
 
       <label id="style-label">How should it talk to you?</label>
       <div class="voices" id="style-cards" role="group" aria-labelledby="style-label"></div>
@@ -508,8 +508,8 @@
         <li>Sign in with your work email.</li>
         <li>It should open on your assistant's folder. If it asks, click the <b>Code</b> tab, then <b>Select folder</b>, and choose:<br><span class="path" id="done-folder"></span>
           <button type="button" class="copy" id="copy-folder">Copy</button></li>
-        <li>Open <b>Settings</b>, then <b>Claude Code</b>, and turn on <b>Connect new sessions to Remote Control</b>. That is what lets your phone see your chats.</li>
-        <li>Type <b>/start</b> and press Enter.</li>
+        <li id="remote-step">Open <b>Settings</b>, then <b>Claude Code</b>, and turn on <b>Connect new sessions to Remote Control</b>. That is what lets your phone see your chats.</li>
+        <li>Type <b>/start</b> and press Enter. You will know it worked when it greets you by name and knows your company.</li>
       </ol>
     </section>
     <details class="what">
@@ -533,17 +533,17 @@
       <h2>Once ChatGPT is open</h2>
       <ol class="next">
         <li>Sign in if it asks.</li>
-        <li>Point it at your assistant's folder. Under the message box, click <b>Choose project</b>, add a project, and select this folder:<br><span class="path the-folder"></span>
+        <li>It should open on your assistant's folder. If it does not, click <b>Choose project</b> under the message box, add a project, and select this folder:<br><span class="path the-folder"></span>
           <button type="button" class="copy" id="cx-copy">Copy</button></li>
+        <li>Type <b>/start</b>. It shows up in a list as you type: press Enter to pick it, then Enter again to send.</li>
         <li>You will know it worked when it greets you by name and knows your company.</li>
-        <li>Type <b>$start</b> and press Enter. Your commands are skills here, so they begin with a dollar sign: <b>$start</b>, <b>$save</b>, <b>$update</b>, <b>$help</b>.</li>
       </ol>
     </section>
     <section>
       <h2>Two things to set up inside ChatGPT</h2>
       <ul class="done">
-        <li><b>Chrome.</b> In ChatGPT's settings, add its Chrome extension so it can work in your web tools.</li>
-        <li><b>Email, calendar and files.</b> Under Plugins, connect Gmail, Google Calendar and Google Drive.</li>
+        <li><b>Chrome.</b> When ChatGPT shows <b>Set up Chrome extension</b>, click it and install the extension, so it can work in your web tools.</li>
+        <li><b>Email, calendar and files.</b> Under <b>Plugins</b>, connect Gmail, Google Calendar and Google Drive with your work Google account.</li>
       </ul>
       <p class="hint">Setup cannot do these two for you yet.</p>
     </section>
@@ -585,7 +585,7 @@
         <li><button class="step" data-page="extension">Add Claude to Chrome</button>
           <span id="cs-extension">Click <b>Add to Chrome</b> in the window that opens. If Chrome already asked you to turn on "Claude", click <b>Enable</b> instead. This page ticks it when Chrome has it; then close that window.</span></li>
         <li><button class="step" data-page="claude">Sign in to Claude in Chrome</button>
-          <button type="button" class="copy" id="cs-claude-done" hidden>Done: close that window</button>
+          <button type="button" class="copy" id="cs-claude-done" hidden>I signed in: close that window</button>
           <span id="cs-claude">Adding it is not enough: Claude in Chrome only works once you sign in to it. Sign in with the same work email in the window that opens, and close it. Then click the puzzle piece at the top right of Chrome, pin <b>Claude</b>, and click it: if it asks you to sign in, do that too. It is ready when it shows a box to type in.</span></li>
       </ol>
     </section>
@@ -665,7 +665,7 @@
         <li><b>Do you already have your own GitHub account?</b>
           <div class="chips" style="margin:8px 0 4px">
             <button type="button" class="chip" id="gh-have">Yes, I have one</button>
-            <button type="button" class="chip" id="gh-signup">No, make me one</button>
+            <button type="button" class="chip" id="gh-signup">No, I need one</button>
           </div>
           <span class="hint" id="gh-signup-note" hidden>GitHub's sign-up page opened in Chrome. Use your work email, pick any username, then come back here.</span></li>
         <li><button class="step" id="gh-connect">Connect my GitHub</button>
@@ -678,7 +678,8 @@
           <span id="gh-backup-note">Makes a private copy. Your keys and tokens are never included.</span></li>
       </ol>
     </section>
-    <div class="nav"><button class="go quiet back" data-go="8">Back</button><button class="go next" id="gh-next" data-go="10" disabled>Next</button></div>
+    <p class="hint" id="gh-skip" style="margin:0 0 14px">You can skip this and do it later: <span class="the-name">Jarvis</span> works without it, it just has no backup.</p>
+    <div class="nav"><button class="go quiet back" data-go="8">Back</button><button class="go next" id="gh-next" data-go="10">Next</button></div>
   </div>
 
   <div class="page" data-page="10" hidden>
@@ -742,8 +743,10 @@ function showInstalls(st) {
   if (!st.rows || !st.rows.length) return
   $('dock').hidden = false
   $('dock-count').textContent = `${st.settled} of ${st.total}`
-  $('dock-title').textContent = st.busy ? 'Getting your computer ready' : 'Your computer is ready'
-  $('dock-spin').classList.toggle('done', !st.busy)
+  const failed = st.rows.filter(r => r.state === 'failed')
+  $('dock-title').textContent = st.busy ? 'Getting your computer ready'
+    : failed.length ? `${failed.length === 1 ? 'One thing' : `${failed.length} things`} could not be installed` : 'Your computer is ready'
+  $('dock-spin').classList.toggle('done', !st.busy && !failed.length)
   $('dock-list').replaceChildren(...st.rows.map(row => {
     const li = Object.assign(document.createElement('li'), { className: row.state })
     const mark = row.state === 'done' ? '\u2713' : row.state === 'failed' ? '!' : ''
@@ -780,10 +783,16 @@ function refreshTools() {
   // The primary one is not also offered as an "other".
   for (const row of document.querySelectorAll('#tool-list label')) row.hidden = row.querySelector('input').value === main
   $('extras-bypass-row').hidden = !pickedTools().some(id => id !== 'claude' && id !== main)
-  // Remote control and color modes are Claude's.
-  $('remote').closest('label').hidden = $('tint').closest('label').hidden = !pickedTools().includes('claude')
+  // Remote control and color modes are Claude's: named as such when Claude is only a side app.
+  const claudeOn = pickedTools().includes('claude')
+  $('remote').closest('label').hidden = $('tint').closest('label').hidden = !claudeOn
+  $('color-hint').hidden = !claudeOn
+  const side = claudeOn && main !== 'claude' ? ' (Claude app)' : ''
+  $('remote').nextElementSibling.firstChild.textContent = 'Remote control' + side
+  $('tint').nextElementSibling.firstChild.textContent = 'Color modes' + side
 }
 const codexMain = () => Boolean(result && result.main === 'codex')
+const phoneOn = () => $('remote').checked
 
 // Codex as the main assistant: is it signed in, and open the ChatGPT app on the folder.
 function showCodex(a) {
@@ -798,7 +807,8 @@ function showCodex(a) {
     words.textContent = a.waiting ? 'A sign-in page opened in your browser. Finish it there.' : 'You are not signed in to ChatGPT yet.'
     button.hidden = a.waiting
   } else {
-    words.textContent = 'Codex is still installing. This checks again by itself.'
+    words.textContent = 'ChatGPT’s Codex tool is not on this computer yet. If the panel at the bottom right says it could not be installed, '
+      + `send ${options.contact || 'your manager'} a screenshot of it. Otherwise this checks again by itself.`
   }
   if ((a.waiting || a.state === 'no-codex') && page === 4.5) setTimeout(async () => showCodex(await post('/codex/status')), 3000)
 }
@@ -830,8 +840,8 @@ function presetRow() {
 function showFinale() {
   $('final-user').textContent = result && result.user ? `, ${result.user}` : ''
   if (codexMain()) {
-    $('tries-hint').textContent = 'Click one to copy it, then paste it into ChatGPT after $start.'
-    $('final-hint').textContent = 'Choose your folder as the project, then type $start.'
+    $('tries-hint').textContent = 'Click one to copy it, then paste it into ChatGPT after /start.'
+    $('final-hint').textContent = 'If it does not open on your folder, click Choose project under the message box and pick it. Then type /start, press Enter to pick it, and Enter again to send.'
     if (!$('final-open').dataset.clicked) $('final-open').textContent = 'Open ChatGPT'
   }
   const sys = ((result && result.systems) || [])
@@ -844,7 +854,7 @@ function showFinale() {
     [Boolean(done.profile), 'What matters to your company', done.profile ? 'Saved in its notes.' : 'Not filled in yet.', 4.2],
     ...presetRow(),
     [done.drill, 'The four commands', done.drill ? 'You typed all four.' : 'Not practised yet.', 7],
-    [done.github, 'GitHub backup', done.github ? 'Connected.' : 'Not connected yet.', 9],
+    [done.github, 'Company GitHub', done.github ? (done.org ? `Joined ${done.org}.` : 'Connected.') : 'Not connected yet.', 9],
   ] : [
     [true, `${result ? result.assistant : 'Your assistant'} is set up`, setUp, 0],
     [appState === 'installed', 'The Claude app', appState === 'installed' ? 'On this computer.' : 'Not installed yet.', 4],
@@ -858,7 +868,7 @@ function showFinale() {
     [done.github, 'Company GitHub', done.github ? (done.org ? `Joined ${done.org}.` : 'Connected.') : 'Not connected yet.', 9],
   ]
   for (const tool of ((result && result.tools) || []).filter(tool => !(codexMain() && tool.id === 'codex'))) rows.push([Boolean(opened[tool.id]), tool.label,
-    opened[tool.id] ? `Opened in a terminal. Sign in there with ${tool.account}.` : `Set up. Open it once to sign in with ${tool.account}.`, tool])
+    opened[tool.id] ? `Opened ${tool.where || 'in a terminal'}. Sign in there with ${tool.account}.` : `Set up. Open it once to sign in with ${tool.account}.`, tool])
   $('ready').replaceChildren(...rows.map(([on, title, detail, go]) => {
     const li = document.createElement('li')
     if (on) li.className = 'on'
@@ -917,12 +927,15 @@ function show(n) {
   if (n === 9) post('/github/status').then(showGithub)
   if (n === 5) setTimeout(watchChrome, 0)
   if (n === 4.2) startResearch()
+  // Coming back to a sign-in page checks again: they may have signed in somewhere else meanwhile.
+  if (n === 4 && result && !codexMain()) post('/account/status').then(showAccount)
+  if (n === 4.5 && result && codexMain()) post('/codex/status').then(showCodex)
   for (const el of document.querySelectorAll('.page')) el.hidden = Number(el.dataset.page) !== n
   $('progress').hidden = $('bar').hidden = n === 0
   const choices = [0.5, 1, 2, 2.5, 3]
-  const after = codexMain() ? [4.5, 4.2, 7, 9, 10] : [4, 4.2, 5, 6, 7, 8, 9, 10]
+  const after = codexMain() ? [4.5, 4.2, 7, 9, 10] : [4, 4.2, 5, ...(phoneOn() ? [6] : []), 7, 8, 9, 10]
   $('progress').textContent = n <= 3 ? `Step ${choices.indexOf(n) + 1} of ${choices.length}` : `Almost there: ${after.indexOf(n) + 1} of ${after.length}`
-  const total = n <= 3 ? 4 : after.length, at = (n <= 3 ? choices : after).indexOf(n) + 1
+  const total = n <= 3 ? choices.length : after.length, at = (n <= 3 ? choices : after).indexOf(n) + 1
   $('bar').replaceChildren(...Array.from({ length: total }, (_, i) =>
     Object.assign(document.createElement('i'), { className: i < at ? 'on' : '' })))
   window.scrollTo(0, 0)
@@ -939,6 +952,8 @@ for (const button of document.querySelectorAll('button[data-go]')) {
     if (codexMain() && to === 6) show(4.2)
     else if (codexMain() && to === 4) show(4.5)
     else if (codexMain() && to === 8) show(page === 7 ? 9 : 7)
+    // The phone page is about Remote control: with it switched off, Chrome and practice meet.
+    else if (!codexMain() && to === 6 && !phoneOn()) show(page === 5 ? 7 : 5)
     else show(to)
   }
 }
@@ -1054,12 +1069,14 @@ $('go').onclick = async () => {
     if (!result.ok) throw new Error(result.error || 'Setup did not finish.')
     $('done-name').textContent = result.assistant
     $('done-folder').textContent = result.folder
+    $('remote-step').hidden = !$('remote').checked  // only for those who kept Remote control on
     for (const list of [$('log'), $('log-codex')]) {
       list.replaceChildren(...result.log.map(line => Object.assign(document.createElement('li'), { textContent: line })))
     }
     for (const el of document.querySelectorAll('.the-folder')) el.textContent = result.folder
     for (const el of document.querySelectorAll('.the-name')) el.textContent = result.assistant
     drillAt = 0
+    $('drill-log').replaceChildren()
     askDrill()  // the practice follows the primary agent
     show(codexMain() ? 4.5 : 4)
     post('/installs/status').then(showInstalls)
@@ -1391,7 +1408,6 @@ const slugify = text => (text || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').r
 function showGithub(s) {
   $('gh-missing').hidden = s.installed
   $('gh-steps').hidden = !s.installed
-  if (!s.installed) $('gh-next').disabled = false  // nothing they can do here; do not trap them
   if (s.state === 'connected') {
     $('gh-connect').classList.add('done')
     $('gh-connect').textContent = `\u2713 Connected as ${s.user}`
@@ -1400,7 +1416,7 @@ function showGithub(s) {
     if (waited.github) $('gh-note').textContent = 'Connected. If the GitHub window is still open, you can close it.'
     $('gh-code').hidden = true
     $('gh-backup').disabled = false
-    $('gh-next').disabled = false
+    $('gh-skip').hidden = true
     done.github = true
     $('gh-have').setAttribute('aria-pressed', 'true')
     if (!orgAsked) { orgAsked = true; loadOrg() }
@@ -1434,11 +1450,16 @@ $('gh-signup').onclick = () => {
 }
 
 // The four commands, typed once each.
+// The same four in ChatGPT, except that its app has /new where Claude has /clear. /start and
+// /save are the assistant's own skills (Enter picks, Enter again sends); the other two are the
+// app's built-in commands, which run as soon as they are picked.
+const SKILL_KEYS = 'In ChatGPT itself a list pops up as you type: Enter picks it, a second Enter sends it.'
+const BUILT_IN_KEYS = 'In ChatGPT itself this one runs as soon as you pick it from the list.'
 const DRILL_CODEX = [
-  ['$start', n => `Begins your day. ${n} reads its notes and tells you where things stand.`],
-  ['$save', n => `Ends your session. ${n} writes down what you did, so tomorrow picks up from here.`],
-  ['$update', () => 'A quick checkpoint in the middle of work, so nothing is lost.'],
-  ['$help', n => `Lists every command and what ${n} can do.`],
+  ['/start', n => `Begins your day. ${n} reads its notes and tells you where things stand.`, SKILL_KEYS],
+  ['/save', n => `Ends your session. ${n} writes down what you did, so tomorrow picks up from here.`, SKILL_KEYS],
+  ['/compact', n => `For when a chat gets long. It shrinks the chat to a summary so ${n} stays quick and keeps going.`, BUILT_IN_KEYS],
+  ['/new', () => 'Starts a fresh, empty chat in the same folder. Run /save first if you want this one remembered.', BUILT_IN_KEYS],
 ]
 const drillList = () => (codexMain() ? DRILL_CODEX : DRILL)
 const DRILL = [
@@ -1449,11 +1470,11 @@ const DRILL = [
 ]
 let drillAt = 0
 function askDrill() {
-  const list = drillList(), sign = codexMain() ? 'dollar sign' : 'slash'
+  const list = drillList()
   const done = drillAt >= list.length
   $('drill-where').textContent = codexMain() ? 'ChatGPT' : 'Claude'
   $('drill').hidden = done
-  $('drill-hint').textContent = done ? '' : `Start with the ${sign}.`
+  $('drill-hint').textContent = done ? '' : ['Start with the slash.', list[drillAt][2]].filter(Boolean).join(' ')
   $('drill-next').disabled = !done
   if (done) {
     window.setTimeout(() => { doneState.drill = true }, 0)
@@ -1470,7 +1491,7 @@ $('drill').onkeydown = event => {
   const [command, explain] = drillList()[drillAt]
   if (typed !== command) {
     $('drill-hint').textContent = typed.replace(/^[\/$]/, '') === command.slice(1)
-      ? `Close. Put the ${codexMain() ? 'dollar sign' : 'slash'} in front, with no space.`
+      ? 'Close. Put the slash in front, with no space.'
       : `Not quite. Type ${command} exactly.`
     return
   }
@@ -1583,15 +1604,17 @@ for (const button of document.querySelectorAll('button.step[data-page]')) {
     await openSite(step)
     if (step === 'claude') $('cs-claude-done').hidden = false
     if (lastChrome) showChrome(lastChrome)
-    // The click counts (Claude's sign-in inside the extension cannot be seen from here, and
-    // someone may say no to signing in to Chrome itself); a check that sees it done adds the detail.
-    tickStep(step)
+    // Google and the extension: the click counts (someone may say no to signing in to Chrome
+    // itself), and a check that sees it done adds the detail. Claude's sign-in inside the
+    // extension cannot be seen from here, so that one is ticked when they say they are done.
+    if (step !== 'claude') tickStep(step)
     watchChrome()
   }
 }
 
 $('cs-claude-done').onclick = async () => {
   $('cs-claude-done').hidden = true
+  tickStep('claude')
   if (!(await closeSite('claude'))) $('cs-claude').textContent = 'Close the Claude window yourself: setup could not close it.'
 }
 

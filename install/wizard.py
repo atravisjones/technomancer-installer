@@ -468,9 +468,36 @@ def claude_md(a, workspace):
     upper = name.upper()
     today = datetime.date.today().isoformat()
     kit = KITS.get(a["role"], DEFAULT_KIT)
+    tools = a.get("tools") if isinstance(a.get("tools"), list) else []
+    codex_on = chosen_main(a) == "codex" or "codex" in tools
+    tint_on = uses_claude(a) and bool(a.get("colors", True))  # color modes and the usage bar are Claude's mod
+    safety_lead = ("Permission prompts are off on this machine, so nothing stops a mistake but you.\n"
+                   if a.get("mode", "bypassPermissions") == "bypassPermissions" else "")
+    tint_row = "| `/tint <topic>` | Change this chat's color |\n" if tint_on else ""
+    chatgpt_note = ("\nIn the ChatGPT (Codex) app the same commands work, with two differences: there is no\n"
+                    "`/clear` (`/new` starts a blank chat in this folder), and its own `/status` shows usage\n"
+                    "limits (when asked whether everything is connected, follow `.claude/commands/status.md`).\n"
+                    + ("Colors, `/tint` and the usage bar exist only in the Claude app.\n" if tint_on else "")) if codex_on else ""
+    colors_part = f"""### Color modes
+
+Each chat is colored by its topic, with a matching shape on its title:
+{company_name(a)} orange, Personal green, and {name}'s own color for work on the
+assistant itself. `/tint <topic>` changes it, `/tint off` clears it. To add or
+change topics, edit `.mods/session-tint/hooks/topics.js`.
+
+""" if tint_on else ""
+    usage_part = """### Usage bar
+
+Above the message box, three meters show how full this chat is (Context) and
+how much of the Session and Week limits is used, with when each resets. They
+turn amber at 60% and red at 85%. When Context is high, `/compact` or `/save`
+and start a new chat.
+
+""" if tint_on else ""
     return f"""# {upper} - AI Chief of Staff
 
-This document is the primary context for Claude operating as {upper}.
+This document is the primary context for {upper}. Claude reads it directly; ChatGPT
+(Codex) and any other assistant on this folder read it through `AGENTS.md`.
 
 Your name is **{name}**. Some files in this workspace came from a shared template
 and still say MARVIN. Those instructions are addressed to you: read MARVIN as {name}.
@@ -502,8 +529,7 @@ and still say MARVIN. Those instructions are addressed to you: read MARVIN as {n
 - Explain technical steps the way you would to someone who is not a developer.
 
 ### Safety
-Permission prompts are off on this machine, so nothing stops a mistake but you.
-**Always confirm with {a["user"]} first** before sending an email or message,
+{safety_lead}**Always confirm with {a["user"]} first** before sending an email or message,
 deleting or overwriting a file, changing anything in a company system, or
 creating or changing a calendar event. When in doubt, ask.
 
@@ -546,18 +572,10 @@ and today's session log (or yesterday's), then give a briefing.
 | `/help` | List every command and connected tool |
 | `/report` | Weekly summary of the work done |
 | `/status` | Check that everything is connected and healthy |
-| `/tint <topic>` | Change this chat's color |
-
+{tint_row}{chatgpt_note}
 If {a["user"]} seems unsure what to type, point them to `START-HERE.md`.
 
-### Color modes
-
-Each chat is colored by its topic, with a matching shape on its title:
-{company_name(a)} orange, Personal green, and {name}'s own color for work on the
-assistant itself. `/tint <topic>` changes it, `/tint off` clears it. To add or
-change topics, edit `.mods/session-tint/hooks/topics.js`.
-
-### Company GitHub
+{colors_part}### Company GitHub
 
 When {company_name(a)} has a GitHub organization, its name is in `.company-github`
 in this folder. The company's shared choices live in that organization's private
@@ -572,14 +590,7 @@ same folder, and Codex opens it in the ChatGPT desktop app: double-click the mat
 `Open ...` file in this folder. Each reads the same notes through `AGENTS.md` (Gemini
 through `GEMINI.md`) and asks you to sign in with its own account the first time.
 
-### Usage bar
-
-Above the message box, three meters show how full this chat is (Context) and
-how much of the Session and Week limits is used, with when each resets. They
-turn amber at 60% and red at 85%. When Context is high, `/compact` or `/save`
-and start a new chat.
-
----
+{usage_part}---
 
 *Set up {today} by {BRAND} ({BRAND_SITE}).*
 """
@@ -588,27 +599,30 @@ and start a new chat.
 START_HERE_CODEX = """# Start here
 
 {name} is your AI assistant, running in ChatGPT. You talk to it in plain English. The
-commands below are shortcuts: type one in the chat box and press Enter. In ChatGPT they
-begin with a dollar sign.
+commands below are shortcuts: type one in the chat box and a list pops up as you type.
 
 ## The four commands
 
 | Type this | When | What happens |
 |-----------|------|--------------|
-| `$start` | First thing, in a new chat | {name} reads its notes and tells you where things stand |
-| `$save` | When you are done | {name} writes a summary and saves it, so tomorrow's chat picks up from here |
-| `$update` | In the middle of work | A quick checkpoint, so nothing is lost |
-| `$help` | Any time | Lists every command and what {name} can do |
+| `/start` | First thing, in a new chat | {name} reads its notes and tells you where things stand |
+| `/save` | When you are done | {name} writes a summary and saves it, so tomorrow's chat picks up from here |
+| `/compact` | When a chat has got long | Shrinks the chat to a summary, so {name} stays quick and keeps going |
+| `/new` | When you want a fresh start | Starts a new, empty chat in the same folder. Run `/save` first if you want this one remembered |
 
-Think of `$start` and `$save` as bookends. Everything in between is just conversation.
-When a chat has got long, run `$save` and start a new chat.
+`/start` and `/save` need two presses of Enter: one picks the command from the list, the
+next sends it. `/compact` and `/new` run as soon as you pick them.
+
+Think of `/start` and `/save` as bookends. Everything in between is just conversation.
 
 ## Handy extras
 
 | Type this | What happens |
 |-----------|--------------|
-| `$report` | A summary of your week |
-| `$status` | Checks that everything is connected and working |
+| `/update` | A quick checkpoint in the middle of work, so nothing is lost |
+| `/help` | Lists every command and what {name} can do |
+| `/report` | A summary of your week |
+| "Is everything connected?" | Checks that everything is connected and working. Ask it in words: ChatGPT's own `/status` shows its usage limits instead |
 
 ## Things to try
 
@@ -630,6 +644,12 @@ def start_here(name, a, main="claude"):
     examples = "\n".join(f'- "{line}"' for line in tries(a))
     if main == "codex":
         return START_HERE_CODEX.format(name=name, examples=examples, contact=CONTACT)
+    colors = bool(a.get("colors", True))
+    tint_row = "| `/tint company` | Colors this chat. Try `company`, `personal`, or `off` |\n" if colors else ""
+    colors_line = ("- **Colors mean topics.** Orange is work, green is personal. The shape on\n"
+                   "  a chat's title in the sidebar matches.\n") if colors else ""
+    phone_line = ("- **Your phone works too.** Open the Claude app on your phone to pick up any chat.\n"
+                  if a.get("remote", True) else "")
     return f"""# Start here
 
 {name} is your AI assistant. You talk to it in plain English. The commands below
@@ -651,11 +671,10 @@ Think of `/start` and `/save` as bookends. Everything in between is just convers
 | Type this | What happens |
 |-----------|--------------|
 | `/update` | A quick checkpoint in the middle of work, so nothing is lost |
-| `/help` | Lists every command and what {name} is connected to |
+| `/help` | Lists every command and what {name} can do |
 | `/report` | A summary of your week |
 | `/status` | Checks that everything is connected and working |
-| `/tint company` | Colors this chat. Try `company`, `personal`, or `off` |
-
+{tint_row}
 ## Things to try
 
 {examples}
@@ -666,10 +685,7 @@ Think of `/start` and `/save` as bookends. Everything in between is just convers
 - **It remembers.** Tell it something once and it writes it down.
 - **It asks before it sends.** {name} will check with you before sending a message,
   deleting anything, or changing a company system.
-- **Colors mean topics.** Orange is work, green is personal. The shape on
-  a chat's title in the sidebar matches.
-- **Your phone works too.** Open the Claude app on your phone to pick up any chat.
-- **Stuck?** Type "I'm stuck" and say what you were trying to do, or send {CONTACT} a screenshot.
+{colors_line}{phone_line}- **Stuck?** Type "I'm stuck" and say what you were trying to do, or send {CONTACT} a screenshot.
 """
 
 
@@ -964,8 +980,12 @@ def configure(a):
 
     load_pack(workspace, log)
 
-    if not (workspace / "START-HERE.md").exists():
-        (workspace / "START-HERE.md").write_text(start_here(name, a, main), encoding="utf-8")
+    # Setup's own guide, so a re-run refreshes it (new commands, a different main app). One the
+    # person rewrote themselves no longer starts with setup's heading and is left alone.
+    guide = workspace / "START-HERE.md"
+    current_guide = guide.read_text(encoding="utf-8", errors="ignore") if guide.exists() else ""
+    if not current_guide or current_guide.startswith("# Start here\n"):
+        guide.write_text(start_here(name, a, main), encoding="utf-8")
 
     if existed:
         log.append(f"{workspace} already had a CLAUDE.md, so your notes and profile were kept as they are.")
@@ -1026,7 +1046,8 @@ def configure(a):
         log.append(f"In the Claude app, a new chat can start in this folder: pick \"{preset['name']}\" in the new-chat menu.")
 
     return {"ok": True, "log": log, "folder": str(workspace), "assistant": name, "main": main,
-            "tools": [{"id": t, "label": EXTRAS[t]["label"], "account": EXTRAS[t]["account"]} for t in extras],
+            "tools": [{"id": t, "label": EXTRAS[t]["label"], "account": EXTRAS[t]["account"],
+                       "where": EXTRAS[t].get("where", "in a terminal")} for t in extras],
             "user": a["user"] if a["user"] != "the owner of this computer" else "",
             "try": tries(a)[:3], "systems": systems_summary(a)}
 
@@ -2503,8 +2524,9 @@ POINTER = """# {name}
 Read `CLAUDE.md` in this folder first and follow it: it says who you are, who you work
 for and how. The notes it points to (`state/`, `company/`) are yours to read and keep up.
 
-The files in `.claude/commands/` are plain instructions. When the person types `/start`
-or `/save`, read `.claude/commands/start.md` or `.claude/commands/save.md` and do what it says.
+The files in `.claude/commands/` are plain instructions. When the person types a command
+such as `/start` or `/save`, read the matching file (`.claude/commands/start.md`,
+`.claude/commands/save.md`) and do what it says.
 
 The folders and files in `.claude/skills/` are how-to guides for particular jobs, such as
 looking up jobs in the CRM or calls on the phone system. Before a task one of them covers, read it (a folder's guide
@@ -2713,6 +2735,15 @@ def codex_login():
     threading.Thread(target=work, daemon=True).start()
 
 
+# Codex's version of each Permissions choice. "untrusted" asks before any command that is not
+# a plain read; workspace-write lets it edit files in the folder; read-only asks for edits too.
+CODEX_POLICY = {
+    "bypassPermissions": {"approval_policy": "never", "sandbox_mode": "danger-full-access"},
+    "acceptEdits": {"approval_policy": "untrusted", "sandbox_mode": "workspace-write"},
+    "default": {"approval_policy": "untrusted", "sandbox_mode": "read-only"},
+}
+
+
 def write_codex_settings(workspace, never_asks, log):
     """Codex's settings file, which the ChatGPT app and the terminal tool both read.
 
@@ -2732,9 +2763,11 @@ def write_codex_settings(workspace, never_asks, log):
     first_table = next((i for i, line in enumerate(lines) if line.lstrip().startswith("[")), len(lines))
     top = [line for line in lines[:first_table] if not line.rstrip().endswith(OURS.strip())]
     rest = lines[first_table:]
-    if never_asks:
+    # never_asks is True/False (an assistant beside the main one) or the Permissions choice
+    # (Codex as the main one), so each of the three choices means the same as it does for Claude.
+    wanted = CODEX_POLICY.get("bypassPermissions" if never_asks is True else never_asks)
+    if wanted:
         theirs = {line.split("=", 1)[0].strip() for line in top if "=" in line and not line.lstrip().startswith("#")}
-        wanted = {"approval_policy": "never", "sandbox_mode": "danger-full-access"}
         top = [f'{key} = "{value}"{OURS}' for key, value in wanted.items() if key not in theirs] + top
     # Codex records a trusted folder under its path, lower-cased on Windows, in single quotes.
     folder = str(workspace).lower() if IS_WINDOWS else str(workspace)
@@ -2796,7 +2829,7 @@ def write_extras(a, workspace, name, extras, log):
     if "codex" in extras:
         # As the main assistant, Codex follows the Permissions choice, the way Claude does.
         as_main = chosen_main(a) == "codex"
-        write_codex_settings(workspace, a.get("mode", "bypassPermissions") == "bypassPermissions" if as_main else never_asks, log)
+        write_codex_settings(workspace, a.get("mode", "bypassPermissions") if as_main else never_asks, log)
         write_agent_skills(workspace)
     names = [EXTRAS[tool]["short"] for tool in extras]
     log.append(" and ".join([", ".join(names[:-1]), names[-1]] if len(names) > 1 else names)
