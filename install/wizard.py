@@ -1116,7 +1116,9 @@ def configure(a):
     extras = chosen_extras(a)
     write_extras(a, workspace, name, extras, log)
     if not os.environ.get("ASSISTANT_SKIP_INSTALLS"):
-        run_installs(claude=with_claude)  # Claude's pieces, if they were not started with the page
+        # Claude's pieces, if they were not started with the page; the desktop app only for the main one.
+        run_installs(claude=with_claude, claude_app=main == "claude",
+                     chatgpt_app=main == "codex" and not os.environ.get("CI"))
         for tool in extras:
             install_extra(tool)
     try:
@@ -1130,7 +1132,7 @@ def configure(a):
         if main == "codex":
             offer_extension(log, CHATGPT_EXTENSION, "ChatGPT")
 
-    missing = missing_apps(with_claude)
+    missing = missing_apps(main == "claude")
     if missing:
         log.append("Still to install: " + "; ".join(missing) + ".")
 
@@ -1141,9 +1143,16 @@ def configure(a):
     if preset["state"] in ("added", "there"):
         log.append(f"In the Claude app, a new chat can start in this folder: pick \"{preset['name']}\" in the new-chat menu.")
 
+    side = [t for t in extras if not (t == "codex" and main == "codex")]
+    tools = ([{"id": "claude", "label": "Claude", "account": CLAUDE_SIDE["account"], "where": "in a terminal"}]
+             if with_claude and main != "claude" else [])
+    tools += [{"id": t, "label": "Codex" if t == "codex" else EXTRAS[t]["label"], "account": EXTRAS[t]["account"],
+               "where": "in a terminal"} for t in side]
+    if main == "codex":
+        tools.append({"id": "codex", "label": EXTRAS["codex"]["label"], "account": EXTRAS["codex"]["account"],
+                      "where": EXTRAS["codex"]["where"]})
     return {"ok": True, "log": log, "folder": str(workspace), "assistant": name, "main": main,
-            "tools": [{"id": t, "label": EXTRAS[t]["label"], "account": EXTRAS[t]["account"],
-                       "where": EXTRAS[t].get("where", "in a terminal")} for t in extras],
+            "tools": tools,
             "user": a["user"] if a["user"] != "the owner of this computer" else "",
             "try": tries(a)[:3], "systems": systems_summary(a)}
 
@@ -2578,6 +2587,110 @@ def _get_claude_app():
     return claude_app_installed(), CLAUDE_APP.get("error", "")
 
 
+# The ChatGPT (Codex) desktop app. Windows: OpenAI's Microsoft Store listing (the one
+# `codex app` opens). Mac: OpenAI's disk image (about 580 MB), the one `codex app` fetches.
+CHATGPT_STORE_ID = "9PLM9XGG6VKS"
+CHATGPT_DMG = "https://persistent.oaistatic.com/codex-app-prod/ChatGPT.dmg"
+CHATGPT_SEEN = {"installed": False}
+
+
+def _mac_app_id(app):
+    import plistlib
+    try:
+        with open(app / "Contents" / "Info.plist", "rb") as handle:
+            return str(plistlib.load(handle).get("CFBundleIdentifier") or "")
+    except (OSError, ValueError, Exception):
+        return ""
+
+
+def chatgpt_app_installed():
+    """Whether the ChatGPT (Codex) desktop app is on this computer. Not the older ChatGPT chat
+    app: on a Mac both can be called ChatGPT.app, so it goes by the app's id, which says codex."""
+    if CHATGPT_SEEN["installed"]:
+        return True
+    found = False
+    if IS_WINDOWS:
+        try:
+            done = subprocess.run(["powershell", "-NoProfile", "-Command",
+                                   "if (Get-AppxPackage -Name OpenAI.Codex) { 'yes' }"],
+                                  capture_output=True, timeout=30, stdin=subprocess.DEVNULL)
+            found = "yes" in done.stdout.replace(b"\x00", b"").decode("ascii", "ignore")
+        except (OSError, subprocess.TimeoutExpired, ValueError):
+            found = False
+    elif IS_MAC:
+        for base in (Path("/Applications"), Path.home() / "Applications"):
+            if base.is_dir() and any("codex" in _mac_app_id(app).lower() for app in base.glob("*.app")):
+                found = True
+                break
+    CHATGPT_SEEN["installed"] = found
+    return found
+
+
+def _get_chatgpt_app():
+    import time
+    if IS_WINDOWS:
+        if shutil.which("winget"):
+            _run([shutil.which("winget"), "install", "--id", CHATGPT_STORE_ID, "--source", "msstore", "-e", "--silent",
+                  "--accept-source-agreements", "--accept-package-agreements"])
+            if chatgpt_app_installed():
+                return True, ""
+        try:
+            os.startfile(f"ms-windows-store://pdp/?ProductId={CHATGPT_STORE_ID}")  # noqa: S606 - Microsoft's own Store
+        except OSError:
+            return False, "the Microsoft Store could not be opened"
+        _mark("chatgpt-app", "working", "In the Microsoft Store window that opened, click Get (or Install).")
+        for _ in range(180):  # up to half an hour
+            if chatgpt_app_installed():
+                return True, ""
+            time.sleep(10)
+        return False, "not installed from the Microsoft Store yet"
+    if not IS_MAC:
+        return False, "no desktop app for this system"
+    import tempfile
+    import urllib.request
+    work = Path(tempfile.mkdtemp(prefix="chatgpt-app-"))
+    try:
+        dmg, mount = work / "ChatGPT.dmg", work / "mount"
+        try:
+            head = urllib.request.Request(CHATGPT_DMG, method="HEAD", headers={"User-Agent": BROWSER_AGENT})
+            with urllib.request.urlopen(head, timeout=30) as reply:
+                size = int(reply.headers.get("Content-Length") or 0)
+        except (OSError, ValueError):
+            size = 0
+        fetch = subprocess.Popen(["curl", "-fL", "--retry", "2", "-sS", "-A", BROWSER_AGENT, "-o", str(dmg), CHATGPT_DMG],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL)
+        while fetch.poll() is None:
+            have = dmg.stat().st_size if dmg.exists() else 0
+            _mark("chatgpt-app", "working", f"Downloading: {min(99, have * 100 // size)}%" if size else
+                  f"Downloading: {have // 1_000_000} MB")
+            time.sleep(1)
+        if fetch.returncode != 0 or not dmg.exists() or dmg.stat().st_size < 50_000_000:
+            return False, "the download did not finish"
+        _mark("chatgpt-app", "working", "Copying it into Applications")
+        mount.mkdir()
+        subprocess.run(["hdiutil", "attach", str(dmg), "-nobrowse", "-quiet", "-mountpoint", str(mount)], check=True)
+        try:
+            app = next((a for a in mount.glob("*.app") if "codex" in _mac_app_id(a).lower()), None)
+            if app is None:
+                return False, "the download did not hold the ChatGPT (Codex) app"
+            wanted = _mac_app_id(app)
+            folders = ([Path("/Applications")] if os.access("/Applications", os.W_OK) else []) + [Path.home() / "Applications"]
+            # Never over a different app of the same name (the older ChatGPT chat app is ChatGPT.app too).
+            target = next((f for f in folders if not (f / app.name).exists() or _mac_app_id(f / app.name) == wanted), None)
+            if target is None:
+                return False, f"another app called {app.name} is in the way"
+            target.mkdir(exist_ok=True)
+            subprocess.run(["ditto", str(app), str(target / app.name)], check=True)
+        finally:
+            subprocess.run(["hdiutil", "detach", str(mount), "-quiet"], check=False)
+        CHATGPT_SEEN["installed"] = False
+        return chatgpt_app_installed(), ""
+    except Exception as error:
+        return False, f"{type(error).__name__}: {error}"[:160]
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
 def _get_gh():
     GH_TOOL["tried"] = False
     ensure_gh()
@@ -2589,6 +2702,7 @@ def install_plan():
     plan = [
         ("claude-code", "Claude Code", lambda: claude_cli() is not None, _get_claude_code, "the engine your assistant runs on"),
         ("claude-app", "The Claude app", claude_app_installed, _get_claude_app, "where you will talk to it"),
+        ("chatgpt-app", "The ChatGPT app", chatgpt_app_installed, _get_chatgpt_app, "where you will talk to it"),
         ("chrome", "Google Chrome", _has_chrome, _get_chrome, "for your web tools"),
         ("gh", "GitHub tool", lambda: gh_path() is not None, _get_gh, "for backing up your notes"),
     ]
@@ -2601,14 +2715,20 @@ def install_plan():
     return plan
 
 
-def run_installs(blocking=False, claude=True):
+LONG_STEPS = {"chatgpt-app"} | ({"git"} if IS_MAC else set())
+
+
+def run_installs(blocking=False, claude=True, claude_app=None, chatgpt_app=False):
     """Fetch whatever is missing. Each row moves waiting -> working -> done or failed.
 
-    Safe to call again: it only adds what an earlier call left out (Claude's pieces, when the
-    person turned out to want Claude after all).
+    Every assistant picked gets its command-line tool; only the main one gets its desktop
+    app (`claude_app`, `chatgpt_app`). Safe to call again: it only adds what an earlier call
+    left out (Claude's pieces, when the person turned out to want Claude after all).
     """
     refresh_path()
-    plan = [step for step in install_plan() if claude or not step[0].startswith("claude-")]
+    claude_app = claude if claude_app is None else claude_app
+    wanted = {"claude-code": claude, "claude-app": claude and claude_app, "chatgpt-app": chatgpt_app}
+    plan = [step for step in install_plan() if wanted.get(step[0], True)]
     with INSTALL_LOCK:
         here = {row["id"] for row in INSTALLS}
         plan = [step for step in plan if step[0] not in here]
@@ -2626,7 +2746,7 @@ def run_installs(blocking=False, claude=True):
             # One installer at a time, whoever asked: each adds itself to the PATH, and two
             # at once can undo each other. Apple's developer tools are the exception: they
             # wait many minutes on a click, and must not hold everything else up.
-            with (contextlib.nullcontext() if IS_MAC and step_id == "git" else QUEUE_LOCK):
+            with (contextlib.nullcontext() if step_id in LONG_STEPS else QUEUE_LOCK):
                 worked, note = get()
             refresh_path()
             _mark(step_id, "done" if have() else "failed", "" if have() else (note or "could not be installed"))
@@ -2637,8 +2757,9 @@ def run_installs(blocking=False, claude=True):
         for step in steps:
             one(step)
 
-    # Apple's developer tools take many minutes and wait on a click, so they run on their own.
-    slow = [step for step in plan if IS_MAC and step[0] == "git"]
+    # Apple's developer tools and the ChatGPT app take many minutes (a click, a big download),
+    # so each runs on its own and does not hold the others up.
+    slow = [step for step in plan if step[0] in LONG_STEPS]
     fast = [step for step in plan if step not in slow]
     if blocking:
         queue(fast + ([] if os.environ.get("CI") else slow))
@@ -2647,8 +2768,8 @@ def run_installs(blocking=False, claude=True):
                 _mark(step[0], "done" if step[2]() else "failed", "")
         return
     threading.Thread(target=queue, args=(fast,), daemon=True).start()
-    if slow:
-        threading.Thread(target=queue, args=(slow,), daemon=True).start()
+    for step in slow:
+        threading.Thread(target=queue, args=([step],), daemon=True).start()
 
 
 def installs_status():
@@ -2717,6 +2838,8 @@ DEFAULT_TOOLS = _default_tools()
 
 def tool_path(tool):
     """Where the tool is, whether or not this window's PATH has caught up with its installer."""
+    if tool == "claude":
+        return claude_cli()
     found = shutil.which(EXTRAS[tool]["command"])
     if found:
         return found
@@ -2751,14 +2874,27 @@ def chosen_extras(a):
     return [tool for tool in EXTRAS if tool in picked]
 
 
+# Claude when another assistant is the main one: its command-line tool, opened in a terminal.
+CLAUDE_SIDE = {"label": "Claude", "short": "Claude", "command": "claude", "account": "your Claude account", "never": ""}
+
+
+def side_spec(tool):
+    return CLAUDE_SIDE if tool == "claude" else EXTRAS[tool]
+
+
 def launcher(tool, workspace):
-    return workspace / f"Open {EXTRAS[tool]['short']}{'.cmd' if IS_WINDOWS else '.command'}"
+    return workspace / f"Open {side_spec(tool)['short']}{'.cmd' if IS_WINDOWS else '.command'}"
 
 
-def write_launcher(tool, workspace, never_asks):
-    """A file in the folder that opens the tool there. Rewritten each run, so it follows the latest choice."""
-    spec = EXTRAS[tool]
-    run = spec.get("run") or spec["command"] + (" " + spec["never"] if never_asks and spec["never"] else "")
+def write_launcher(tool, workspace, never_asks, main="claude"):
+    """A file in the folder that opens the tool there. Rewritten each run, so it follows the latest choice.
+
+    Only the main assistant opens in its desktop app (Codex: `codex app .`); the others run
+    their command-line tool in a terminal.
+    """
+    spec = side_spec(tool)
+    run = (spec.get("run") if tool != "codex" or main == "codex" else None) \
+        or spec["command"] + (" " + spec["never"] if never_asks and spec["never"] else "")
     target = launcher(tool, workspace)
     if IS_WINDOWS:
         lines = ["@echo off", f"title {spec['short']}", 'cd /d "%~dp0"',
@@ -2951,9 +3087,14 @@ def write_agent_skills(workspace):
 
 def write_extras(a, workspace, name, extras, log):
     """Point each chosen assistant at this folder's notes and leave a file that opens it here."""
-    for tool in EXTRAS:  # one that was unticked on a later run loses its file
-        if tool not in extras and launcher(tool, workspace).is_file():
+    main = chosen_main(a)
+    claude_side = uses_claude(a) and main != "claude"
+    for tool in list(EXTRAS) + ["claude"]:  # one that was unticked on a later run loses its file
+        keep = claude_side if tool == "claude" else tool in extras
+        if not keep and launcher(tool, workspace).is_file():
             launcher(tool, workspace).unlink()
+    if claude_side:  # Claude beside another main assistant: the terminal tool, not the app
+        write_launcher("claude", workspace, False, main)
     if not extras:
         return
     never_asks = bool(a.get("extrasBypass", a.get("agyBypass", True)))
@@ -2965,7 +3106,7 @@ def write_extras(a, workspace, name, extras, log):
         if not current or ours_before:
             (workspace / pointer).write_text(POINTER.format(name=name), encoding="utf-8")
     for tool in extras:
-        write_launcher(tool, workspace, never_asks)
+        write_launcher(tool, workspace, never_asks, main)
     if "agy" in extras:
         write_agy_settings(workspace, never_asks, log)
     if "codex" in extras:
@@ -3006,11 +3147,22 @@ def install_extra(tool):
 
 
 def open_extra(tool, folder=""):
-    """A terminal window on the assistant's folder, running the tool. Its first run asks for a sign-in."""
+    """Open an assistant on its folder: the ChatGPT app when Codex is the main assistant (straight
+    away, no terminal), else a terminal window running the tool. Its first run asks for a sign-in."""
     workspace = Path(folder).resolve() if folder else None
-    if tool not in EXTRAS or not (workspace and workspace.parent == Path.home().resolve()
-                                  and (workspace / ".assistant-name").exists()):
+    if (tool not in EXTRAS and tool != "claude") or not (workspace and workspace.parent == Path.home().resolve()
+                                                         and (workspace / ".assistant-name").exists()):
         return False
+    if tool == "codex" and chosen_main(LAST["answers"] or {}) == "codex":
+        if not (tool_path("codex") and chatgpt_app_installed()):
+            return False  # the page shows the app's install row instead of a terminal installer
+        try:
+            hidden = {"creationflags": 0x08000000} if IS_WINDOWS else {"start_new_session": True}  # CREATE_NO_WINDOW
+            subprocess.Popen([tool_path("codex"), "app", str(workspace)], cwd=str(workspace), stdin=subprocess.DEVNULL,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **hidden)
+            return True
+        except OSError:
+            return False
     file = launcher(tool, workspace)
     if not (tool_path(tool) and file.is_file()):
         return False
@@ -3104,9 +3256,10 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/open":
             self.send({"ok": True, "claude": open_claude(str(body.get("folder") or ""))})
         elif self.path == "/tool/open":
-            tool = body.get("tool") if body.get("tool") in EXTRAS else ""
+            tool = body.get("tool") if body.get("tool") in EXTRAS or body.get("tool") == "claude" else ""
+            app = next((dict(r) for r in INSTALLS if r["id"] == "chatgpt-app"), None) if tool == "codex" else None
             self.send({"ok": bool(tool), "opened": bool(tool) and open_extra(tool, str(body.get("folder") or "")),
-                       "installed": bool(tool) and tool_path(tool) is not None})
+                       "installed": bool(tool) and tool_path(tool) is not None, "app": app})
         elif self.path == "/codex/status":
             self.send(codex_account())
         elif self.path == "/codex/login":
@@ -3116,9 +3269,10 @@ class Handler(BaseHTTPRequestHandler):
             self.send(connectors_status(bool(body.get("fresh"))))
         elif self.path == "/installs/status":
             self.send(installs_status())
-        elif self.path == "/installs/start":  # the person said they use Claude: fetch its pieces now
-            if body.get("claude") is True and not os.environ.get("ASSISTANT_SKIP_INSTALLS"):
-                run_installs(claude=True)
+        elif self.path == "/installs/start":  # the first question is answered: fetch those assistants' pieces now
+            if not os.environ.get("ASSISTANT_SKIP_INSTALLS"):
+                run_installs(claude=body.get("claude") is True, claude_app=body.get("claudeApp") is True,
+                             chatgpt_app=body.get("chatgptApp") is True)
             self.send(installs_status())
         elif self.path == "/account/status":
             self.send(claude_account())
@@ -3188,7 +3342,9 @@ def main():
 
     if args.answers:
         answers = json.loads(Path(args.answers).read_text(encoding="utf-8"))
-        run_installs(blocking=True, claude=uses_claude(answers))
+        # The test machines skip the ChatGPT app: a 580 MB download proves nothing setup does.
+        run_installs(blocking=True, claude=uses_claude(answers), claude_app=chosen_main(answers) == "claude",
+                     chatgpt_app=chosen_main(answers) == "codex" and not os.environ.get("CI"))
         for row in INSTALLS:
             print(f"  {row['label']}: {row['state']}" + (f" ({row['note']})" if row["note"] else ""))
         result = configure(answers)

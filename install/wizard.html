@@ -528,7 +528,7 @@
       <button class="step" id="cx-login" style="margin-top:12px" hidden>Sign in to ChatGPT</button>
     </section>
     <button class="go" id="cx-open">Open ChatGPT</button>
-    <p class="hint" id="cx-note" style="text-align:center;margin:12px 0 20px">If the ChatGPT app is not on this computer yet, this opens its installer first.</p>
+    <p class="hint" id="cx-note" style="text-align:center;margin:12px 0 20px" role="status">Setup installs the ChatGPT app for you if it is not on this computer yet. This button opens it.</p>
     <section>
       <h2>Once ChatGPT is open</h2>
       <ol class="next">
@@ -761,6 +761,7 @@ function showInstalls(st) {
   const needsThem = st.rows.some(r => r.state === 'failed' || (r.state === 'working' && r.note))
   if (!dockTouched) $('dock').dataset.open = String(needsThem || (st.busy && innerWidth >= 1040))
   if (st.busy) setTimeout(async () => showInstalls(await post('/installs/status')), 2000)
+  showChatGPTApp(st.rows.find(r => r.id === 'chatgpt-app'))
 }
 $('dock-head').onclick = () => {
   dockTouched = true
@@ -947,7 +948,9 @@ for (const button of document.querySelectorAll('button[data-go]')) {
   button.onclick = () => {
     const to = Number(button.dataset.go)
     // Leaving the first question: if they use Claude, its pieces start installing now.
-    if (page === 0.5 && to === 1 && pickedTools().includes('claude')) post('/installs/start', { claude: true }).then(showInstalls)
+    // Every assistant picked gets its command-line tool; only the main one gets its desktop app.
+    if (page === 0.5 && to === 1) post('/installs/start', { claude: pickedTools().includes('claude'),
+      claudeApp: mainTool() === 'claude', chatgptApp: mainTool() === 'codex' }).then(showInstalls)
     // With Codex as the primary agent the flow is 4.5, 4.2, 5, 7, 9, 10: the Claude-only pages are stepped over.
     if (codexMain() && to === 4) show(4.5)
     else if (codexMain() && to === 8) show(page === 7 ? 9 : 7)
@@ -1657,12 +1660,45 @@ $('copy-folder').onclick = async () => {
   }
 }
 
+// The ChatGPT app installs in the background like everything else; the Open button waits for
+// it (showing how far it has got) and opens it once it is there, instead of a terminal installer.
+let wantChatGPT = false
+function showChatGPTApp(row) {
+  if (!row) return
+  const busy = row.state === 'waiting' || row.state === 'working'
+  for (const button of [$('cx-open'), $('final-open')]) {
+    if (button === $('final-open') && !codexMain()) continue
+    button.disabled = busy
+    if (busy) button.textContent = 'Installing ChatGPT…'
+    else if (button.textContent === 'Installing ChatGPT…') button.textContent = 'Open ChatGPT'
+  }
+  if (busy) {
+    $('cx-note').textContent = `Setup is installing the ChatGPT app (${row.note || 'starting'}). The button below works as soon as it is done.`
+  } else if (row.state === 'failed') {
+    $('cx-note').textContent = `The ChatGPT app could not be installed${row.note ? ` (${row.note})` : ''}. Get it from chatgpt.com/codex, or send ${options.contact || 'your manager'} a screenshot of this page.`
+  } else if (wantChatGPT) {
+    wantChatGPT = false
+    openChatGPT()
+  } else if ($('cx-note').textContent.startsWith('Setup is installing')) {
+    $('cx-note').textContent = 'The ChatGPT app is installed. Click Open ChatGPT.'
+  }
+}
 async function openChatGPT() {
   const reply = await post('/tool/open', { tool: 'codex', folder: result ? result.folder : '' })
   if (reply.opened) opened.codex = true
+  const app = reply.app
+  if (!reply.opened && app && (app.state === 'waiting' || app.state === 'working')) {
+    wantChatGPT = true
+    showChatGPTApp(app)
+    return false
+  }
+  if (!reply.opened && app && app.state === 'failed') {
+    showChatGPTApp(app)  // keeps the reason and where to get it, not a terminal installer
+    return false
+  }
   $('cx-note').textContent = reply.opened ? 'ChatGPT is opening. Follow the steps below, then come back here and click Next.'
-    : reply.installed ? 'It did not open by itself. In your folder, double-click "Open Codex".'
-      : 'Codex is still installing. Watch the installs panel, then click again.'
+    : !reply.installed ? 'ChatGPT\'s Codex tool is still installing. Watch the panel at the bottom right, then click again.'
+      : 'It did not open by itself. In your folder, double-click "Open Codex".'
   return reply.opened
 }
 $('cx-open').onclick = openChatGPT
@@ -1674,7 +1710,8 @@ $('cx-login').onclick = async () => showCodex(await post('/codex/login'))
 $('final-open').onclick = async () => {
   $('final-open').dataset.clicked = '1'
   if (codexMain()) {
-    $('final-open').textContent = (await openChatGPT()) ? 'ChatGPT is opening…' : 'In your folder, double-click "Open Codex"'
+    const opening = await openChatGPT()
+    if (!wantChatGPT) $('final-open').textContent = opening ? 'ChatGPT is opening…' : 'In your folder, double-click "Open Codex"'
     return
   }
   const opened = await post('/open', { folder: result ? result.folder : '' })

@@ -161,7 +161,7 @@ local = Path(os.environ.get("LOCALAPPDATA", ""))
 ending = ".cmd" if os.name == "nt" else ".command"
 for label, command, flag, windows_spot, other_spot in (
         ("Antigravity", "agy", "", local / "agy" / "bin" / "agy.exe", home / ".local" / "bin" / "agy"),
-        ("Codex", "codex app .", "",
+        ("Codex", "codex", "",
          local / "Programs" / "OpenAI" / "Codex" / "bin" / "codex.exe", home / ".local" / "bin" / "codex"),
         ("Grok", "grok", "--always-approve", home / ".grok" / "bin" / "grok.exe", home / ".grok" / "bin" / "grok")):
     opener = read(work / f"Open {label}{ending}")
@@ -171,6 +171,8 @@ for label, command, flag, windows_spot, other_spot in (
     if os.name != "nt":
         check(f"{label}'s file can be run", os.access(work / f"Open {label}{ending}", os.X_OK))
     note(f"{label} installed", shutil.which(command.split()[0]) is not None or (windows_spot if os.name == "nt" else other_spot).exists())
+check("Codex beside Claude opens in a terminal, not the ChatGPT app", "codex app" not in read(work / f"Open Codex{ending}"))
+check("no Open Claude file when Claude is the main assistant", not (work / f"Open Claude{ending}").exists())
 whole, top = codex_settings()
 check("Codex never asks, in the app too", 'approval_policy = "never"' in top and 'sandbox_mode = "danger-full-access"' in top)
 check("Codex trusts the assistant's folder", ("friday']" in whole.lower() or 'friday"]' in whole.lower()) and 'trust_level = "trusted"' in whole)
