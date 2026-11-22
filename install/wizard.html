@@ -551,15 +551,16 @@
 
   <div class="page" data-page="5" hidden>
     <h1>Connect Chrome</h1>
-    <p class="lede">This lets <span class="the-name">Jarvis</span> work in web pages for you. Three clicks, in order.</p>
+    <p class="lede">This lets <span class="the-name">Jarvis</span> work in web pages for you. Three clicks, in order. Each one opens a small window of its own.</p>
+    <p class="note" id="cs-summary" hidden></p>
     <section>
       <ol class="next steps">
         <li><button class="step" data-page="google">Sign in to Google</button>
-          Use your work email. If Chrome offers to sign you in to Chrome too, say yes.</li>
+          <span id="cs-google">Use your work email. If Chrome offers to sign you in to Chrome too, say yes: that is how setup sees you are done. Then close that window.</span></li>
         <li><button class="step" data-page="extension">Add Claude to Chrome</button>
-          Click <b>Add to Chrome</b> on the page that opens. If Chrome already asked you to turn on "Claude", click <b>Enable</b> instead.</li>
-        <li><button class="step" data-page="claude">Sign in to Claude</button>
-          Use the same work email. Then click the puzzle piece at the top right of Chrome and pin <b>Claude</b>.</li>
+          <span id="cs-extension">Click <b>Add to Chrome</b> in the window that opens. If Chrome already asked you to turn on "Claude", click <b>Enable</b> instead. This page ticks it when Chrome has it; then close that window.</span></li>
+        <li><button class="step" data-page="claude">Sign in to Claude in Chrome</button>
+          <span id="cs-claude">Adding it is not enough: Claude in Chrome only works once you sign in to it. Sign in with the same work email in the window that opens, and close it. Then click the puzzle piece at the top right of Chrome, pin <b>Claude</b>, and click it: if it asks you to sign in, do that too. It is ready when it shows a box to type in.</span></li>
       </ol>
     </section>
     <div class="nav"><button class="go quiet back" data-go="4">Back</button><button class="go next" data-go="6">Next</button></div>
@@ -763,8 +764,9 @@ function showCodex(a) {
   const words = $('cx-text'), button = $('cx-login')
   button.hidden = true
   done.codexIn = a.state === 'signed-in'
+  if (a.waiting) waited.codex = true
   if (a.state === 'signed-in') {
-    words.textContent = '\u2713 Already signed in to ChatGPT on this computer.'
+    words.textContent = '\u2713 Already signed in to ChatGPT on this computer.' + closeTab('codex')
   } else if (a.state === 'signed-out') {
     words.textContent = a.waiting ? 'A sign-in page opened in your browser. Finish it there.' : 'You are not signed in to ChatGPT yet.'
     button.hidden = a.waiting
@@ -805,7 +807,7 @@ function showFinale() {
   ] : [
     [true, `${result ? result.assistant : 'Your assistant'} is set up`, setUp, 0],
     [appState === 'installed', 'The Claude app', appState === 'installed' ? 'On this computer.' : 'Not installed yet.', 4],
-    [done.chrome >= 3, 'Chrome', done.chrome >= 3 ? 'Signed in, with Claude added.' : 'Not finished: this is what lets it work in your web tools for you.', 5],
+    [done.chrome >= 3, 'Chrome', done.chrome >= 3 ? 'Signed in to Google, with Claude added and signed in.' : 'Not finished: this is what lets it work in your web tools for you.', 5],
     [done.drill, 'The four commands', done.drill ? 'You typed all four.' : 'Not practised yet.', 7],
     [done.connectors >= 3, 'Email, calendar and files',
       done.connectors >= 3 ? 'Gmail, Calendar and Drive are connected.'
@@ -868,6 +870,7 @@ function show(n) {
   if (n === 7) setTimeout(() => $('drill').focus(), 60)
   if (n === 8) post('/connectors/status').then(showConnectors)
   if (n === 9) post('/github/status').then(showGithub)
+  if (n === 5) setTimeout(watchChrome, 0)
   for (const el of document.querySelectorAll('.page')) el.hidden = Number(el.dataset.page) !== n
   $('progress').hidden = $('bar').hidden = n === 0
   const choices = [0.5, 1, 2, 2.5, 3]
@@ -1028,11 +1031,15 @@ $('go').onclick = async () => {
 }
 
 // Is there already a Claude account on this computer, and is it the work one?
+// A sign-in the tool itself opened in the browser: once it is done, say the tab can go.
+const waited = {}
+const closeTab = id => (waited[id] ? ' You can close the sign-in tab in your browser.' : '')
 function showAccount(a) {
   const text = $('acct-text'), button = $('acct-login')
   button.hidden = true
+  if (a.waiting) waited.claude = true
   if (a.state === 'work') {
-    text.textContent = `\u2713 Already signed in as ${a.email}${a.org ? ` (${a.org})` : ''}. Use this same account in the Claude app.`
+    text.textContent = `\u2713 Already signed in as ${a.email}${a.org ? ` (${a.org})` : ''}. Use this same account in the Claude app.${closeTab('claude')}`
   } else if (a.state === 'other') {
     text.textContent = `This computer is signed in to Claude as ${a.email}, which is not your work email. `
       + `Sign in with your ${workEmail()} so you are on the company plan.`
@@ -1244,7 +1251,7 @@ function showOrg(s) {
 }
 
 function createOrg(company) {
-  post('/chrome', { page: 'github-new-org' })
+  openSite('github-new-org')
   $('org-box').replaceChildren(
     el('p', { className: 'hint', style: 'margin:6px 0' },
       `GitHub's page opened in Chrome. Choose the Free plan, name it after ${company}, and use your work email. Then come back.`),
@@ -1261,7 +1268,8 @@ function showGithub(s) {
     $('gh-connect').classList.add('done')
     $('gh-connect').textContent = `\u2713 Connected as ${s.user}`
     $('gh-connect').disabled = true
-    $('gh-note').hidden = true
+    $('gh-note').hidden = !waited.github
+    if (waited.github) $('gh-note').textContent = 'Connected. You can close the GitHub tab in your browser.'
     $('gh-code').hidden = true
     $('gh-backup').disabled = false
     $('gh-next').disabled = false
@@ -1269,6 +1277,7 @@ function showGithub(s) {
     $('gh-have').setAttribute('aria-pressed', 'true')
     if (!orgAsked) { orgAsked = true; loadOrg() }
   } else if (s.state === 'waiting') {
+    waited.github = true
     $('gh-code').hidden = !s.code
     $('gh-code-value').textContent = s.code
     $('gh-connect').textContent = 'Waiting for GitHub…'
@@ -1293,7 +1302,7 @@ $('gh-have').onclick = () => { $('gh-have').setAttribute('aria-pressed', 'true')
 $('gh-signup').onclick = () => {
   $('gh-signup').setAttribute('aria-pressed', 'true'); $('gh-have').setAttribute('aria-pressed', 'false')
   $('gh-signup-note').hidden = false
-  post('/chrome', { page: 'github-signup' })
+  openSite('github-signup')
 }
 
 // The four commands, typed once each.
@@ -1367,7 +1376,7 @@ function showConnectors(c) {
   }
 }
 $('conn-open').onclick = async () => {
-  await post('/chrome', { page: 'connectors' })
+  await openSite('connectors')
   $('conn-open').classList.add('done')
   showConnectors(await post('/connectors/status'))
 }
@@ -1388,14 +1397,67 @@ $('gh-backup').onclick = async () => {
   }
 }
 
+// Connect Chrome. Each sign-in opens in a small window of its own (a pop-up when this page
+// is itself in Chrome, else a new Chrome window), so it is plain what to close afterwards.
+// Google, the Web Store and claude.ai cut the link back to the page that opened them, so
+// the page cannot close those windows itself; it says when they can go instead. Steps
+// Chrome already has (its Google account, the Claude extension) are ticked by themselves.
+const inChrome = Boolean(navigator.userAgentData && navigator.userAgentData.brands.some(b => b.brand === 'Google Chrome'))
+const chromeSteps = { google: false, extension: false, claude: false }
+let chromeTimer = null
+function tickStep(page, words) {
+  const button = document.querySelector(`button.step[data-page="${page}"]`)
+  chromeSteps[page] = true
+  done.chrome = Object.values(chromeSteps).filter(Boolean).length
+  button.classList.add('done')
+  button.textContent = '✓ ' + button.textContent.replace(/^✓ /, '')
+  if (words) $('cs-' + page).textContent = words
+}
+function openPopup(page) {
+  const url = (options.chromePages || {})[page]
+  if (!inChrome || !url) return false
+  const w = 560, h = 760
+  const left = Math.max(0, window.screenX + window.outerWidth - w - 40), top = Math.max(0, window.screenY + 60)
+  return Boolean(window.open(url, 'tm-' + page, `popup,width=${w},height=${h},left=${left},top=${top}`))
+}
+// Any other site page: a small window of its own, the same way.
+const openSite = page => openPopup(page) || post('/chrome', { page, window: true })
+let lastChrome = null
+const doneWhileOpen = {}
+function showChrome(s) {
+  if (!s || !s.ok) return
+  // Done while its window was open (not already done when the page loaded): say it can go.
+  const gone = key => {
+    if (lastChrome !== null && s[key] && s[key] !== lastChrome[key]) doneWhileOpen[key] = true
+    return doneWhileOpen[key] ? ' You can close that window now.' : ''
+  }
+  if (s.google) {
+    const work = s.work ? '' : ` That is not your ${workEmail()}: if this Chrome is for work, click the button and add your work account.`
+    tickStep('google', `✓ Chrome is signed in as ${s.google}.${work}${gone('google')}`)
+  }
+  if (s.extension) tickStep('extension', `✓ Claude is added to Chrome and turned on.${gone('extension')}`)
+  lastChrome = s
+  const have = [s.google && 'signed in to Google', s.extension && 'Claude is added'].filter(Boolean)
+  $('cs-summary').hidden = !have.length
+  $('cs-summary').textContent = have.length === 2
+    ? (chromeSteps.claude ? 'Chrome is signed in and Claude is added. All three steps are done.'
+      : 'Chrome is already signed in and Claude is added. Only the last step is left: sign in to Claude in Chrome.')
+    : have.length ? `Already done: ${have[0]}. Setup ticked it for you.` : ''
+}
+async function watchChrome() {
+  clearTimeout(chromeTimer)
+  if (page !== 5) return
+  showChrome(await post('/chrome/status'))
+  chromeTimer = setTimeout(watchChrome, 2500)
+}
 for (const button of document.querySelectorAll('button.step[data-page]')) {
   button.onclick = async () => {
-    await fetch('/chrome', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ page: button.dataset.page }),
-    })
-    if (!button.classList.contains('done')) done.chrome += 1
-    button.classList.add('done')
-    button.textContent = '✓ ' + button.textContent.replace(/^✓ /, '')
+    const step = button.dataset.page
+    if (!openPopup(step)) await post('/chrome', { page: step, window: true })
+    // The click counts (Claude's sign-in inside the extension cannot be seen from here, and
+    // someone may say no to signing in to Chrome itself); a check that sees it done adds the detail.
+    tickStep(step)
+    watchChrome()
   }
 }
 

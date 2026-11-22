@@ -1043,7 +1043,9 @@ WEB_STORE_UPDATES = "https://clients2.google.com/service/update2/crx"
 
 # The only pages the setup page may ask Chrome to open.
 CHROME_PAGES = {
-    "google": "https://accounts.google.com/",
+    # Ends on google.com, which (unlike Google's account pages) lets the setup page close
+    # the sign-in window it opened.
+    "google": "https://accounts.google.com/ServiceLogin?continue=https%3A%2F%2Fwww.google.com%2F",
     "extension": "https://chromewebstore.google.com/detail/claude/" + CLAUDE_EXTENSION,
     "claude": "https://claude.ai/login",
     "github-device": "https://github.com/login/device",
@@ -1087,21 +1089,78 @@ def chrome_path():
     return None
 
 
-def open_in_chrome(page):
-    """Open one of CHROME_PAGES in Chrome (the default browser if Chrome is missing)."""
+def open_in_chrome(page, new_window=False):
+    """Open one of CHROME_PAGES in Chrome (the default browser if Chrome is missing).
+
+    `new_window` puts it in a window of its own, so it is plain what to close afterwards.
+    """
     url = CHROME_PAGES.get(page)
     if url is None:
         return False
+    extra = ["--new-window"] if new_window else []
     try:
         if IS_WINDOWS and chrome_path():
-            subprocess.Popen([chrome_path(), url])
+            subprocess.Popen([chrome_path(), *extra, url])
             return True
-        if IS_MAC and subprocess.run(["open", "-a", "Google Chrome", url], check=False).returncode == 0:
-            return True
+        if IS_MAC:
+            command = (["open", "-na", "Google Chrome", "--args", *extra, url] if new_window
+                       else ["open", "-a", "Google Chrome", url])
+            if subprocess.run(command, check=False, capture_output=True).returncode == 0:
+                return True
     except OSError:
         pass
     webbrowser.open(url)
     return False
+
+
+def chrome_data_dir():
+    if IS_WINDOWS:
+        return Path(os.environ.get("LOCALAPPDATA", "")) / "Google" / "Chrome" / "User Data"
+    if IS_MAC:
+        return Path.home() / "Library" / "Application Support" / "Google" / "Chrome"
+    return Path.home() / ".config" / "google-chrome"
+
+
+def _read_json(path):
+    try:
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def chrome_status():
+    """What Chrome already has, from its own profile files: the Google account it is signed
+    in to and whether Claude in Chrome is installed and turned on.
+
+    It reads the profile Chrome opens by default (the one used last). It never reads
+    cookies, saved passwords or what an extension keeps, so whether someone is signed
+    in to Claude inside the extension cannot be seen from here.
+    """
+    data = chrome_data_dir()
+    profiles = _read_json(data / "Local State").get("profile", {})
+    profiles = profiles if isinstance(profiles, dict) else {}
+    name = str(profiles.get("last_used") or "Default")
+    if not re.fullmatch(r"[A-Za-z0-9 _-]{1,40}", name):
+        name = "Default"
+    info = (profiles.get("info_cache") or {}).get(name) or {}
+    info = info if isinstance(info, dict) else {}
+    email = str(info.get("user_name") or "")
+    email = email if re.fullmatch(r"[^@\s]{1,64}@[A-Za-z0-9.-]{1,190}", email) else ""
+
+    folder = data / name
+    extension = False
+    if (folder / "Extensions" / CLAUDE_EXTENSION).is_dir():
+        for prefs in ("Secure Preferences", "Preferences"):
+            row = (((_read_json(folder / prefs).get("extensions") or {}).get("settings") or {})
+                   .get(CLAUDE_EXTENSION))
+            if isinstance(row, dict):
+                # Turned off shows as state 0 (older Chrome) or a list of reasons (newer).
+                extension = row.get("state", 1) != 0 and not row.get("disable_reasons")
+                break
+    return {"ok": True, "chrome": _has_chrome(), "google": email,
+            "work": bool(email) and (not WORK_DOMAIN or email.lower().endswith("@" + WORK_DOMAIN)),
+            "extension": extension}
 
 
 # --- GitHub (optional): sign in and keep a private backup of the workspace ---------
@@ -2356,7 +2415,7 @@ class Handler(BaseHTTPRequestHandler):
                 "modes": MODES, "home": str(Path.home()), "sep": os.sep,
                 "bridge": bridge_ready(), "workDomain": WORK_DOMAIN, "brand": BRAND,
                 "preset": PRESET, "industries": {k: v[0] for k, v in INDUSTRIES.items()},
-                "integrations": INTEGRATIONS,
+                "integrations": INTEGRATIONS, "chromePages": CHROME_PAGES,
                 "user": os.environ.get("ASSISTANT_USER_NAME", ""),
                 "contact": CONTACT,
                 "main": default_main(),
@@ -2419,7 +2478,10 @@ class Handler(BaseHTTPRequestHandler):
             ensure_claude_app()
             self.send(claude_app_status())
         elif self.path == "/chrome":
-            self.send({"ok": body.get("page") in CHROME_PAGES, "chrome": open_in_chrome(body.get("page"))})
+            self.send({"ok": body.get("page") in CHROME_PAGES,
+                       "chrome": open_in_chrome(body.get("page"), body.get("window") is True)})
+        elif self.path == "/chrome/status":
+            self.send(chrome_status())
         elif self.path == "/github/connect":
             github_connect()
             self.send(dict(GITHUB, ok=True, installed=gh_path() is not None))
