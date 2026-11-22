@@ -46,11 +46,12 @@
   label { display: block; font-weight: 600; margin: 14px 0 6px; }
   label:first-of-type { margin-top: 0; }
   .hint { font-weight: 400; color: var(--soft); font-size: 14px; margin: 4px 0 0; }
-  select, input[type=text] {
+  select, input[type=text], textarea {
     width: 100%; padding: 11px 12px; font: inherit; color: var(--ink);
     background: var(--bg); border: 1px solid var(--line); border-radius: 9px;
   }
-  select:focus, input:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  textarea { resize: vertical; line-height: 1.45; }
+  select:focus, input:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   @media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
   .swatches { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -155,11 +156,11 @@
   details.what { padding: 16px 24px; }
   h2 { font-size: 12px; letter-spacing: .12em; }
   label { margin: 20px 0 8px; }
-  select, input[type=text] {
+  select, input[type=text], textarea {
     padding: 13px 14px; border-radius: 12px; background: color-mix(in srgb, var(--bg) 70%, transparent);
     border: 1px solid var(--edge); transition: border-color .2s, box-shadow .2s;
   }
-  select:focus, input[type=text]:focus {
+  select:focus, input[type=text]:focus, textarea:focus {
     outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 28%, transparent);
   }
 
@@ -436,8 +437,11 @@
       <label for="company">Company name</label>
       <input type="text" id="company" maxlength="60" autocomplete="organization" placeholder="Your company's name">
 
-      <label for="industry">What kind of company are you?</label>
-      <select id="industry"></select>
+      <label for="business">What does your company do?</label>
+      <input type="text" id="business" maxlength="120" list="business-list" autocomplete="off" placeholder="For example: roofing, bakery, law office, dental clinic">
+      <datalist id="business-list"></datalist>
+      <p class="hint">Any kind of business. After you sign in, <span class="the-name">Jarvis</span> looks your company up and fills in the rest.</p>
+      <input type="hidden" id="industry">
     </section>
     <section>
       <h2>Your systems</h2>
@@ -511,7 +515,7 @@
       <summary>What was set up</summary>
       <ul class="done" id="log"></ul>
     </details>
-    <div class="nav"><span></span><button class="go next" data-go="5">Next: connect Chrome</button></div>
+    <div class="nav"><span></span><button class="go next" data-go="4.2">Next: about your company</button></div>
   </div>
 
   <div class="page" data-page="4.5" hidden>
@@ -546,7 +550,26 @@
       <summary>What was set up</summary>
       <ul class="done" id="log-codex"></ul>
     </details>
-    <div class="nav"><span></span><button class="go next" data-go="7">Next: four commands</button></div>
+    <div class="nav"><span></span><button class="go next" data-go="4.2">Next: about your company</button></div>
+  </div>
+
+  <div class="page" data-page="4.2" hidden>
+    <h1>About <span class="the-company">your company</span></h1>
+    <p class="lede"><span class="the-name">Jarvis</span> looks your company up on the web and lists problems that companies like it often run into. Tick the big ones, so it knows what matters to you from day one.</p>
+    <p class="note" id="rs-status" role="status"></p>
+    <section>
+      <label for="rs-about">What <span class="the-company">your company</span> does</label>
+      <textarea id="rs-about" rows="3" maxlength="400" placeholder="A sentence or two. Fix anything it got wrong."></textarea>
+      <div id="rs-problems-box" hidden>
+        <label>Problems companies like yours often have</label>
+        <p class="hint" style="margin-bottom:4px">Tick the ones that are big for you. Leave the rest.</p>
+        <div id="rs-problems"></div>
+      </div>
+      <label for="rs-other">Anything we missed?</label>
+      <textarea id="rs-other" rows="3" maxlength="600" placeholder="Other problems you have, one per line"></textarea>
+    </section>
+    <p class="hint" id="rs-saved"></p>
+    <div class="nav"><button class="go quiet back" data-go="4">Back</button><button class="go next" id="rs-next">Save and continue</button></div>
   </div>
 
   <div class="page" data-page="5" hidden>
@@ -563,7 +586,7 @@
           <span id="cs-claude">Adding it is not enough: Claude in Chrome only works once you sign in to it. Sign in with the same work email in the window that opens, and close it. Then click the puzzle piece at the top right of Chrome, pin <b>Claude</b>, and click it: if it asks you to sign in, do that too. It is ready when it shows a box to type in.</span></li>
       </ol>
     </section>
-    <div class="nav"><button class="go quiet back" data-go="4">Back</button><button class="go next" data-go="6">Next</button></div>
+    <div class="nav"><button class="go quiet back" data-go="4.2">Back</button><button class="go next" data-go="6">Next</button></div>
   </div>
 
   <div class="page" data-page="6" hidden>
@@ -765,6 +788,7 @@ function showCodex(a) {
   button.hidden = true
   done.codexIn = a.state === 'signed-in'
   if (a.waiting) waited.codex = true
+  if (a.state === 'signed-in' && result) kickResearch()
   if (a.state === 'signed-in') {
     words.textContent = '\u2713 Already signed in to ChatGPT on this computer.' + closeTab('codex')
   } else if (a.state === 'signed-out') {
@@ -788,6 +812,18 @@ async function openTool(tool) {
   }
 }
 
+// The Claude app's new-chat menu: a preset for the assistant's folder, added once the app is closed.
+let preset = null
+function presetRow() {
+  if (!preset || preset.state === 'skip' || preset.state === 'unknown-file') return []
+  const on = preset.state === 'added' || preset.state === 'there'
+  const words = on ? `Pick "${preset.name}" in the Claude app's new-chat menu and it starts in this folder. If it is not listed yet, quit Claude and reopen it.`
+    : preset.state === 'running' ? 'Quit the Claude app fully (not just its window), then click Add it. Setup cannot add it while Claude is open.'
+      : preset.state === 'no-account' ? 'Open the Claude app and sign in once, quit it, then click Add it.'
+        : `It could not be added${preset.error ? ` (${preset.error})` : ''}. Use the desktop shortcut instead.`
+  return [[on, 'New chats in this folder', words, async () => { preset = await post('/app/preset'); showFinale() }]]
+}
+
 function showFinale() {
   $('final-user').textContent = result && result.user ? `, ${result.user}` : ''
   if (codexMain()) {
@@ -802,11 +838,14 @@ function showFinale() {
     [true, `${result.assistant} is set up`, setUp, 0],
     [Boolean(done.codexIn), 'ChatGPT account', done.codexIn ? 'Signed in on this computer.' : 'Not signed in yet.', 4.5],
     [Boolean(opened.codex), 'The ChatGPT app', opened.codex ? 'Opened.' : 'Not opened yet.', 4.5],
+    [Boolean(done.profile), 'What matters to your company', done.profile ? 'Saved in its notes.' : 'Not filled in yet.', 4.2],
     [done.drill, 'The four commands', done.drill ? 'You typed all four.' : 'Not practised yet.', 7],
     [done.github, 'GitHub backup', done.github ? 'Connected.' : 'Not connected yet.', 9],
   ] : [
     [true, `${result ? result.assistant : 'Your assistant'} is set up`, setUp, 0],
     [appState === 'installed', 'The Claude app', appState === 'installed' ? 'On this computer.' : 'Not installed yet.', 4],
+    [Boolean(done.profile), 'What matters to your company', done.profile ? 'Saved in its notes.' : 'Not filled in yet.', 4.2],
+    ...presetRow(),
     [done.chrome >= 3, 'Chrome', done.chrome >= 3 ? 'Signed in to Google, with Claude added and signed in.' : 'Not finished: this is what lets it work in your web tools for you.', 5],
     [done.drill, 'The four commands', done.drill ? 'You typed all four.' : 'Not practised yet.', 7],
     [done.connectors >= 3, 'Email, calendar and files',
@@ -824,11 +863,12 @@ function showFinale() {
     text.append(Object.assign(document.createElement('b'), { textContent: title }),
       Object.assign(document.createElement('small'), { textContent: detail }))
     li.append(mark, text)
-    const tool = typeof go === 'object' ? go : null
+    const tool = go && typeof go === 'object' ? go : null, act = typeof go === 'function' ? go : null
     if (tool) li.dataset.tool = tool.id
     if (!on && go) {
-      const fix = Object.assign(document.createElement('button'), { type: 'button', className: 'copy', textContent: tool ? 'Open it' : 'Finish it' })
-      fix.onclick = tool ? () => openTool(tool) : () => show(go)
+      const fix = Object.assign(document.createElement('button'), { type: 'button', className: 'copy',
+        textContent: tool ? 'Open it' : act ? 'Add it' : 'Finish it' })
+      fix.onclick = tool ? () => openTool(tool) : act || (() => show(go))
       li.append(fix)
     }
     return li
@@ -866,15 +906,16 @@ function startIntro() {
 
 function show(n) {
   page = n
-  if (n === 10) showFinale()
+  if (n === 10) { showFinale(); post('/app/preset').then(r => { preset = r; showFinale() }) }
   if (n === 7) setTimeout(() => $('drill').focus(), 60)
   if (n === 8) post('/connectors/status').then(showConnectors)
   if (n === 9) post('/github/status').then(showGithub)
   if (n === 5) setTimeout(watchChrome, 0)
+  if (n === 4.2) startResearch()
   for (const el of document.querySelectorAll('.page')) el.hidden = Number(el.dataset.page) !== n
   $('progress').hidden = $('bar').hidden = n === 0
   const choices = [0.5, 1, 2, 2.5, 3]
-  const after = codexMain() ? [4.5, 7, 9, 10] : [4, 5, 6, 7, 8, 9, 10]
+  const after = codexMain() ? [4.5, 4.2, 7, 9, 10] : [4, 4.2, 5, 6, 7, 8, 9, 10]
   $('progress').textContent = n <= 3 ? `Step ${choices.indexOf(n) + 1} of ${choices.length}` : `Almost there: ${after.indexOf(n) + 1} of ${after.length}`
   const total = n <= 3 ? 4 : after.length, at = (n <= 3 ? choices : after).indexOf(n) + 1
   $('bar').replaceChildren(...Array.from({ length: total }, (_, i) =>
@@ -890,7 +931,8 @@ for (const button of document.querySelectorAll('button[data-go]')) {
     // Leaving the first question: if they use Claude, its pieces start installing now.
     if (page === 0.5 && to === 1 && pickedTools().includes('claude')) post('/installs/start', { claude: true }).then(showInstalls)
     // With Codex as the primary agent the flow is 4.5, 7, 9, 10: the Claude-only pages are stepped over.
-    if (codexMain() && to === 6) show(4.5)
+    if (codexMain() && to === 6) show(4.2)
+    else if (codexMain() && to === 4) show(4.5)
     else if (codexMain() && to === 8) show(page === 7 ? 9 : 7)
     else show(to)
   }
@@ -994,7 +1036,7 @@ $('go').onclick = async () => {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         assistant: chosenName(), color, style: $('style').value, user: $('user').value, role: $('role').value,
-        company: $('company').value, industry: $('industry').value,
+        company: $('company').value, industry: $('industry').value, business: $('business').value,
         crm: $('crm').value, crm_other: $('crm-other').value, crm_name: $('crm-name').value,
         phone: $('phone').value, phone_other: $('phone-other').value,
         keys: { crm: $('crm-key').value, phone: $('phone-key').value },
@@ -1038,6 +1080,7 @@ function showAccount(a) {
   const text = $('acct-text'), button = $('acct-login')
   button.hidden = true
   if (a.waiting) waited.claude = true
+  if ((a.state === 'work' || a.state === 'other') && result) kickResearch()
   if (a.state === 'work') {
     text.textContent = `\u2713 Already signed in as ${a.email}${a.org ? ` (${a.org})` : ''}. Use this same account in the Claude app.${closeTab('claude')}`
   } else if (a.state === 'other') {
@@ -1162,17 +1205,80 @@ function refreshSystems() {
 
 function setupBusiness() {
   const p = options.preset || {}
-  fill($('industry'), [['', 'Choose one…'], ...Object.entries(options.industries || {})])
+  $('business-list').replaceChildren(...Object.entries(options.industries || {})
+    .filter(([key]) => key !== 'other').map(([, label]) => el('option', { value: label })))
   $('company').value = p.company || ''
-  $('industry').value = p.industry || ''
+  $('business').value = (options.industries || {})[p.industry] && p.industry !== 'other' ? options.industries[p.industry] : ''
+  $('industry').value = tradeOf($('business').value)
   fillSystems('crm'); fillSystems('phone')
   if (p.crm) $('crm').value = p.crm
   if (p.phone) $('phone').value = p.phone
-  $('industry').onchange = () => { fillSystems('crm'); fillSystems('phone'); refreshSystems() }
+  $('business').oninput = () => {
+    const trade = tradeOf($('business').value)
+    if (trade === $('industry').value) return
+    $('industry').value = trade
+    fillSystems('crm'); fillSystems('phone'); refreshSystems()
+  }
   for (const id of ['company', 'crm-other', 'phone-other']) $(id).oninput = refreshSystems
   // A key typed for one system must not ride along to the next one picked.
   for (const id of ['crm', 'phone']) $(id).onchange = () => { $(`${id}-key`).value = ''; refreshSystems() }
   refreshSystems()
+}
+
+// What they typed about the business, matched to a trade only to order the CRM and phone lists.
+const TRADE_HINTS = {
+  roofing: ['roof'], 'general-contractor': ['general contractor', 'construction', 'builder', 'home build'],
+  remodeling: ['remodel', 'renovat'], hvac: ['hvac', 'heating', 'air condition', 'cooling'], plumbing: ['plumb'],
+  electrical: ['electric'], restoration: ['restoration', 'mitigation', 'water damage', 'fire damage'], solar: ['solar'],
+  landscaping: ['landscap', 'lawn', 'irrigation'], pest: ['pest', 'termite', 'extermin'], painting: ['paint'],
+  cleaning: ['cleaning', 'janitor', 'maid'],
+}
+function tradeOf(text) {
+  const t = String(text || '').toLowerCase().trim()
+  if (!t) return ''
+  for (const [key, label] of Object.entries(options.industries || {})) if (key !== 'other' && t === label.toLowerCase()) return key
+  for (const [key, words] of Object.entries(TRADE_HINTS)) if (words.some(w => t.includes(w))) return key
+  return ''
+}
+
+// --- About the company: looked up on the person's own account, problems they tick ------
+let researchTimer = null, researchShown = false
+const kickResearch = () => post('/company/research').catch(() => {})  // early, so it is ready by then
+async function startResearch() {
+  clearTimeout(researchTimer)
+  showResearch(await post('/company/research'))
+}
+function showResearch(r) {
+  clearTimeout(researchTimer)
+  const company = r.company || 'your company', say = $('rs-status')
+  const again = ms => { if (page === 4.2) researchTimer = setTimeout(async () => showResearch(await post('/company/research')), ms) }
+  if (r.state === 'running') {
+    say.textContent = `Looking up ${company} on the web. This takes about a minute; you can type below meanwhile.`
+    again(3000)
+  } else if (r.state === 'no-account') {
+    say.textContent = codexMain() ? 'Sign in to ChatGPT first (Back), and the lookup starts by itself. It runs on your own account.'
+      : 'Sign in to Claude first (Back), and the lookup starts by itself. It runs on your own account.'
+    again(5000)
+  } else if (r.state === 'no-company') {
+    say.textContent = 'No company name was given, so there is nothing to look up. Describe it yourself below.'
+  } else if (r.state === 'failed') {
+    say.textContent = `The lookup did not work (${r.error || 'no answer'}). Describe your company yourself below; it saves the same way.`
+  } else if (r.state === 'done' && !researchShown) {
+    researchShown = true
+    say.textContent = r.found ? `Here is what we found about ${company}. Fix anything that is wrong.`
+      : `We could not find ${company} online, so this is a best guess from what you told us. Fix it as you like.`
+    if (!$('rs-about').value.trim()) $('rs-about').value = r.about || ''
+    $('rs-problems').replaceChildren(...(r.problems || []).map(text => el('label', { className: 'check' },
+      el('input', { type: 'checkbox', value: text }), el('span', { textContent: text }))))
+    $('rs-problems-box').hidden = !(r.problems || []).length
+  }
+}
+$('rs-next').onclick = async () => {
+  const problems = [...$('rs-problems').querySelectorAll('input:checked')].map(box => box.value)
+  const saved = await post('/company/profile', { about: $('rs-about').value, problems, other: $('rs-other').value })
+  if (saved.ok === false) { $('rs-saved').textContent = saved.error; return }
+  done.profile = Boolean(saved.saved)
+  show(codexMain() ? 7 : 5)
 }
 
 // --- The company's GitHub organization ------------------------------------------------
