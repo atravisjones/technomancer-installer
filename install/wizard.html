@@ -509,7 +509,7 @@
         <li>It should open on your assistant's folder. If it asks, click the <b>Code</b> tab, then <b>Select folder</b>, and choose:<br><span class="path" id="done-folder"></span>
           <button type="button" class="copy" id="copy-folder">Copy</button></li>
         <li id="remote-step">Open <b>Settings</b>, then <b>Claude Code</b>, and turn on <b>Connect new sessions to Remote Control</b>. That is what lets your phone see your chats.</li>
-        <li>Type <b>/start</b> and press Enter. You will know it worked when it greets you by name and knows your company.</li>
+        <li>Type <b>/start</b> and press Enter. You will know it worked when it greets you by name and knows your company. The first time, it checks that its tools work and asks you a few questions about your work: about ten minutes.</li>
       </ol>
     </section>
     <details class="what">
@@ -536,7 +536,7 @@
         <li>It should open on your assistant's folder. If it does not, click <b>Choose project</b> under the message box, add a project, and select this folder:<br><span class="path the-folder"></span>
           <button type="button" class="copy" id="cx-copy">Copy</button></li>
         <li>Type <b>$start</b>, with a dollar sign. If a list pops up, press Enter to pick it, then Enter again to send.</li>
-        <li>You will know it worked when it greets you by name and knows your company.</li>
+        <li>You will know it worked when it greets you by name and knows your company. The first time, it checks that its tools work and asks you a few questions about your work: about ten minutes.</li>
       </ol>
     </section>
     <section>
@@ -574,7 +574,7 @@
 
   <div class="page" data-page="5" hidden>
     <h1>Connect Chrome</h1>
-    <p class="lede">This lets <span class="the-name">Jarvis</span> work in web pages for you. Three clicks, in order. Each one opens a small window of its own.</p>
+    <p class="lede">This lets <span class="the-name">Jarvis</span> work in web pages for you. <span id="cs-lede-count">Three clicks</span>, in order. Each one opens a small window of its own.</p>
     <p class="hint mac-only" hidden>If your Mac asks whether Terminal may control Google Chrome, click <b>OK</b> (or <b>Allow</b>): that is how setup closes each window when its step is done.</p>
     <p class="note" id="cs-summary" hidden></p>
     <section>
@@ -701,7 +701,7 @@
     </section>
 
     <button class="go" id="final-open">Open Claude</button>
-    <p class="hint" id="final-hint" style="text-align:center;margin:12px 0 22px">Pick your folder in the <b>Code</b> tab and type <code>/start</code>.</p>
+    <p class="hint" id="final-hint" style="text-align:center;margin:12px 0 22px">Pick your folder in the <b>Code</b> tab and type <code>/start</code>. The first time, it checks its tools and asks about your work.</p>
 
     <details class="what">
       <summary>Where to find things later</summary>
@@ -840,7 +840,7 @@ function showFinale() {
   $('final-user').textContent = result && result.user ? `, ${result.user}` : ''
   if (codexMain()) {
     $('tries-hint').textContent = 'Click one to copy it, then paste it into ChatGPT after $start.'
-    $('final-hint').textContent = 'If it does not open on your folder, click Choose project under the message box and pick it. Then type $start and send it (if a list pops up, Enter picks it and Enter again sends).'
+    $('final-hint').textContent = 'If it does not open on your folder, click Choose project under the message box and pick it. Then type $start and send it (if a list pops up, Enter picks it and Enter again sends). The first time, it checks its tools and asks about your work.'
     if (!$('final-open').dataset.clicked) $('final-open').textContent = 'Open ChatGPT'
   }
   const sys = ((result && result.systems) || [])
@@ -1604,8 +1604,13 @@ function showChrome(s) {
   }
   if (s.google) {
     const work = s.work ? '' : ` That is not your ${workEmail()}: if this Chrome is for work, click the button and add your work account.`
-    tickStep('google', `✓ Chrome is signed in as ${s.google}.${work}${gone('google')}`)
+    const profile = s.profile ? ` (Chrome profile "${s.profile}", where setup opens its windows)` : ''
+    tickStep('google', `✓ Chrome is signed in as ${s.google}${profile}.${work}${gone('google')}`)
   }
+  // Signed in to the work account already: nothing to ask, so the step is a line, not a button.
+  const googleDone = Boolean(s.google && s.work)
+  document.querySelector('button.step[data-page="google"]').hidden = googleDone
+  $('cs-lede-count').textContent = googleDone ? 'Two clicks' : 'Three clicks'
   if (s.extension) tickStep('extension', `✓ ${chromeApp()} is added to Chrome and turned on.${gone('extension')}`)
   lastChrome = s
   const app = chromeApp()

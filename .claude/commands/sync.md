@@ -1,5 +1,5 @@
 ---
-description: Sync updates from the MARVIN template
+description: Get the latest updates to this assistant
 ---
 
 # /sync - Get Updates

@@ -1,5 +1,5 @@
 ---
-description: Check integration health and MARVIN workspace status
+description: Check that every connection and the workspace are working
 ---
 
 # /status - MARVIN Status Check

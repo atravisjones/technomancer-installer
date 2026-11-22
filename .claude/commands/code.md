@@ -1,5 +1,5 @@
 ---
-description: Open MARVIN in your IDE (Cursor, VS Code, etc.)
+description: Open this folder in a code editor (Cursor, VS Code, etc.)
 ---
 
 # /code - Open in IDE
