@@ -842,6 +842,7 @@ function showFinale() {
     [Boolean(done.codexIn), 'ChatGPT account', done.codexIn ? 'Signed in on this computer.' : 'Not signed in yet.', 4.5],
     [Boolean(opened.codex), 'The ChatGPT app', opened.codex ? 'Opened.' : 'Not opened yet.', 4.5],
     [Boolean(done.profile), 'What matters to your company', done.profile ? 'Saved in its notes.' : 'Not filled in yet.', 4.2],
+    ...presetRow(),
     [done.drill, 'The four commands', done.drill ? 'You typed all four.' : 'Not practised yet.', 7],
     [done.github, 'GitHub backup', done.github ? 'Connected.' : 'Not connected yet.', 9],
   ] : [
@@ -909,6 +910,7 @@ function startIntro() {
 
 function show(n) {
   page = n
+  if (n !== 4.2) clearTimeout(researchTimer)
   if (n === 10) { showFinale(); post('/app/preset').then(r => { preset = r; showFinale() }) }
   if (n === 7) setTimeout(() => $('drill').focus(), 60)
   if (n === 8) post('/connectors/status').then(showConnectors)
@@ -1241,8 +1243,16 @@ function tradeOf(text) {
   const t = String(text || '').toLowerCase().trim()
   if (!t) return ''
   for (const [key, label] of Object.entries(options.industries || {})) if (key !== 'other' && t === label.toLowerCase()) return key
-  for (const [key, words] of Object.entries(TRADE_HINTS)) if (words.some(w => t.includes(w))) return key
-  return ''
+  // A hint counts only at the start of a word ("waterproofing" is not roofing), and the
+  // one that comes first in what they typed wins ("electrical construction" is electrical).
+  let best = null
+  for (const [key, words] of Object.entries(TRADE_HINTS)) {
+    for (const w of words) {
+      const at = t.search(new RegExp('(^|[^a-z])' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+      if (at >= 0 && (!best || at < best.at || (at === best.at && w.length > best.len))) best = { key, at, len: w.length }
+    }
+  }
+  return best ? best.key : ''
 }
 
 // --- About the company: looked up on the person's own account, problems they tick ------
@@ -1255,7 +1265,14 @@ async function startResearch() {
 function showResearch(r) {
   clearTimeout(researchTimer)
   const company = r.company || 'your company', say = $('rs-status')
-  const again = ms => { if (page === 4.2) researchTimer = setTimeout(async () => showResearch(await post('/company/research')), ms) }
+  const again = ms => {
+    if (page !== 4.2) return
+    researchTimer = setTimeout(async () => {
+      if (page !== 4.2) return  // they left: a late answer must not refill a page they moved past
+      const next = await post('/company/research')
+      if (page === 4.2) showResearch(next)
+    }, ms)
+  }
   if (r.state === 'running') {
     say.textContent = `Looking up ${company} on the web. This takes about a minute; you can type below meanwhile.`
     again(3000)

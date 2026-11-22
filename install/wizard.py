@@ -840,9 +840,15 @@ def write_shortcut(name, workspace, log, main="claude"):
 def clean_business(a, log):
     """Keep only answers the page could have sent about the business and its systems."""
     a["company"] = re.sub(r"[^A-Za-z0-9 &.,'-]", "", str(a.get("company") or PRESET["company"] or "")).strip()[:60]
-    a["industry"] = a.get("industry") if a.get("industry") in INDUSTRIES else (PRESET["industry"] if PRESET["industry"] in INDUSTRIES else "")
-    a["crm_name"] = re.sub(r"[^A-Za-z0-9 .'-]", "", str(a.get("crm_name") or "")).strip()[:60]
     a["business"] = re.sub(r"[^A-Za-z0-9 &.,'()/+-]", "", str(a.get("business") or "")).strip()[:120]
+    # What they typed wins: a business setup cannot match to a trade has none, not the preset's.
+    if a.get("industry") in INDUSTRIES:
+        pass
+    elif a["business"]:
+        a["industry"] = ""
+    else:
+        a["industry"] = PRESET["industry"] if PRESET["industry"] in INDUSTRIES else ""
+    a["crm_name"] = re.sub(r"[^A-Za-z0-9 .'-]", "", str(a.get("crm_name") or "")).strip()[:60]
     keys = a.get("keys") if isinstance(a.get("keys"), dict) else {}
     a["keys"] = {}
     for kind in ("crm", "phone"):
@@ -1973,9 +1979,11 @@ RESEARCH_PROMPT = """Look up this business on the web: "{company}".{hint}
 Reply with ONLY one JSON object and nothing else:
 {{"found": true, "about": "...", "trade": "...", "problems": ["...", "..."]}}
 
-- found: false if you could not find this exact business.
-- about: two plain sentences on what the company does and where. If you could not find
-  it, describe what a business like the one described usually does.
+- found: false only if you found nothing that is plausibly this business. A close match
+  (an "LLC" or "Inc" added, a slightly different spelling) counts as found.
+- about: at most two short, plain sentences (under 300 characters) on what the company
+  does and where. Write about the company, not about your search. If you found nothing,
+  describe what a business like the one described usually does.
 - trade: the closest of these, written exactly as here: {trades}
 - problems: 5 or 6 everyday problems that businesses like this one commonly run into,
   the kind an assistant could take some weight off (missed calls, slow follow-up,
@@ -2005,7 +2013,11 @@ def _research_answer(text):
     problems = data.get("problems") if isinstance(data.get("problems"), list) else []
     trade = str(data.get("trade") or "")
     about = re.sub(r"\[([^\]]{1,80})\]\([^)]{1,300}\)", r"\1", str(data.get("about") or ""))  # [text](link) -> text
-    return {"found": data.get("found") is True, "about": _clean_line(about, 400),
+    about = _clean_line(about, 2000)
+    if len(about) > 400:  # end on a whole sentence rather than mid-word
+        cut = about[:400].rfind(". ")
+        about = about[:cut + 1] if cut > 100 else about[:399].rsplit(" ", 1)[0] + "…"
+    return {"found": data.get("found") is True, "about": about,
             "trade": trade if trade in INDUSTRIES and trade != "other" else "",
             "problems": [p for p in (_clean_line(x, 100) for x in problems[:6]) if p]}
 
@@ -2026,8 +2038,11 @@ def _run_research(tool, prompt):
     try:
         if tool == "claude":
             done = subprocess.run(
+                # Web tools only, and nothing else allowed: a web page must not be able to talk
+                # it into running a command, whatever permission mode the person's settings hold.
                 [claude_cli(), "-p", "--output-format", "json", "--model", "sonnet",
-                 "--allowedTools", "WebSearch", "WebFetch", "--no-session-persistence"],
+                 "--tools", "WebSearch,WebFetch", "--allowedTools", "WebSearch,WebFetch",
+                 "--permission-mode", "dontAsk", "--no-session-persistence"],
                 input=prompt, cwd=str(work), capture_output=True, text=True, encoding="utf-8",
                 errors="replace", timeout=240, env=plain_env())
             try:
@@ -2167,9 +2182,10 @@ def claude_app_running():
                                    "@(Get-Process -Name claude -ErrorAction SilentlyContinue | Where-Object "
                                    "{ $_.Path -and $_.Path -notmatch '\\\\.local\\\\bin\\\\' }).Count"],
                                   capture_output=True, text=True, timeout=30)
-            return done.stdout.strip() not in ("", "0")
+            count = done.stdout.replace("\x00", "").strip()
+            return done.returncode != 0 or count != "0"
     except (OSError, subprocess.TimeoutExpired):
-        pass
+        return True  # cannot tell: do not write over an app that may be open
     return False
 
 
@@ -2200,8 +2216,9 @@ def add_app_preset():
         return {"ok": True, "state": "unknown-file"}
     mine = by_account.get(account, {"presets": [], "builtIns": {}, "seededFromDraft": True})
     presets = mine.get("presets") if isinstance(mine, dict) else None
-    if not isinstance(presets, list):
-        return {"ok": True, "state": "unknown-file"}
+    if (not isinstance(presets, list) or not isinstance(mine.get("builtIns", {}), dict)
+            or any(not isinstance(p, dict) or not isinstance(p.get("target", {}), dict) for p in presets)):
+        return {"ok": True, "state": "unknown-file"}  # a shape this setup does not know: change nothing
     name = a.get("assistant") or "Assistant"
     if any(isinstance(p, dict) and isinstance(p.get("target"), dict) and p["target"].get("cwd") == workspace
            for p in presets):
