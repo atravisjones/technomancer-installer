@@ -535,7 +535,7 @@
         <li>Sign in if it asks.</li>
         <li>It should open on your assistant's folder. If it does not, click <b>Choose project</b> under the message box, add a project, and select this folder:<br><span class="path the-folder"></span>
           <button type="button" class="copy" id="cx-copy">Copy</button></li>
-        <li>Type <b>/start</b>. It shows up in a list as you type: press Enter to pick it, then Enter again to send.</li>
+        <li>Type <b>$start</b>, with a dollar sign. If a list pops up, press Enter to pick it, then Enter again to send.</li>
         <li>You will know it worked when it greets you by name and knows your company.</li>
       </ol>
     </section>
@@ -840,8 +840,8 @@ function presetRow() {
 function showFinale() {
   $('final-user').textContent = result && result.user ? `, ${result.user}` : ''
   if (codexMain()) {
-    $('tries-hint').textContent = 'Click one to copy it, then paste it into ChatGPT after /start.'
-    $('final-hint').textContent = 'If it does not open on your folder, click Choose project under the message box and pick it. Then type /start, press Enter to pick it, and Enter again to send.'
+    $('tries-hint').textContent = 'Click one to copy it, then paste it into ChatGPT after $start.'
+    $('final-hint').textContent = 'If it does not open on your folder, click Choose project under the message box and pick it. Then type $start and send it (if a list pops up, Enter picks it and Enter again sends).'
     if (!$('final-open').dataset.clicked) $('final-open').textContent = 'Open ChatGPT'
   }
   const sys = ((result && result.systems) || [])
@@ -1450,17 +1450,18 @@ $('gh-signup').onclick = () => {
 }
 
 // The four commands, typed once each.
-// The same four in ChatGPT, except that its app has /new where Claude has /clear. /start and
-// /save are the assistant's own skills (Enter picks, Enter again sends); the other two are the
-// app's built-in commands, which run as soon as they are picked.
-const SKILL_KEYS = 'In ChatGPT itself a list pops up as you type: Enter picks it, a second Enter sends it.'
-const BUILT_IN_KEYS = 'In ChatGPT itself this one runs as soon as you pick it from the list.'
+// The same four in ChatGPT. The assistant's own commands are skills there and start with $
+// (/start does not reach them, tested 11/22); /compact and /new are the app's built-ins, and
+// the app has /new where Claude has /clear.
+const SKILL_KEYS = 'Its own commands start with a dollar sign in ChatGPT. If a list pops up, Enter picks it and a second Enter sends it.'
+const BUILT_IN_KEYS = 'This one is built into ChatGPT, so it starts with a slash and runs as soon as you pick it from the list.'
 const DRILL_CODEX = [
-  ['/start', n => `Begins your day. ${n} reads its notes and tells you where things stand.`, SKILL_KEYS],
-  ['/save', n => `Ends your session. ${n} writes down what you did, so tomorrow picks up from here.`, SKILL_KEYS],
+  ['$start', n => `Begins your day. ${n} reads its notes and tells you where things stand.`, SKILL_KEYS],
+  ['$save', n => `Ends your session. ${n} writes down what you did, so tomorrow picks up from here.`, SKILL_KEYS],
   ['/compact', n => `For when a chat gets long. It shrinks the chat to a summary so ${n} stays quick and keeps going.`, BUILT_IN_KEYS],
-  ['/new', () => 'Starts a fresh, empty chat in the same folder. Run /save first if you want this one remembered.', BUILT_IN_KEYS],
+  ['/new', () => 'Starts a fresh, empty chat in the same folder. Run $save first if you want this one remembered.', BUILT_IN_KEYS],
 ]
+const markOf = command => command[0] === '$' ? 'dollar sign' : 'slash'
 const drillList = () => (codexMain() ? DRILL_CODEX : DRILL)
 const DRILL = [
   ['/start', n => `Begins your day. ${n} reads its notes and tells you where things stand.`],
@@ -1474,7 +1475,7 @@ function askDrill() {
   const done = drillAt >= list.length
   $('drill-where').textContent = codexMain() ? 'ChatGPT' : 'Claude'
   $('drill').hidden = done
-  $('drill-hint').textContent = done ? '' : ['Start with the slash.', list[drillAt][2]].filter(Boolean).join(' ')
+  $('drill-hint').textContent = done ? '' : [`Start with the ${markOf(list[drillAt][0])}.`, list[drillAt][2]].filter(Boolean).join(' ')
   $('drill-next').disabled = !done
   if (done) {
     window.setTimeout(() => { doneState.drill = true }, 0)
@@ -1491,7 +1492,7 @@ $('drill').onkeydown = event => {
   const [command, explain] = drillList()[drillAt]
   if (typed !== command) {
     $('drill-hint').textContent = typed.replace(/^[\/$]/, '') === command.slice(1)
-      ? 'Close. Put the slash in front, with no space.'
+      ? `Close. Put the ${markOf(command)} in front, with no space.`
       : `Not quite. Type ${command} exactly.`
     return
   }

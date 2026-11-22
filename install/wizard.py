@@ -474,9 +474,11 @@ def claude_md(a, workspace):
     safety_lead = ("Permission prompts are off on this machine, so nothing stops a mistake but you.\n"
                    if a.get("mode", "bypassPermissions") == "bypassPermissions" else "")
     tint_row = "| `/tint <topic>` | Change this chat's color |\n" if tint_on else ""
-    chatgpt_note = ("\nIn the ChatGPT (Codex) app the same commands work, with two differences: there is no\n"
-                    "`/clear` (`/new` starts a blank chat in this folder), and its own `/status` shows usage\n"
-                    "limits (when asked whether everything is connected, follow `.claude/commands/status.md`).\n"
+    chatgpt_note = ("\nIn the ChatGPT (Codex) app the same commands start with `$` instead of `/` (`$start`,\n"
+                    "`$save`; treat `$name` exactly like `/name`). ChatGPT's own `/compact` works as usual,\n"
+                    "there is no `/clear` (`/new` starts a blank chat in this folder), and its own `/status`\n"
+                    "shows usage limits (when asked whether everything is connected, follow\n"
+                    "`.claude/commands/status.md`).\n"
                     + ("Colors, `/tint` and the usage bar exist only in the Claude app.\n" if tint_on else "")) if codex_on else ""
     colors_part = f"""### Color modes
 
@@ -589,6 +591,7 @@ If you chose them in setup, Gemini (Antigravity) and Grok run in a terminal on t
 same folder, and Codex opens it in the ChatGPT desktop app: double-click the matching
 `Open ...` file in this folder. Each reads the same notes through `AGENTS.md` (Gemini
 through `GEMINI.md`) and asks you to sign in with its own account the first time.
+In ChatGPT, type the commands with a dollar sign instead of a slash: `$start`, `$save`.
 
 {usage_part}---
 
@@ -599,29 +602,32 @@ through `GEMINI.md`) and asks you to sign in with its own account the first time
 START_HERE_CODEX = """# Start here
 
 {name} is your AI assistant, running in ChatGPT. You talk to it in plain English. The
-commands below are shortcuts: type one in the chat box and a list pops up as you type.
+commands below are shortcuts you type in the chat box.
+
+In ChatGPT, {name}'s own commands start with a dollar sign: `$start`, `$save`. ChatGPT's
+built-in commands start with a slash: `/compact`, `/new`.
 
 ## The four commands
 
 | Type this | When | What happens |
 |-----------|------|--------------|
-| `/start` | First thing, in a new chat | {name} reads its notes and tells you where things stand |
-| `/save` | When you are done | {name} writes a summary and saves it, so tomorrow's chat picks up from here |
+| `$start` | First thing, in a new chat | {name} reads its notes and tells you where things stand |
+| `$save` | When you are done | {name} writes a summary and saves it, so tomorrow's chat picks up from here |
 | `/compact` | When a chat has got long | Shrinks the chat to a summary, so {name} stays quick and keeps going |
-| `/new` | When you want a fresh start | Starts a new, empty chat in the same folder. Run `/save` first if you want this one remembered |
+| `/new` | When you want a fresh start | Starts a new, empty chat in the same folder. Run `$save` first if you want this one remembered |
 
-`/start` and `/save` need two presses of Enter: one picks the command from the list, the
-next sends it. `/compact` and `/new` run as soon as you pick them.
+A list pops up as you type. If it does, press Enter to pick the command and Enter again
+to send. `/compact` and `/new` run as soon as you pick them.
 
-Think of `/start` and `/save` as bookends. Everything in between is just conversation.
+Think of `$start` and `$save` as bookends. Everything in between is just conversation.
 
 ## Handy extras
 
 | Type this | What happens |
 |-----------|--------------|
-| `/update` | A quick checkpoint in the middle of work, so nothing is lost |
-| `/help` | Lists every command and what {name} can do |
-| `/report` | A summary of your week |
+| `$update` | A quick checkpoint in the middle of work, so nothing is lost |
+| `$help` | Lists every command and what {name} can do |
+| `$report` | A summary of your week |
 | "Is everything connected?" | Checks that everything is connected and working. Ask it in words: ChatGPT's own `/status` shows its usage limits instead |
 
 ## Things to try
@@ -2525,8 +2531,8 @@ Read `CLAUDE.md` in this folder first and follow it: it says who you are, who yo
 for and how. The notes it points to (`state/`, `company/`) are yours to read and keep up.
 
 The files in `.claude/commands/` are plain instructions. When the person types a command
-such as `/start` or `/save`, read the matching file (`.claude/commands/start.md`,
-`.claude/commands/save.md`) and do what it says.
+such as `/start` or `/save` (or `$start`, `$save` in ChatGPT), read the matching file
+(`.claude/commands/start.md`, `.claude/commands/save.md`) and do what it says.
 
 The folders and files in `.claude/skills/` are how-to guides for particular jobs, such as
 looking up jobs in the CRM or calls on the phone system. Before a task one of them covers, read it (a folder's guide

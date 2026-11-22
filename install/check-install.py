@@ -70,8 +70,8 @@ if sys.argv[1:] == ["codex"]:
     check("Codex trusts the folder", ("sol']" in whole.lower() or 'sol"]' in whole.lower()) and 'trust_level = "trusted"' in whole)
     check("Claude's color modes left out", not (sol / ".mods").exists())
     guide = read(sol / "START-HERE.md")
-    check("START-HERE teaches the same slash commands as Claude", all(f"`/{c}`" in guide for c in ("start", "save", "compact", "new"))
-          and "$start" not in guide)
+    check("START-HERE teaches ChatGPT's commands ($start, $save, /compact, /new)",
+          all(c in guide for c in ("`$start`", "`$save`", "`/compact`", "`/new`")) and "`/start`" not in guide)
     check("pending CRM key saved", "JOBBER_API_KEY=test_jobber_key_not_real_123" in read(sol / ".env"))
     check("pending systems marked in CLAUDE.md", "Jobber" in read(sol / "CLAUDE.md") and "finishing this connection" in read(sol / "CLAUDE.md"))
     check("no live skill for a pending CRM", not (sol / ".claude" / "skills" / "crm-roofr").exists())
