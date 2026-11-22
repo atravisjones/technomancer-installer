@@ -540,12 +540,11 @@
       </ol>
     </section>
     <section>
-      <h2>Two things to set up inside ChatGPT</h2>
+      <h2>One thing to set up inside ChatGPT</h2>
       <ul class="done">
-        <li><b>Chrome.</b> When ChatGPT shows <b>Set up Chrome extension</b>, click it and install the extension, so it can work in your web tools.</li>
         <li><b>Email, calendar and files.</b> Under <b>Plugins</b>, connect Gmail, Google Calendar and Google Drive with your work Google account.</li>
       </ul>
-      <p class="hint">Setup cannot do these two for you yet.</p>
+      <p class="hint">Setup cannot do this one for you yet. Chrome comes on a page of its own in a moment.</p>
     </section>
     <details class="what">
       <summary>What was set up</summary>
@@ -582,9 +581,9 @@
       <ol class="next steps">
         <li><button class="step" data-page="google">Sign in to Google</button>
           <span id="cs-google">Use your work email. If Chrome offers to sign you in to Chrome too, say yes: that is how setup sees you are done. Then close that window.</span></li>
-        <li><button class="step" data-page="extension">Add Claude to Chrome</button>
+        <li><button class="step" data-page="extension" data-claude="Add Claude to Chrome" data-codex="Add ChatGPT to Chrome">Add Claude to Chrome</button>
           <span id="cs-extension">Click <b>Add to Chrome</b> in the window that opens. If Chrome already asked you to turn on "Claude", click <b>Enable</b> instead. This page ticks it when Chrome has it; then close that window.</span></li>
-        <li><button class="step" data-page="claude">Sign in to Claude in Chrome</button>
+        <li><button class="step" data-page="claude" data-claude="Sign in to Claude in Chrome" data-codex="Sign in to ChatGPT in Chrome">Sign in to Claude in Chrome</button>
           <button type="button" class="copy" id="cs-claude-done" hidden>I signed in: close that window</button>
           <span id="cs-claude">Adding it is not enough: Claude in Chrome only works once you sign in to it. Sign in with the same work email in the window that opens, and close it. Then click the puzzle piece at the top right of Chrome, pin <b>Claude</b>, and click it: if it asks you to sign in, do that too. It is ready when it shows a box to type in.</span></li>
       </ol>
@@ -853,6 +852,7 @@ function showFinale() {
     [Boolean(opened.codex), 'The ChatGPT app', opened.codex ? 'Opened.' : 'Not opened yet.', 4.5],
     [Boolean(done.profile), 'What matters to your company', done.profile ? 'Saved in its notes.' : 'Not filled in yet.', 4.2],
     ...presetRow(),
+    [done.chrome >= 3, 'Chrome', done.chrome >= 3 ? 'Signed in to Google, with ChatGPT added and signed in.' : 'Not finished: this is what lets it work in your web tools for you.', 5],
     [done.drill, 'The four commands', done.drill ? 'You typed all four.' : 'Not practised yet.', 7],
     [done.github, 'Company GitHub', done.github ? (done.org ? `Joined ${done.org}.` : 'Connected.') : 'Not connected yet.', 9],
   ] : [
@@ -925,7 +925,7 @@ function show(n) {
   if (n === 7) setTimeout(() => $('drill').focus(), 60)
   if (n === 8) post('/connectors/status').then(showConnectors)
   if (n === 9) post('/github/status').then(showGithub)
-  if (n === 5) setTimeout(watchChrome, 0)
+  if (n === 5) { chromeCopy(); setTimeout(watchChrome, 0) }
   if (n === 4.2) startResearch()
   // Coming back to a sign-in page checks again: they may have signed in somewhere else meanwhile.
   if (n === 4 && result && !codexMain()) post('/account/status').then(showAccount)
@@ -933,7 +933,7 @@ function show(n) {
   for (const el of document.querySelectorAll('.page')) el.hidden = Number(el.dataset.page) !== n
   $('progress').hidden = $('bar').hidden = n === 0
   const choices = [0.5, 1, 2, 2.5, 3]
-  const after = codexMain() ? [4.5, 4.2, 7, 9, 10] : [4, 4.2, 5, ...(phoneOn() ? [6] : []), 7, 8, 9, 10]
+  const after = codexMain() ? [4.5, 4.2, 5, 7, 9, 10] : [4, 4.2, 5, ...(phoneOn() ? [6] : []), 7, 8, 9, 10]
   $('progress').textContent = n <= 3 ? `Step ${choices.indexOf(n) + 1} of ${choices.length}` : `Almost there: ${after.indexOf(n) + 1} of ${after.length}`
   const total = n <= 3 ? choices.length : after.length, at = (n <= 3 ? choices : after).indexOf(n) + 1
   $('bar').replaceChildren(...Array.from({ length: total }, (_, i) =>
@@ -948,12 +948,11 @@ for (const button of document.querySelectorAll('button[data-go]')) {
     const to = Number(button.dataset.go)
     // Leaving the first question: if they use Claude, its pieces start installing now.
     if (page === 0.5 && to === 1 && pickedTools().includes('claude')) post('/installs/start', { claude: true }).then(showInstalls)
-    // With Codex as the primary agent the flow is 4.5, 7, 9, 10: the Claude-only pages are stepped over.
-    if (codexMain() && to === 6) show(4.2)
-    else if (codexMain() && to === 4) show(4.5)
+    // With Codex as the primary agent the flow is 4.5, 4.2, 5, 7, 9, 10: the Claude-only pages are stepped over.
+    if (codexMain() && to === 4) show(4.5)
     else if (codexMain() && to === 8) show(page === 7 ? 9 : 7)
-    // The phone page is about Remote control: with it switched off, Chrome and practice meet.
-    else if (!codexMain() && to === 6 && !phoneOn()) show(page === 5 ? 7 : 5)
+    // The phone page is Claude's Remote control: without it, Chrome and practice meet.
+    else if (to === 6 && (codexMain() || !phoneOn())) show(page === 5 ? 7 : 5)
     else show(to)
   }
 }
@@ -1316,7 +1315,7 @@ $('rs-next').onclick = async () => {
   const saved = await post('/company/profile', { about: $('rs-about').value, problems, other: $('rs-other').value })
   if (saved.ok === false) { $('rs-saved').textContent = saved.error; return }
   done.profile = Boolean(saved.saved)
-  show(codexMain() ? 7 : 5)
+  show(5)
 }
 
 // --- The company's GitHub organization ------------------------------------------------
@@ -1561,8 +1560,32 @@ function tickStep(page, words) {
   button.textContent = '✓ ' + button.textContent.replace(/^✓ /, '')
   if (words) $('cs-' + page).textContent = words
 }
-const openSite = page => post('/window/open', { page }).catch(() => ({}))
-const closeSite = page => post('/window/close', { page }).then(r => Boolean(r.closed)).catch(() => false)
+// The same three steps for either assistant; ChatGPT's open its own store page and site.
+const chromeApp = () => codexMain() ? 'ChatGPT' : 'Claude'
+const sitePage = step => codexMain() ? ({ extension: 'extension-chatgpt', claude: 'chatgpt' }[step] || step) : step
+const openSite = page => post('/window/open', { page: sitePage(page) }).catch(() => ({}))
+const closeSite = page => post('/window/close', { page: sitePage(page) }).then(r => Boolean(r.closed)).catch(() => false)
+const CHROME_WORDS = { claude: {}, codex: {
+  'cs-extension': 'Click <b>Add to Chrome</b> in the window that opens. If Chrome already asked you to turn on "ChatGPT", click <b>Enable</b> instead. This page ticks it when Chrome has it; then close that window.',
+  'cs-claude': 'Sign in to ChatGPT with your work account in the window that opens. Then, in the ChatGPT app, open <b>Settings</b> and then <b>Computer use</b>: under <b>Google Chrome</b>, click <b>Install</b> if it shows. It is ready when Google Chrome says <b>Installed</b>.',
+} }
+for (const id of Object.keys(CHROME_WORDS.codex)) CHROME_WORDS.claude[id] = $(id).innerHTML
+let chromeFor = 'claude'
+function chromeCopy() {
+  // The page's words follow the assistant picked on the first page, which can change until here.
+  const app = codexMain() ? 'codex' : 'claude'
+  if (app === chromeFor) return
+  chromeFor = app
+  for (const step of Object.keys(chromeSteps)) chromeSteps[step] = false
+  done.chrome = 0
+  lastChrome = null
+  for (const button of document.querySelectorAll('button.step[data-page]')) {
+    button.classList.remove('done')
+    button.textContent = button.dataset[app] || button.textContent.replace(/^✓ /, '')
+  }
+  for (const [id, words] of Object.entries(CHROME_WORDS[app])) $(id).innerHTML = words
+  $('cs-claude-done').hidden = true
+}
 let lastChrome = null
 const doneWhileOpen = {}, clickedDone = {}
 function showChrome(s) {
@@ -1583,19 +1606,20 @@ function showChrome(s) {
     const work = s.work ? '' : ` That is not your ${workEmail()}: if this Chrome is for work, click the button and add your work account.`
     tickStep('google', `✓ Chrome is signed in as ${s.google}.${work}${gone('google')}`)
   }
-  if (s.extension) tickStep('extension', `✓ Claude is added to Chrome and turned on.${gone('extension')}`)
+  if (s.extension) tickStep('extension', `✓ ${chromeApp()} is added to Chrome and turned on.${gone('extension')}`)
   lastChrome = s
-  const have = [s.google && 'signed in to Google', s.extension && 'Claude is added'].filter(Boolean)
+  const app = chromeApp()
+  const have = [s.google && 'signed in to Google', s.extension && `${app} is added`].filter(Boolean)
   $('cs-summary').hidden = !have.length
   $('cs-summary').textContent = have.length === 2
-    ? (chromeSteps.claude ? 'Chrome is signed in and Claude is added. All three steps are done.'
-      : 'Chrome is already signed in and Claude is added. Only the last step is left: sign in to Claude in Chrome.')
+    ? (chromeSteps.claude ? `Chrome is signed in and ${app} is added. All three steps are done.`
+      : `Chrome is already signed in and ${app} is added. Only the last step is left: sign in to ${app} in Chrome.`)
     : have.length ? `Already done: ${have[0]}. Setup ticked it for you.` : ''
 }
 async function watchChrome() {
   clearTimeout(chromeTimer)
   if (page !== 5) return
-  try { showChrome(await post('/chrome/status')) } catch (error) {}  // a failed check must not end the checking
+  try { showChrome(await post('/chrome/status', { assistant: codexMain() ? 'codex' : 'claude' })) } catch (error) {}  // a failed check must not end the checking
   if (page === 5) chromeTimer = setTimeout(watchChrome, 2500)
 }
 for (const button of document.querySelectorAll('button.step[data-page]')) {
@@ -1616,7 +1640,7 @@ for (const button of document.querySelectorAll('button.step[data-page]')) {
 $('cs-claude-done').onclick = async () => {
   $('cs-claude-done').hidden = true
   tickStep('claude')
-  if (!(await closeSite('claude'))) $('cs-claude').textContent = 'Close the Claude window yourself: setup could not close it.'
+  if (!(await closeSite('claude'))) $('cs-claude').textContent = `Close the ${chromeApp()} window yourself: setup could not close it.`
 }
 
 $('copy-folder').onclick = async () => {

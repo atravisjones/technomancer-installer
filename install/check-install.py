@@ -51,6 +51,19 @@ def codex_settings():
     return text, text.split("\n[", 1)[0]
 
 
+def offered(ext):
+    """Chrome has been asked to offer this extension (Chrome's own external-extension route)."""
+    if os.name == "nt":
+        import winreg
+        try:
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Google\Chrome\Extensions" + "\\" + ext)
+            return "clients2.google.com" in winreg.QueryValueEx(key, "update_url")[0]
+        except OSError:
+            return False
+    return "clients2.google.com" in read(
+        home / "Library" / "Application Support" / "Google" / "Chrome" / "External Extensions" / (ext + ".json"))
+
+
 if sys.argv[1:] == ["codex"]:
     sol = home / "sol"
     ending = ".cmd" if os.name == "nt" else ".command"
@@ -78,6 +91,7 @@ if sys.argv[1:] == ["codex"]:
     spot = (Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "OpenAI" / "Codex" / "bin" / "codex.exe") if os.name == "nt" \
         else (home / ".local" / "bin" / "codex")
     note("Codex installed", shutil.which("codex") is not None or spot.exists())
+    check("ChatGPT extension offered to Chrome", offered("hehggadaopoacecdllhhajmbjkdcmajg"))
     finish()
 
 print("Workspace")
@@ -178,18 +192,7 @@ elif os.name == "nt":
     note("Claude desktop app installed", (local / "AnthropicClaude" / "claude.exe").exists())
 
 print("Chrome")
-EXT = "fcoeoabgfenejglbffodgkkbkcdhcgfn"
-if os.name == "nt":
-    import winreg
-    try:
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Google\Chrome\Extensions" + "\\" + EXT)
-        offered = "clients2.google.com" in winreg.QueryValueEx(key, "update_url")[0]
-    except OSError:
-        offered = False
-else:
-    offered = "clients2.google.com" in read(
-        home / "Library" / "Application Support" / "Google" / "Chrome" / "External Extensions" / (EXT + ".json"))
-check("Claude extension offered to Chrome", offered)
+check("Claude extension offered to Chrome", offered("fcoeoabgfenejglbffodgkkbkcdhcgfn"))
 
 if sys.argv[1:] == ["again"]:
     print("Second run")

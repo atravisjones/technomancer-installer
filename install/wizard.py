@@ -1037,8 +1037,11 @@ def configure(a):
     except OSError:
         log.append("The desktop shortcut could not be made. Pick the folder in your agent's app instead.")
 
-    if with_claude and a.get("chrome", True) and not os.environ.get("ASSISTANT_SKIP_CHROME"):
-        offer_extension(log)
+    if a.get("chrome", True) and not os.environ.get("ASSISTANT_SKIP_CHROME"):
+        if with_claude:
+            offer_extension(log)
+        if main == "codex":
+            offer_extension(log, CHATGPT_EXTENSION, "ChatGPT")
 
     missing = missing_apps(with_claude)
     if missing:
@@ -1078,6 +1081,9 @@ def missing_apps(with_claude=True):
 
 # Anthropic's Claude in Chrome extension, as listed on the Chrome Web Store.
 CLAUDE_EXTENSION = "fcoeoabgfenejglbffodgkkbkcdhcgfn"
+# OpenAI's ChatGPT extension: the one the ChatGPT (Codex) desktop app's stable channel
+# sends people to from "Set up Chrome extension" (read from the app's own bundle, 11/22).
+CHATGPT_EXTENSION = "hehggadaopoacecdllhhajmbjkdcmajg"
 WEB_STORE_UPDATES = "https://clients2.google.com/service/update2/crx"
 
 # The only pages the setup page may ask Chrome to open.
@@ -1087,6 +1093,8 @@ CHROME_PAGES = {
     "google": "https://accounts.google.com/ServiceLogin?continue=https%3A%2F%2Fwww.google.com%2F",
     "extension": "https://chromewebstore.google.com/detail/claude/" + CLAUDE_EXTENSION,
     "claude": "https://claude.ai/login",
+    "extension-chatgpt": "https://chromewebstore.google.com/detail/chatgpt/" + CHATGPT_EXTENSION,
+    "chatgpt": "https://chatgpt.com/",
     "github-device": "https://github.com/login/device",
     "github-signup": "https://github.com/signup",
     "github-new-org": "https://github.com/account/organizations/new?plan=free",
@@ -1095,8 +1103,8 @@ CHROME_PAGES = {
 }
 
 
-def offer_extension(log):
-    """Ask Chrome to offer Claude in Chrome the next time it starts.
+def offer_extension(log, extension=CLAUDE_EXTENSION, label="Claude"):
+    """Ask Chrome to offer an assistant's extension the next time it starts.
 
     This is Chrome's own "external extension" route. Chrome shows the person a
     box to turn the extension on; nothing is installed behind their back.
@@ -1104,17 +1112,17 @@ def offer_extension(log):
     try:
         if IS_WINDOWS:
             import winreg
-            key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Google\Chrome\Extensions" + "\\" + CLAUDE_EXTENSION)
+            key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Google\Chrome\Extensions" + "\\" + extension)
             winreg.SetValueEx(key, "update_url", 0, winreg.REG_SZ, WEB_STORE_UPDATES)
             winreg.CloseKey(key)
         elif IS_MAC:
             folder = Path.home() / "Library" / "Application Support" / "Google" / "Chrome" / "External Extensions"
             folder.mkdir(parents=True, exist_ok=True)
-            (folder / (CLAUDE_EXTENSION + ".json")).write_text(
+            (folder / (extension + ".json")).write_text(
                 json.dumps({"external_update_url": WEB_STORE_UPDATES}) + "\n", encoding="utf-8")
         else:
             return
-        log.append("Chrome will offer the Claude extension the next time it opens.")
+        log.append(f"Chrome will offer the {label} extension the next time it opens.")
     except OSError:
         pass  # the setup page's own button covers it
 
@@ -1174,9 +1182,9 @@ def _dict(value, key):
     return found if isinstance(found, dict) else {}
 
 
-def chrome_status():
+def chrome_status(extension_id=CLAUDE_EXTENSION):
     """What Chrome already has, from its own profile files: the Google account it is signed
-    in to and whether Claude in Chrome is installed and turned on.
+    in to and whether the assistant's extension (Claude's or ChatGPT's) is installed and on.
 
     It reads the profile Chrome opens by default (the one used last). It never reads
     cookies, saved passwords or what an extension keeps, so whether someone is signed
@@ -1193,9 +1201,9 @@ def chrome_status():
 
     folder = data / name
     extension = False
-    if (folder / "Extensions" / CLAUDE_EXTENSION).is_dir():
+    if (folder / "Extensions" / extension_id).is_dir():
         for prefs in ("Secure Preferences", "Preferences"):
-            row = _dict(_dict(_read_json(folder / prefs), "extensions"), "settings").get(CLAUDE_EXTENSION)
+            row = _dict(_dict(_read_json(folder / prefs), "extensions"), "settings").get(extension_id)
             if isinstance(row, dict):
                 # Turned off shows as state 0 (older Chrome) or a list of reasons (newer).
                 extension = row.get("state", 1) != 0 and not row.get("disable_reasons")
@@ -2999,7 +3007,7 @@ class Handler(BaseHTTPRequestHandler):
                        "chrome": open_in_chrome(body.get("page"), body.get("window") is True)})
         elif self.path == "/chrome/status":
             try:
-                self.send(chrome_status())
+                self.send(chrome_status(CHATGPT_EXTENSION if body.get("assistant") == "codex" else CLAUDE_EXTENSION))
             except Exception as error:  # an odd profile must not stop the page checking
                 self.send({"ok": False, "error": f"{type(error).__name__}"})
         elif self.path == "/window/open":
