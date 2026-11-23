@@ -24,6 +24,7 @@ Display this reference:
 | /commit   | Review and commit git changes       |
 | /code     | Open MARVIN in your IDE             |
 | /status   | Check integration & workspace health|
+| /publish  | Put a web page or app online        |
 | /help     | Show this help guide                |
 | /sync     | Get updates from MARVIN template    |
 | /skills   | Search & install agent skills       |

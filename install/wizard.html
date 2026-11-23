@@ -36,7 +36,6 @@
   .sys .badge.none { background: color-mix(in srgb, var(--soft) 14%, transparent); color: var(--soft); }
   .sys p { margin: 0; font-size: 14.5px; color: var(--soft); }
   .sys p b { color: var(--ink); display: block; font-size: 15.5px; }
-  optgroup { font-weight: 700; }
   main { max-width: 620px; margin: 0 auto; padding: 32px 16px 64px; }
   h1 { font-size: 28px; line-height: 1.2; margin: 0 0 6px; text-wrap: balance; }
   h1 span { color: var(--accent); transition: color .4s; }
@@ -62,6 +61,9 @@
   .check { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; font-weight: 400; }
   .check input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); flex: none; }
   .check b { display: block; }
+  .check .logo { flex: none; width: 28px; height: 28px; margin-top: -1px; display: block; }
+  .check .logo svg { width: 28px; height: 28px; display: block; }
+  .check .logo + span { min-width: 0; }
   .go {
     width: 100%; padding: 15px; font: inherit; font-weight: 700; font-size: 17px; cursor: pointer;
     color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 11px; transition: background .4s;
@@ -88,6 +90,7 @@
   }
   button.step[disabled]:not(.done) { opacity: .45; cursor: default; }
   button.step.done { background: transparent; color: var(--ok); border: 1px solid var(--line); }
+  button.step.said { background: transparent; color: var(--soft); border: 1px dashed var(--line); }
   table.cmds { border-collapse: collapse; width: 100%; }
   table.cmds td { padding: 7px 0; vertical-align: top; border-top: 1px solid var(--line); }
   table.cmds tr:first-child td { border-top: 0; }
@@ -214,7 +217,6 @@
   ul.ready .what-it-is { flex: 1; }
   ul.ready .what-it-is small { display: block; color: var(--soft); font-size: 14px; }
   ul.ready button { flex: none; }
-  .tries { display: grid; gap: 8px; }
   .try { text-align: left; padding: 13px 16px; font: inherit; cursor: pointer; color: var(--ink); border-radius: 14px;
     background: color-mix(in srgb, var(--bg) 60%, transparent); border: 1px solid var(--edge); transition: transform .12s, border-color .2s; }
   .try:hover { transform: translateY(-1px); border-color: var(--accent); }
@@ -331,6 +333,94 @@
     * { transition: none !important; }
   }
   [hidden] { display: none !important; }
+
+  /* "Meet your assistant": a living preview beside the three choices. */
+  main:has(> .page[data-page="1"]:not([hidden])) { max-width: 1010px; }
+  .meet { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); gap: 22px; align-items: start; }
+  .meet-stage { position: sticky; top: 24px; isolation: isolate; overflow: hidden; min-height: 540px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; padding: 40px 30px; border-radius: 28px; background: var(--glass);
+    border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--edge)); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+    box-shadow: 0 34px 90px -40px hsl(var(--h) 80% 45% / .8); transition: border-color .6s, box-shadow .6s; }
+  .meet-stage::before { content: ""; position: absolute; inset: -30%; z-index: -1;
+    background: radial-gradient(circle at 50% 36%, hsl(var(--h) 82% 55% / .36), transparent 56%); animation: meet-glow 7s ease-in-out infinite alternate; }
+  @keyframes meet-glow { from { transform: scale(.92); opacity: .75; } to { transform: scale(1.08); opacity: 1; } }
+  .being { position: relative; width: 200px; height: 200px; display: grid; place-items: center; margin-bottom: 20px; }
+  .being::before { content: ""; position: absolute; inset: 18px; border-radius: 50%;
+    background: conic-gradient(from 0deg, transparent, hsl(var(--h) 85% 66%), transparent 38%, hsl(calc(var(--h) + 50) 85% 66%), transparent 76%);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px)); animation: turn 9s linear infinite; }
+  .being i { position: absolute; inset: 0; border-radius: 50%; border: 1px solid hsl(var(--h) 80% 70% / .4); animation: meet-ripple 4.8s ease-out infinite; }
+  .being i:nth-child(2) { animation-delay: 1.6s; }
+  .being i:nth-child(3) { animation-delay: 3.2s; }
+  @keyframes meet-ripple { 0% { transform: scale(.58); opacity: .9; } 100% { transform: scale(1.2); opacity: 0; } }
+  .being .orb { width: 124px; height: 124px; font-size: 56px; }
+  .meet-stage.react .orb { animation: meet-hello .6s cubic-bezier(.2, 1.6, .4, 1), breathe 6s ease-in-out .6s infinite alternate; }
+  @keyframes meet-hello { 0% { transform: scale(.8); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
+  .meet-stage .kicker { margin: 0 0 4px; }
+  .meet-stage h1 { margin: 0 0 18px; font-size: clamp(32px, 4vw, 44px); line-height: 1.05; letter-spacing: -.02em; overflow-wrap: anywhere; }
+  #title-name { color: hsl(var(--h) 66% 40%); transition: color .6s; }
+  .bubble { width: 100%; min-height: 96px; text-align: left; padding: 15px 17px; border-radius: 20px 20px 20px 6px; font-size: 15.5px; line-height: 1.5;
+    background: color-mix(in srgb, var(--base) 62%, transparent); border: 1px solid var(--edge); }
+  .caret { display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: -2px; background: var(--accent); opacity: 0; }
+  .meet-stage.typing .caret { opacity: 1; animation: meet-blink .8s steps(2) infinite; }
+  @keyframes meet-blink { 50% { opacity: 0; } }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .meet-choices .lede { margin: 2px 0 14px; }
+  .pick { padding: 20px 22px; margin-bottom: 14px; transition: border-color .3s; }
+  .pick:hover, .pick:focus-within { border-color: color-mix(in srgb, var(--accent) 40%, var(--edge)); }
+  .pick h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; font-size: 18px; letter-spacing: -.01em; text-transform: none; color: var(--ink); }
+  .pick h2 b { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px;
+    color: #fff; background: linear-gradient(135deg, hsl(var(--h) 70% 48%), hsl(calc(var(--h) + 30) 70% 42%)); }
+  .meet .chip { padding: 8px 15px; font-size: 15px; }
+  .meet .chip[aria-pressed=true] { border-color: transparent; color: #fff;
+    background: linear-gradient(135deg, hsl(var(--h) 72% 44%), hsl(calc(var(--h) + 28) 72% 40%)); box-shadow: 0 8px 22px -8px hsl(var(--h) 80% 50% / .9); }
+  .meet .swatches button { position: relative; display: grid; place-items: center; }
+  .meet .swatches button[aria-pressed=true] { transform: scale(1.08); }
+  .meet .swatches button[aria-pressed=true]::after { content: "\2713"; color: #fff; font-weight: 800; font-size: 19px; }
+  .meet #color-hint { margin: 12px 0 0; }
+  .meet .voice { transition: transform .15s, border-color .25s, background .25s, box-shadow .25s; }
+  .meet .voice[aria-pressed=true] { background: hsl(var(--h) 70% 45% / .14); }
+  @media (prefers-color-scheme: dark) { #title-name { color: hsl(var(--h) 72% 66%); } }
+  @media (max-width: 880px) {
+    .meet { grid-template-columns: 1fr; }
+    .meet-stage { position: relative; top: 0; min-height: 0; padding: 26px 20px; }
+    .being { width: 150px; height: 150px; margin-bottom: 12px; }
+    .being .orb { width: 92px; height: 92px; font-size: 42px; }
+    .bubble { min-height: 76px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .meet-stage::before, .being::before, .being i, .meet-stage.react .orb, .meet-stage.typing .caret { animation: none; }
+    .being i { opacity: .35; }
+  }
+
+  /* The company's problems: big tappable cards instead of a checklist. */
+  #rs-problems { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  #rs-problems .check { position: relative; display: block; margin: 0; min-height: 84px; padding: 14px 44px 14px 16px; border-radius: 16px; cursor: pointer;
+    font-weight: 600; font-size: 15px; line-height: 1.35; border: 1px solid var(--edge); background: color-mix(in srgb, var(--base) 52%, transparent);
+    transition: transform .16s ease, border-color .2s, background .2s, box-shadow .2s; animation: arrive .4s cubic-bezier(.2, .7, .2, 1) both; }
+  #rs-problems .check:nth-child(2) { animation-delay: .05s; } #rs-problems .check:nth-child(3) { animation-delay: .1s; }
+  #rs-problems .check:nth-child(4) { animation-delay: .15s; } #rs-problems .check:nth-child(5) { animation-delay: .2s; }
+  #rs-problems .check:nth-child(n+6) { animation-delay: .25s; }
+  #rs-problems .check input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  #rs-problems .check::after { content: ""; position: absolute; top: 13px; right: 13px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+    font-size: 13px; font-weight: 800; color: #fff; border: 2px solid color-mix(in srgb, var(--soft) 55%, transparent); transition: background .18s, border-color .18s; }
+  #rs-problems .check:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 65%, var(--edge)); box-shadow: 0 12px 26px -16px hsl(var(--h) 80% 50% / .9); }
+  #rs-problems .check:active { transform: scale(.98); }
+  #rs-problems .check:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #rs-problems .check:has(input:checked) { border-color: var(--accent); box-shadow: 0 14px 30px -16px hsl(var(--h) 80% 50% / 1);
+    background: linear-gradient(135deg, hsl(var(--h) 70% 45% / .3), hsl(calc(var(--h) + 30) 70% 42% / .16)); }
+  #rs-problems .check:has(input:checked)::after { content: "\2713"; background: var(--accent); border-color: var(--accent); animation: meet-hello .32s cubic-bezier(.2, 1.6, .4, 1); }
+  .rs-count { min-height: 22px; margin: 10px 0 0; font-weight: 600; font-size: 14px; color: hsl(var(--h) 66% 40%); }
+  @media (prefers-color-scheme: dark) { .rs-count { color: hsl(var(--h) 72% 66%); } }
+  @media (max-width: 560px) { #rs-problems { grid-template-columns: 1fr; } #rs-problems .check { min-height: 0; } }
+  @media (prefers-reduced-motion: reduce) { #rs-problems .check, #rs-problems .check:has(input:checked)::after { animation: none; transition: none; } }
+
+  /* The last page: two steps into the first chat. */
+  .first-steps h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; font-size: 18px; letter-spacing: -.01em; text-transform: none; color: var(--ink); }
+  .first-steps h2:not(:first-child) { margin-top: 24px; }
+  .first-steps h2 b { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; color: #fff;
+    background: linear-gradient(135deg, hsl(var(--h) 70% 48%), hsl(calc(var(--h) + 30) 70% 42%)); }
+  .first-steps #fc-command { font-size: 20px; }
 </style>
 </head>
 <body>
@@ -344,7 +434,7 @@
       <svg class="eye" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="tmsun" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFC066"/><stop offset=".45" stop-color="#FF8A3C"/><stop offset="1" stop-color="#D9472C"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="#1C2B3A"/><g transform="translate(5 5) scale(.84375)"><path d="M6 32Q32 2 58 32Q32 62 6 32Z" fill="none" stroke="#F7ECDF" stroke-width="6.5" stroke-linejoin="round"/><path d="M32 20.5Q33.95 30.05 43.5 32Q33.95 33.95 32 43.5Q30.05 33.95 20.5 32Q30.05 30.05 32 20.5Z" fill="url(#tmsun)"/></g></svg>
       <p class="kicker">The Technomancer</p>
       <h1><span id="intro-company">Your business</span>, with its own AI assistant</h1>
-      <p class="lede">Claude or ChatGPT, set up for your business, your systems and your job.</p>
+      <p class="lede">Claude, ChatGPT or Gemini, set up for your business, your systems and your job.</p>
       <div class="stage" id="stage">
         <div class="versus head">
           <div class="plain">A regular LLM</div>
@@ -383,37 +473,50 @@
       <div id="main-list"></div>
     </section>
     <section>
-      <h2>What others do you use?</h2>
-      <p class="hint" style="margin:0 0 6px">They work beside your main assistant, in the same folder, reading the same notes. Ticked ones were found on this computer or are suggested by your company.</p>
+      <h2>Already pay for another AI? Add it to your team</h2>
+      <p class="hint" style="margin:0 0 6px">Tick any you pay for. Setup installs its command-line tool, and your main assistant can hand it work behind the scenes while you keep talking in one place.</p>
+      <ul class="done" style="margin:8px 0">
+        <li><b>A second opinion.</b> A different company's AI checks the work and catches mistakes the first one missed.</li>
+        <li><b>The right tool for the job.</b> Quick models handle simple lookups, and the strongest ones take the hard thinking.</li>
+        <li><b>More done at once.</b> Several can research or draft side by side, so big jobs finish sooner.</li>
+        <li><b>No dead ends.</b> If one hits its usage limit, another picks up the work.</li>
+      </ul>
       <div id="tool-list"></div>
-      <label class="check" id="extras-bypass-row" hidden><input type="checkbox" id="extras-bypass" checked>
-        <span><b>The others never stop to ask</b>Untick it to have them ask before they change files or run commands. Your main assistant has its own setting on a later page.</span></label>
+      <p class="hint" style="margin:12px 0 0">They all share the same notes about your work. Only use one? Skip this. Boxes already ticked were found on this computer or suggested by your company.</p>
     </section>
     <div class="nav"><button class="go quiet back" data-go="0">Back</button><button class="go next" data-go="1">Next</button></div>
   </div>
 
   <div class="page" data-page="1" hidden>
-    <div class="hero">
-      <div class="orb" id="orb" aria-hidden="true">J</div>
-      <h1>Meet <span id="title-name">Jarvis</span>,<br>your AI assistant</h1>
+    <div class="meet">
+      <aside class="meet-stage" id="meet">
+        <div class="being" aria-hidden="true"><i></i><i></i><i></i><div class="orb" id="orb">J</div></div>
+        <p class="kicker">Your new assistant</p>
+        <h1>Meet <span id="title-name">Jarvis</span></h1>
+        <div class="bubble"><span id="meet-line" aria-hidden="true"></span><i class="caret" aria-hidden="true"></i></div>
+        <span class="sr-only" id="meet-said" role="status"></span>
+      </aside>
+      <div class="meet-choices">
+        <p class="lede">Bring it to life. You can change any of this later.</p>
+        <section class="pick">
+          <h2 id="name-label"><b>1</b>Give it a name</h2>
+          <div class="chips" id="name-chips" role="group" aria-labelledby="name-label"></div>
+          <select id="name" hidden></select>
+          <input type="text" id="custom" placeholder="Type a name" maxlength="30" hidden aria-label="Custom name" style="margin-top:10px">
+        </section>
+        <section class="pick">
+          <h2 id="color-label"><b>2</b>Pick its color</h2>
+          <div class="swatches" id="colors" role="group" aria-labelledby="color-label"></div>
+          <p class="hint" id="color-hint">Chats about the assistant itself use this color. Work chats are orange, personal chats green.</p>
+        </section>
+        <section class="pick">
+          <h2 id="style-label"><b>3</b>Give it a voice</h2>
+          <div class="voices" id="style-cards" role="group" aria-labelledby="style-label"></div>
+          <select id="style" hidden></select>
+        </section>
+        <div class="nav"><button class="go quiet back" data-go="0.5">Back</button><button class="go next" data-go="2">Next</button></div>
+      </div>
     </div>
-    <p class="lede">A few quick choices and it is yours. Everything can be changed later.</p>
-    <section>
-      <h2>Your assistant</h2>
-      <label id="name-label">What should it be called?</label>
-      <div class="chips" id="name-chips" role="group" aria-labelledby="name-label"></div>
-      <select id="name" hidden></select>
-      <input type="text" id="custom" placeholder="Type a name" maxlength="30" hidden aria-label="Custom name" style="margin-top:8px">
-
-      <label>Its color</label>
-      <div class="swatches" id="colors" role="group" aria-label="Assistant color"></div>
-      <p class="hint" id="color-hint">Chats about the assistant itself use this color. Work chats are orange, personal chats green.</p>
-
-      <label id="style-label">How should it talk to you?</label>
-      <div class="voices" id="style-cards" role="group" aria-labelledby="style-label"></div>
-      <select id="style" hidden></select>
-    </section>
-    <div class="nav"><button class="go quiet back" data-go="0.5">Back</button><button class="go next" data-go="2">Next</button></div>
   </div>
 
   <div class="page" data-page="2" hidden>
@@ -424,7 +527,7 @@
       <input type="text" id="user" autocomplete="given-name" maxlength="40">
 
       <label for="role">Your role</label>
-      <select id="role"></select>
+      <input type="text" id="role" maxlength="60" autocomplete="organization-title" placeholder="For example: owner, office manager, sales">
     </section>
     <div class="nav"><button class="go quiet back" data-go="1">Back</button><button class="go next" data-go="2.5">Next</button></div>
   </div>
@@ -445,15 +548,9 @@
     </section>
     <section>
       <h2>Your systems</h2>
-      <label for="crm">Which CRM do you use?</label>
-      <select id="crm"></select>
-      <input type="text" id="crm-other" maxlength="40" placeholder="Which one?" aria-label="CRM name" style="margin-top:8px" hidden>
+      <label for="crm">What do you use to track customers and jobs?</label>
+      <input type="text" id="crm" maxlength="40" autocomplete="off" placeholder="For example: Jobber, ServiceTitan, spreadsheets">
       <div class="sys" id="crm-card" hidden></div>
-      <div id="crm-key-row" hidden>
-        <label for="crm-key" id="crm-key-label">API key</label>
-        <input type="text" id="crm-key" autocomplete="off" placeholder="Paste it here, or leave blank">
-        <p class="hint" id="crm-key-hint"></p>
-      </div>
       <div id="crm-name-row" hidden>
         <label for="crm-name">Your name as it appears in <span class="crm-label">the CRM</span> <span class="hint" style="display:inline">(optional)</span></label>
         <input type="text" id="crm-name" maxlength="60" placeholder="First and last name">
@@ -461,14 +558,9 @@
       </div>
 
       <label for="phone">What do you use for phones and call tracking?</label>
-      <select id="phone"></select>
-      <input type="text" id="phone-other" maxlength="40" placeholder="Which one?" aria-label="Phone system name" style="margin-top:8px" hidden>
+      <input type="text" id="phone" maxlength="40" autocomplete="off" placeholder="For example: RingCentral, CallRail, our cell phones">
+      <p class="hint">Not sure? Leave these blank.</p>
       <div class="sys" id="phone-card" hidden></div>
-      <div id="phone-key-row" hidden>
-        <label for="phone-key" id="phone-key-label">API key</label>
-        <input type="text" id="phone-key" autocomplete="off" placeholder="Paste it here, or leave blank">
-        <p class="hint" id="phone-key-hint"></p>
-      </div>
     </section>
     <div class="nav"><button class="go quiet back" data-go="2">Back</button><button class="go next" data-go="3">Next</button></div>
   </div>
@@ -493,7 +585,8 @@
 
   <div class="page" data-page="4" hidden>
     <h1><span id="done-name">Jarvis</span> is ready</h1>
-    <p class="lede">Now open Claude and say hello.</p>
+    <p class="lede">Open Claude and sign in. Your first chat comes at the end of setup.</p>
+    <p class="note setup-issues" hidden></p>
     <section id="account">
       <h2>Your Claude account</h2>
       <p id="acct-text" style="margin:0">Checking whether you are already signed in…</p>
@@ -506,50 +599,57 @@
       <h2>Once Claude is open</h2>
       <ol class="next">
         <li>Sign in with your work email.</li>
-        <li>It should open on your assistant's folder. If it asks, click the <b>Code</b> tab, then <b>Select folder</b>, and choose:<br><span class="path" id="done-folder"></span>
-          <button type="button" class="copy" id="copy-folder">Copy</button></li>
         <li id="remote-step">Open <b>Settings</b>, then <b>Claude Code</b>, and turn on <b>Connect new sessions to Remote Control</b>. That is what lets your phone see your chats.</li>
-        <li>Type <b>/start</b> and press Enter. You will know it worked when it greets you by name and knows your company. The first time, it checks that its tools work and asks you a few questions about your work: about ten minutes.</li>
       </ol>
     </section>
-    <details class="what">
-      <summary>What was set up</summary>
-      <ul class="done" id="log"></ul>
-    </details>
     <div class="nav"><span></span><button class="go next" data-go="4.2">Next: about your company</button></div>
   </div>
 
   <div class="page" data-page="4.5" hidden>
     <h1><span class="the-name">Jarvis</span> is ready</h1>
-    <p class="lede">Now open ChatGPT and say hello.</p>
+    <p class="lede">Sign in and connect your tools. Your first chat comes at the end of setup.</p>
+    <p class="note setup-issues" hidden></p>
     <section>
       <h2>Your ChatGPT account</h2>
       <p id="cx-text" style="margin:0">Checking whether you are already signed in…</p>
       <button class="step" id="cx-login" style="margin-top:12px" hidden>Sign in to ChatGPT</button>
     </section>
     <button class="go" id="cx-open">Open ChatGPT</button>
-    <p class="hint" id="cx-note" style="text-align:center;margin:12px 0 20px" role="status">Setup installs the ChatGPT app for you if it is not on this computer yet. This button opens it.</p>
+    <p class="hint" id="cx-note" style="text-align:center;margin:12px 0 20px" role="status">Setup installs the ChatGPT app for you if it is not on this computer yet. Open it once and sign in if it asks.</p>
     <section>
-      <h2>Once ChatGPT is open</h2>
-      <ol class="next">
-        <li>Sign in if it asks.</li>
-        <li>It should open on your assistant's folder. If it does not, click <b>Choose project</b> under the message box, add a project, and select this folder:<br><span class="path the-folder"></span>
-          <button type="button" class="copy" id="cx-copy">Copy</button></li>
-        <li>Type <b>$start</b>, with a dollar sign. If a list pops up, press Enter to pick it, then Enter again to send.</li>
-        <li>You will know it worked when it greets you by name and knows your company. The first time, it checks that its tools work and asks you a few questions about your work: about ten minutes.</li>
-      </ol>
-    </section>
-    <section>
-      <h2>One thing to set up inside ChatGPT</h2>
-      <ul class="done">
-        <li><b>Email, calendar and files.</b> Under <b>Plugins</b>, connect Gmail, Google Calendar and Google Drive with your work Google account.</li>
+      <h2>Connect your apps</h2>
+      <ul class="conn" id="cx-apps">
+        <li data-app="gmail"><span class="mark"></span><b>Gmail</b><button type="button" class="copy" style="margin-left:auto" hidden>Connect</button></li>
+        <li data-app="google-calendar"><span class="mark"></span><b>Google Calendar</b><button type="button" class="copy" style="margin-left:auto" hidden>Connect</button></li>
+        <li data-app="google-drive"><span class="mark"></span><b>Google Drive</b><button type="button" class="copy" style="margin-left:auto" hidden>Connect</button></li>
+        <li data-app="google-docs"><span class="mark"></span><b>Google Docs</b><small class="hint" style="margin:0 0 0 auto">comes with Google Drive</small></li>
+        <li data-app="google-sheets"><span class="mark"></span><b>Google Sheets</b><small class="hint" style="margin:0 0 0 auto">comes with Google Drive</small></li>
+        <li data-app="vercel"><span class="mark"></span><b>Vercel</b><button type="button" class="copy" style="margin-left:auto" hidden>Connect</button></li>
+        <li data-app="supabase"><span class="mark"></span><b>Supabase</b><button type="button" class="copy" style="margin-left:auto" hidden>Connect</button></li>
       </ul>
-      <p class="hint">Setup cannot do this one for you yet. Chrome comes on a page of its own in a moment.</p>
+      <p class="hint" id="cx-apps-note" role="status" style="margin-top:10px">Sign in to ChatGPT first. Then each one can be connected here.</p>
     </section>
-    <details class="what">
-      <summary>What was set up</summary>
-      <ul class="done" id="log-codex"></ul>
-    </details>
+    <div class="nav"><span></span><button class="go next" data-go="4.2">Next: about your company</button></div>
+  </div>
+
+  <div class="page" data-page="4.6" hidden>
+    <h1><span class="the-name">Jarvis</span> is ready</h1>
+    <p class="lede">Open Antigravity and sign in. Your first chat comes at the end of setup.</p>
+    <p class="note setup-issues" hidden></p>
+    <section>
+      <h2>Your Google account</h2>
+      <p style="margin:0">Sign in to Antigravity with a personal Google account, a Gmail address. Company Google Workspace accounts do not include Antigravity plans. A business can still use it through Google Cloud: ask <span class="the-contact">your manager</span>.</p>
+    </section>
+    <button class="go" id="ag-open">Open Antigravity</button>
+    <p class="hint" id="ag-note" style="text-align:center;margin:12px 0 20px" role="status">Setup installs the Antigravity app for you if it is not on this computer yet. Open it once and sign in if it asks.</p>
+    <section>
+      <h2>Good to know</h2>
+      <ul class="done" style="margin-top:0">
+        <li>Antigravity has its own web browser built into the app, so it can look at web pages for you.</li>
+        <li>To reach it from your phone, open Antigravity and turn on <b>Settings</b>, then <b>Application</b>, then <b>Enable Remote Control</b>. Then open antigravity.google on your phone and sign in with the same Google account.</li>
+        <li>Gmail, Calendar and Drive are not connected in Antigravity yet.</li>
+      </ul>
+    </section>
     <div class="nav"><span></span><button class="go next" data-go="4.2">Next: about your company</button></div>
   </div>
 
@@ -562,8 +662,9 @@
       <textarea id="rs-about" rows="3" maxlength="400" placeholder="A sentence or two. Fix anything it got wrong."></textarea>
       <div id="rs-problems-box" hidden>
         <label>Problems companies like yours often have</label>
-        <p class="hint" style="margin-bottom:4px">Tick the ones that are big for you. Leave the rest.</p>
+        <p class="hint" style="margin-bottom:4px">Tap the ones that hit home.</p>
         <div id="rs-problems"></div>
+        <p class="rs-count" id="rs-count" role="status"></p>
       </div>
       <label for="rs-other">Anything we missed?</label>
       <textarea id="rs-other" rows="3" maxlength="600" placeholder="Other problems you have, one per line"></textarea>
@@ -577,12 +678,14 @@
     <p class="lede">This lets <span class="the-name">Jarvis</span> work in web pages for you. <span id="cs-lede-count">Three clicks</span>, in order. Each one opens a small window of its own.</p>
     <p class="hint mac-only" hidden>If your Mac asks whether Terminal may control Google Chrome, click <b>OK</b> (or <b>Allow</b>): that is how setup closes each window when its step is done.</p>
     <p class="note" id="cs-summary" hidden></p>
+    <p class="note" id="cs-error" role="alert" hidden></p>
     <section>
       <ol class="next steps">
         <li><button class="step" data-page="google">Sign in to Google</button>
-          <span id="cs-google">Use your work email. If Chrome offers to sign you in to Chrome too, say yes: that is how setup sees you are done. Then close that window.</span></li>
+          <button type="button" class="copy" id="cs-google-done" hidden>I signed in to Google</button>
+          <span id="cs-google">Use your work email. This window closes by itself once you are signed in.</span></li>
         <li><button class="step" data-page="extension" data-claude="Add Claude to Chrome" data-codex="Add ChatGPT to Chrome">Add Claude to Chrome</button>
-          <span id="cs-extension">Click <b>Add to Chrome</b> in the window that opens. If Chrome already asked you to turn on "Claude", click <b>Enable</b> instead. This page ticks it when Chrome has it; then close that window.</span></li>
+          <span id="cs-extension">Click <b>Add to Chrome</b> in the window that opens. If Chrome already asked you to turn on "Claude", click <b>Enable</b> instead. This page ticks it and closes the window once Chrome has it.</span></li>
         <li><button class="step" data-page="claude" data-claude="Sign in to Claude in Chrome" data-codex="Sign in to ChatGPT in Chrome">Sign in to Claude in Chrome</button>
           <button type="button" class="copy" id="cs-claude-done" hidden>I signed in: close that window</button>
           <span id="cs-claude">Adding it is not enough: Claude in Chrome only works once you sign in to it. Sign in with the same work email in the window that opens, and close it. Then click the puzzle piece at the top right of Chrome, pin <b>Claude</b>, and click it: if it asks you to sign in, do that too. It is ready when it shows a box to type in.</span></li>
@@ -635,17 +738,21 @@
   </div>
 
   <div class="page" data-page="8" hidden>
-    <h1>Connect your email and calendar</h1>
-    <p class="lede">So <span class="the-name">Jarvis</span> can read your inbox, check your calendar and find files. It only sees what you can see.</p>
+    <h1>Connect your apps</h1>
+    <p class="lede">So <span class="the-name">Jarvis</span> can read your inbox, check your calendar, work in your files, docs and sheets, and publish for you. It only sees what you can see.</p>
     <section>
       <ol class="next steps">
         <li><button class="step" id="conn-open">Open Claude's connectors page</button>
           It opens in Chrome. Sign in with your work email if it asks.</li>
-        <li>On that page, click <b>Connect</b> next to each of these, and choose your work Google account when Google asks:
+        <li>On that page, click <b>Connect</b> next to each of these, with your work Google account for the Google ones:
           <ul class="conn" id="conn-list">
             <li data-conn="Gmail"><span class="mark"></span><b>Gmail</b></li>
             <li data-conn="Google Calendar"><span class="mark"></span><b>Google Calendar</b></li>
             <li data-conn="Google Drive"><span class="mark"></span><b>Google Drive</b></li>
+            <li data-conn="Google Docs"><span class="mark"></span><b>Google Docs</b></li>
+            <li data-conn="Google Sheets"><span class="mark"></span><b>Google Sheets</b></li>
+            <li data-conn="Vercel"><span class="mark"></span><b>Vercel</b></li>
+            <li data-conn="Supabase"><span class="mark"></span><b>Supabase</b></li>
           </ul></li>
       </ol>
       <p class="hint" id="conn-note">Each one gets a tick here once it is connected.</p>
@@ -678,31 +785,66 @@
       </ol>
     </section>
     <p class="hint" id="gh-skip" style="margin:0 0 14px">You can skip this and do it later: <span class="the-name">Jarvis</span> works without it, it just has no backup.</p>
-    <div class="nav"><button class="go quiet back" data-go="8">Back</button><button class="go next" id="gh-next" data-go="10">Next</button></div>
+    <div class="nav"><button class="go quiet back" data-go="8">Back</button><button class="go next" id="gh-next" data-go="9.5">Next</button></div>
+  </div>
+
+  <div class="page" data-page="9.5" hidden>
+    <h1>Publish websites and apps</h1>
+    <p class="lede"><span class="the-name">Jarvis</span> can build a web page or a small app and put it online for you, with a database when it needs to save things. Two free accounts make that work.</p>
+    <section>
+      <ol class="next steps">
+        <li><button class="step" id="vc-connect">Connect Vercel</button>
+          <span id="vc-note">Vercel puts your pages online. A Vercel window opens: sign up or sign in (Continue with Google or GitHub is quickest), then click <b>Allow</b>. This page ticks it when it is done.</span></li>
+        <li><button class="step" id="sb-connect">Connect Supabase</button>
+          <span id="sb-note">Supabase keeps the data your apps save. A Supabase window opens: sign up or sign in, click <b>Generate new token</b>, give it any name, and copy it. Paste it here.</span>
+          <div id="sb-token-box" hidden style="margin-top:8px">
+            <label for="sb-token">Your Supabase token</label>
+            <input type="password" id="sb-token" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sbp_…" style="max-width:320px">
+            <button type="button" class="copy" id="sb-token-send">Connect</button></div></li>
+      </ol>
+      <p class="hint">Both are free to start. Vercel's free plan is for personal sites; a site for a business belongs on Vercel Pro (about $20 a month). Supabase's free plan allows business use, with two projects that pause after a week without visits.</p>
+    </section>
+    <p class="hint" id="pub-skip" style="margin:0 0 14px">You can skip this: the first time you ask <span class="the-name">Jarvis</span> to publish something, it walks you through signing in.</p>
+    <div class="nav"><button class="go quiet back" data-go="9">Back</button><button class="go next" data-go="10">Next</button></div>
   </div>
 
   <div class="page" data-page="10" hidden>
     <div class="finale">
       <div class="burst" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <div class="orb big" aria-hidden="true">&#10003;</div>
-      <h1>You are all set<span id="final-user"></span></h1>
-      <p class="lede"><span class="the-name">Jarvis</span> is ready to work.</p>
+      <h1>You are almost there<span id="final-user"></span></h1>
+      <p class="lede"><span class="the-name">Jarvis</span> is set up. Finish anything below if you want, then click Next to start your first chat in <span id="final-app">Claude</span>.</p>
     </div>
 
     <section>
-      <h2>What is ready</h2>
+      <h2>Your setup so far</h2>
       <ul class="ready" id="ready"></ul>
     </section>
 
-    <section>
-      <h2>Try one of these first</h2>
-      <p class="hint" id="tries-hint" style="margin:0 0 12px">Click one to copy it, then paste it into Claude after <code>/start</code>.</p>
-      <div class="tries" id="tries"></div>
+    <div class="nav"><button class="go quiet back" data-go="9.5">Back</button><button class="go next" data-go="11">Next: start your first chat</button></div>
+  </div>
+
+  <div class="page" data-page="11" hidden>
+    <div class="finale">
+      <div class="orb big" id="fc-orb" aria-hidden="true">J</div>
+      <h1>Say hello to <span class="the-name">Jarvis</span></h1>
+      <p class="lede">It will introduce itself, learn about you and your work, and show you how to use its tools. It takes about fifteen minutes.</p>
+    </div>
+
+    <section class="first-steps">
+      <h2><b>1</b>Open the app</h2>
+      <button class="go" id="final-open">Open Claude and copy /start</button>
+      <h2><b>2</b>Send your first message</h2>
+      <p style="margin:0 0 10px" id="fc-paste">Paste it into the message box and press Enter.</p>
+      <button type="button" class="try" id="fc-copy" style="width:100%"><code id="fc-command">/start</code><small id="fc-copy-tag">Click to copy</small></button>
+      <p class="hint" id="fc-note" role="status" style="margin:10px 0 0"></p>
     </section>
 
-    <button class="go" id="final-open">Open Claude</button>
-    <p class="hint" id="final-hint" style="text-align:center;margin:12px 0 22px">Pick your folder in the <b>Code</b> tab and type <code>/start</code>. The first time, it checks its tools and asks about your work.</p>
-
+    <details class="what">
+      <summary>Not in the right folder?</summary>
+      <p class="hint" style="margin:12px 0 4px"><span id="fc-folder"></span><br><span class="path" id="done-folder"></span>
+        <button type="button" class="copy" id="copy-folder">Copy</button></p>
+    </details>
     <details class="what">
       <summary>Where to find things later</summary>
       <ul class="done" style="margin-top:12px">
@@ -711,7 +853,7 @@
         <li>Stuck? Type "I'm stuck" in a chat, or send <span class="the-contact">your manager</span> a screenshot.</li>
       </ul>
     </details>
-    <div class="nav"><button class="go quiet back" data-go="9">Back</button><button class="go quiet" id="finish">Close setup</button></div>
+    <div class="nav"><button class="go quiet back" data-go="10">Back</button><button class="go quiet" id="finish">Close setup</button></div>
     <p class="hint" id="finish-note" style="text-align:center;margin-top:12px"></p>
   </div>
 </main>
@@ -738,8 +880,24 @@ let page = 1
 // The software this computer needs, installing while they go through the screens.
 const SAY = { waiting: 'Waiting its turn', working: 'Installing…', done: 'Installed', failed: 'Not installed' }
 let dockTouched = false
+// Every poll has a name here, is cleared before it is set again, and the page-scoped ones are
+// cleared when the person leaves their page (see show), so no loop is ever doubled or left running.
+const timers = {}
+const later = (key, fn, ms) => { clearTimeout(timers[key]); timers[key] = setTimeout(fn, ms) }
+const stopTimers = (...keys) => { for (const key of keys) clearTimeout(timers[key]) }
+// Setup starts only the main assistant's desktop app, and only at /apply. Its row can appear a
+// moment after that, so the installs poll keeps looking for it for a little while.
+const MAIN_APP_ROW = { claude: 'claude-app', codex: 'chatgpt-app', agy: 'agy-app' }
+let installsLooks = 0
 function showInstalls(st) {
-  if (!st.rows || !st.rows.length) return
+  stopTimers('installs')
+  const rows = (st && st.rows) || []
+  const wantRow = result && MAIN_APP_ROW[result.main]
+  const waitingForMain = Boolean(wantRow) && !rows.some(r => r.id === wantRow) && installsLooks++ < 12
+  if ((st && st.busy) || waitingForMain) {
+    timers.installs = setTimeout(async () => { try { showInstalls(await post('/installs/status')) } catch (error) { showInstalls(st) } }, 2000)
+  }
+  if (!rows.length) return
   $('dock').hidden = false
   $('dock-count').textContent = `${st.settled} of ${st.total}`
   const failed = st.rows.filter(r => r.state === 'failed')
@@ -760,8 +918,9 @@ function showInstalls(st) {
   // Open by default where there is room beside the page; a pill elsewhere, unless something needs them.
   const needsThem = st.rows.some(r => r.state === 'failed' || (r.state === 'working' && r.note))
   if (!dockTouched) $('dock').dataset.open = String(needsThem || (st.busy && innerWidth >= 1040))
-  if (st.busy) setTimeout(async () => showInstalls(await post('/installs/status')), 2000)
   showChatGPTApp(st.rows.find(r => r.id === 'chatgpt-app'))
+  showAgyApp(st.rows.find(r => r.id === 'agy-app'))
+  syncClaudeApp(st.rows.find(r => r.id === 'claude-app'))
 }
 $('dock-head').onclick = () => {
   dockTouched = true
@@ -782,7 +941,6 @@ function refreshTools() {
   const main = mainTool()
   // The primary one is not also offered as an "other".
   for (const row of document.querySelectorAll('#tool-list label')) row.hidden = row.querySelector('input').value === main
-  $('extras-bypass-row').hidden = !pickedTools().some(id => id !== 'claude' && id !== main)
   // Remote control and color modes are Claude's: named as such when Claude is only a side app.
   const claudeOn = pickedTools().includes('claude')
   $('remote').closest('label').hidden = $('tint').closest('label').hidden = !claudeOn
@@ -792,6 +950,7 @@ function refreshTools() {
   $('tint').nextElementSibling.firstChild.textContent = 'Color modes' + side
 }
 const codexMain = () => Boolean(result && result.main === 'codex')
+const agyMain = () => Boolean(result && result.main === 'agy')
 const phoneOn = () => $('remote').checked
 
 // Codex as the main assistant: is it signed in, and open the ChatGPT app on the folder.
@@ -810,19 +969,17 @@ function showCodex(a) {
     words.textContent = 'ChatGPT’s Codex tool is not on this computer yet. If the panel at the bottom right says it could not be installed, '
       + `send ${options.contact || 'your manager'} a screenshot of it. Otherwise this checks again by itself.`
   }
-  if ((a.waiting || a.state === 'no-codex') && page === 4.5) setTimeout(async () => showCodex(await post('/codex/status')), 3000)
+  stopTimers('codex')
+  if ((a.waiting || a.state === 'no-codex') && page === 4.5) later('codex', async () => { if (page === 4.5) showCodex(await post('/codex/status')) }, 3000)
 }
 const opened = {}
 async function openTool(tool) {
   const reply = await post('/tool/open', { tool: tool.id, folder: result ? result.folder : '' })
-  if (reply.opened) opened[tool.id] = true
-  showFinale()
-  if (!reply.opened) {
-    const row = $('ready').querySelector(`li[data-tool="${tool.id}"] small`)
-    if (row) row.textContent = reply.installed
-      ? `It could not be opened from here. In your folder, double-click the "Open" file for ${tool.label}.`
+  if (reply.opened) opened[tool.id] = true  // remembered for the words only: it never ticks anything
+  openNote[tool.id] = reply.opened ? 'It opened in its own window. Sign in there and this ticks by itself.'
+    : reply.installed ? `It could not be opened from here. In your folder, double-click the "Open" file for ${toolName(tool)}.`
       : 'Still installing, or it could not be installed. Look at the installs panel, then try again.'
-  }
+  showFinale()
 }
 
 // The Claude app's new-chat menu: a preset for the assistant's folder, added once the app is closed.
@@ -837,39 +994,104 @@ function presetRow() {
   return [[on, 'New chats in this folder', words, async () => { preset = await post('/app/preset'); showFinale() }]]
 }
 
+// The first chat starts from one command, copied for them when they open the app.
+const firstCommand = () => (codexMain() ? '$start' : '/start')
+const finalLabel = () => `Open ${codexMain() ? 'ChatGPT' : agyMain() ? 'Antigravity' : 'Claude'} and copy ${firstCommand()}`
+async function copyFirst() {
+  try { await navigator.clipboard.writeText(firstCommand()); return true } catch (error) { return false }
+}
+
+// What setup could confirm about each assistant: { signedIn, app }, each true, false, or null when it
+// cannot be checked from here. Only a true ticks. A click or a launch never does.
+let assist = null
+async function watchAssistants() {
+  stopTimers('assist')
+  if (page !== 10) return
+  let again = 5000
+  try {
+    const s = await post('/assistants/status')
+    if (s && s.ok && page === 10) { assist = s.rows || {}; showFinale() }
+    if (s && s.checking) again = 1500  // the first check is still running
+  } catch (error) {}  // a failed check leaves the last answer, and the next poll tries again
+  stopTimers('assist')  // another poll may have started while this one waited
+  if (page === 10) timers.assist = setTimeout(watchAssistants, again)
+}
+// Rows are empty until the first check finishes: that is "checking", never "cannot confirm".
+const heard = (s, key) => Boolean(s) && key in s
+const CANNOT_CONFIRM = 'Setup cannot confirm this sign-in. Your first chat will show if it worked.'
+const openNote = {}
+const toolName = tool => NAMES[tool.id] || tool.label
+// One row for an assistant's account, one for its app, ticked only on a confirmed true.
+function accountRow(id, title, go) {
+  const s = assist && assist[id]
+  if (!heard(s, 'signedIn')) return [false, title, 'Checking…', 0]
+  if (s.signedIn === true) return [true, title, 'Signed in on this computer.', 0]
+  if (s.signedIn === false) return [false, title, 'Not signed in yet.', go]
+  return [false, title, CANNOT_CONFIRM, 0]
+}
+function appRow(id, title, go) {
+  const s = assist && assist[id]
+  if (!heard(s, 'app')) return [false, title, 'Checking…', 0]
+  if (s.app === true) return [true, title, 'On this computer.', 0]
+  if (s.app === false) return [false, title, 'Not on this computer yet.', go]
+  return [false, title, 'Setup cannot check this from here.', 0]
+}
+function extraRow(tool) {
+  const s = assist && assist[tool.id], name = toolName(tool)
+  if (s && s.signedIn === true) return [true, name, 'Signed in.', 0]
+  if (!heard(s, 'signedIn')) return [false, name, 'Checking…', tool]
+  if (s.signedIn === null) return [false, name, CANNOT_CONFIRM, tool]
+  return [false, name, openNote[tool.id] || `Not signed in yet. Open it and sign in with ${tool.account}.`, tool]
+}
+
 function showFinale() {
   $('final-user').textContent = result && result.user ? `, ${result.user}` : ''
-  if (codexMain()) {
-    $('tries-hint').textContent = 'Click one to copy it, then paste it into ChatGPT after $start.'
-    $('final-hint').textContent = 'If it does not open on your folder, click Choose project under the message box and pick it. Then type $start and send it (if a list pops up, Enter picks it and Enter again sends). The first time, it checks its tools and asks about your work.'
-    if (!$('final-open').dataset.clicked) $('final-open').textContent = 'Open ChatGPT'
-  }
+  $('final-app').textContent = codexMain() ? 'ChatGPT' : agyMain() ? 'Antigravity' : 'Claude'
+  $('fc-orb').textContent = ((result ? result.assistant : chosenName()).match(/[A-Za-z0-9]/) || ['A'])[0].toUpperCase()
+  $('fc-command').textContent = firstCommand()
+  $('fc-paste').textContent = codexMain() ? 'Paste it into the message box and press Enter. If a list pops up, press Enter again to send.'
+    : 'Paste it into the message box and press Enter.'
+  $('fc-folder').textContent = codexMain() ? 'Not on your assistant\'s folder? Click Choose project under the message box, add a project, and select:'
+    : agyMain() ? 'Not on your assistant\'s folder? Add this folder as a project in Antigravity:'
+      : 'If it asks for a folder, click the Code tab, then Select folder, and choose:'
+  if (!$('final-open').dataset.clicked && !$('final-open').disabled) $('final-open').textContent = finalLabel()
   const sys = ((result && result.systems) || [])
-  const sysWords = sys.length ? ' ' + sys.map(s => `${s.label} ${s.state === 'live' ? 'connected' : 'pending'}`).join(', ') + '.' : ''
+  const sysWords = sys.length ? ' ' + sys.map(s => `${s.label} ${s.state === 'live' ? 'connected' : 'to connect in your first chat'}`).join(', ') + '.' : ''
   const setUp = `Its folder, notes and company profile.${sysWords}`
-  const rows = codexMain() ? [
+  const rows = agyMain() ? [
     [true, `${result.assistant} is set up`, setUp, 0],
-    [Boolean(done.codexIn), 'ChatGPT account', done.codexIn ? 'Signed in on this computer.' : 'Not signed in yet.', 4.5],
-    [Boolean(opened.codex), 'The ChatGPT app', opened.codex ? 'Opened.' : 'Not opened yet.', 4.5],
+    accountRow('agy', 'Antigravity account', 4.6),
+    appRow('agy', 'The Antigravity app', 4.6),
     [Boolean(done.profile), 'What matters to your company', done.profile ? 'Saved in its notes.' : 'Not filled in yet.', 4.2],
-    ...presetRow(),
-    [done.chrome >= 3, 'Chrome', done.chrome >= 3 ? 'Signed in to Google, with ChatGPT added and signed in.' : 'Not finished: this is what lets it work in your web tools for you.', 5],
     [done.drill, 'The four commands', done.drill ? 'You typed all four.' : 'Not practised yet.', 7],
     [done.github, 'Company GitHub', done.github ? (done.org ? `Joined ${done.org}.` : 'Connected.') : 'Not connected yet.', 9],
+    [done.publish >= 2, 'Publishing websites', done.publish >= 2 ? 'Vercel and Supabase are connected.' : 'Not finished: this is what lets it put pages online for you.', 9.5],
+  ] : codexMain() ? [
+    [true, `${result.assistant} is set up`, setUp, 0],
+    accountRow('codex', 'ChatGPT account', 4.5),
+    appRow('codex', 'The ChatGPT app', 4.5),
+    [Boolean(done.profile), 'What matters to your company', done.profile ? 'Saved in its notes.' : 'Not filled in yet.', 4.2],
+    ...presetRow(),
+    [done.apps >= APP_TOTAL, 'Your apps', done.apps >= APP_TOTAL ? 'All of them are connected.' : `${done.apps || 0} of ${APP_TOTAL} connected.`, 4.5],
+    chromeRow('ChatGPT'),
+    [done.drill, 'The four commands', done.drill ? 'You typed all four.' : 'Not practised yet.', 7],
+    [done.github, 'Company GitHub', done.github ? (done.org ? `Joined ${done.org}.` : 'Connected.') : 'Not connected yet.', 9],
+    [done.publish >= 2, 'Publishing websites', done.publish >= 2 ? 'Vercel and Supabase are connected.' : 'Not finished: this is what lets it put pages online for you.', 9.5],
   ] : [
     [true, `${result ? result.assistant : 'Your assistant'} is set up`, setUp, 0],
-    [appState === 'installed', 'The Claude app', appState === 'installed' ? 'On this computer.' : 'Not installed yet.', 4],
+    accountRow('claude', 'Claude account', 4),
+    appRow('claude', 'The Claude app', 4),
     [Boolean(done.profile), 'What matters to your company', done.profile ? 'Saved in its notes.' : 'Not filled in yet.', 4.2],
     ...presetRow(),
-    [done.chrome >= 3, 'Chrome', done.chrome >= 3 ? 'Signed in to Google, with Claude added and signed in.' : 'Not finished: this is what lets it work in your web tools for you.', 5],
+    chromeRow('Claude'),
     [done.drill, 'The four commands', done.drill ? 'You typed all four.' : 'Not practised yet.', 7],
-    [done.connectors >= 3, 'Email, calendar and files',
-      done.connectors >= 3 ? 'Gmail, Calendar and Drive are connected.'
-        : done.connectorsKnown ? `${done.connectors} of 3 connected.` : 'Could not be checked from here.', 8],
+    [done.connectors >= $('conn-list').children.length, 'Your apps',
+      done.connectors >= $('conn-list').children.length ? 'All of them are connected.'
+        : done.connectorsKnown ? `${done.connectors} of ${$('conn-list').children.length} connected.` : 'Could not be checked from here.', 8],
     [done.github, 'Company GitHub', done.github ? (done.org ? `Joined ${done.org}.` : 'Connected.') : 'Not connected yet.', 9],
+    [done.publish >= 2, 'Publishing websites', done.publish >= 2 ? 'Vercel and Supabase are connected.' : 'Not finished: this is what lets it put pages online for you.', 9.5],
   ]
-  for (const tool of ((result && result.tools) || []).filter(tool => !(codexMain() && tool.id === 'codex'))) rows.push([Boolean(opened[tool.id]), tool.label,
-    opened[tool.id] ? `Opened ${tool.where || 'in a terminal'}. Sign in there with ${tool.account}.` : `Set up. Open it once to sign in with ${tool.account}.`, tool])
+  for (const tool of ((result && result.tools) || []).filter(tool => !result || tool.id !== result.main)) rows.push(extraRow(tool))
   $('ready').replaceChildren(...rows.map(([on, title, detail, go]) => {
     const li = document.createElement('li')
     if (on) li.className = 'on'
@@ -887,15 +1109,6 @@ function showFinale() {
       li.append(fix)
     }
     return li
-  }))
-  $('tries').replaceChildren(...((result && result.try) || []).map(line => {
-    const card = Object.assign(document.createElement('button'), { type: 'button', className: 'try', textContent: line })
-    const tag = Object.assign(document.createElement('small'), { textContent: 'Click to copy' })
-    card.append(tag)
-    card.onclick = async () => {
-      try { await navigator.clipboard.writeText(line); tag.textContent = codexMain() ? 'Copied. Paste it into ChatGPT.' : 'Copied. Paste it into Claude.' } catch (error) { tag.textContent = 'Select the text and copy it' }
-    }
-    return card
   }))
   let k = 0
   for (const dot of document.querySelectorAll('.burst i')) {
@@ -919,22 +1132,56 @@ function startIntro() {
   else slideTimer = setTimeout(ready, rows.length * 950 + 600)
 }
 
+// Antigravity as the main assistant: [4.6, 4.2, 7, 9, 9.5, 10, 11]. Every caller (buttons, rs-next,
+// the ready list) asks for the Claude-flow page; this turns it into the page that is next, or
+// previous, in the Antigravity flow, using the page they are on.
+function agyRoute(n, from) {
+  if (n === 4) return 4.6
+  if (n === 5) return from === 7 ? 4.2 : 7
+  if (n === 6) return 4.2
+  if (n === 8) return from === 9 ? 7 : 9
+  return n
+}
 function show(n) {
+  if (agyMain()) n = agyRoute(n, page)
   page = n
   if (n !== 4.2) clearTimeout(researchTimer)
-  if (n === 10) { showFinale(); post('/app/preset').then(r => { preset = r; showFinale() }) }
+  if (n === 11) showFinale()
+  if (n === 10) {
+    showFinale()
+    post('/app/preset').then(r => { preset = r; showFinale() }).catch(() => {})
+    post('/publish/status').then(showPublish).catch(() => {})
+    watchAssistants()
+  }
+  if (n === 1) setTimeout(() => sayHello(true), 180)
   if (n === 7) setTimeout(() => $('drill').focus(), 60)
   if (n === 8) post('/connectors/status').then(showConnectors)
   if (n === 9) post('/github/status').then(showGithub)
+  if (n === 9.5) post('/publish/status').then(showPublish)
   if (n === 5) { chromeCopy(); setTimeout(watchChrome, 0) }
   if (n === 4.2) startResearch()
   // Coming back to a sign-in page checks again: they may have signed in somewhere else meanwhile.
-  if (n === 4 && result && !codexMain()) post('/account/status').then(showAccount)
-  if (n === 4.5 && result && codexMain()) post('/codex/status').then(showCodex)
+  if (n === 4 && result && !codexMain() && !agyMain()) {
+    post('/account/status').then(showAccount)
+    post('/app/status').then(showApp).catch(() => {})  // so #open is never left on a stale "Getting the Claude app…"
+  }
+  if (n === 4.5 && result && codexMain()) { post('/codex/status').then(showCodex); setTimeout(watchApps, 0) }
+  if (n !== 4.5) { clearTimeout(appsTimer); stopTimers('codex') }
+  if (n !== 4) stopTimers('acct', 'app')
+  if (n !== 5) clearTimeout(chromeTimer)
+  if (n !== 8) clearTimeout(connTimer)
+  if (n !== 9) { stopTimers('gh'); clearTimeout(orgTimer) }
+  if (n !== 9.5) clearTimeout(publishTimer)
+  if (n !== 10) stopTimers('assist')
+  if (n !== 1) {  // leaving the typing greeting: stop it, and leave the full line showing
+    clearInterval(sayTimer)
+    $('meet').classList.remove('typing')
+    $('meet-line').textContent = $('meet-said').textContent
+  }
   for (const el of document.querySelectorAll('.page')) el.hidden = Number(el.dataset.page) !== n
   $('progress').hidden = $('bar').hidden = n === 0
   const choices = [0.5, 1, 2, 2.5, 3]
-  const after = codexMain() ? [4.5, 4.2, 5, 7, 9, 10] : [4, 4.2, 5, ...(phoneOn() ? [6] : []), 7, 8, 9, 10]
+  const after = agyMain() ? [4.6, 4.2, 7, 9, 9.5, 10, 11] : codexMain() ? [4.5, 4.2, 5, 7, 9, 9.5, 10, 11] : [4, 4.2, 5, ...(phoneOn() ? [6] : []), 7, 8, 9, 9.5, 10, 11]
   $('progress').textContent = n <= 3 ? `Step ${choices.indexOf(n) + 1} of ${choices.length}` : `Almost there: ${after.indexOf(n) + 1} of ${after.length}`
   const total = n <= 3 ? choices.length : after.length, at = (n <= 3 ? choices : after).indexOf(n) + 1
   $('bar').replaceChildren(...Array.from({ length: total }, (_, i) =>
@@ -947,11 +1194,11 @@ for (const button of document.querySelectorAll('button[data-go]')) {
   // With Codex as the main assistant, the Claude-only pages are skipped: GitHub's Back goes to the ChatGPT page.
   button.onclick = () => {
     const to = Number(button.dataset.go)
-    // Leaving the first question: if they use Claude, its pieces start installing now.
-    // Every assistant picked gets its command-line tool; only the main one gets its desktop app.
+    // Leaving the first question: the command-line tools start installing now. No desktop app does:
+    // they can still change their mind (Back), so the main one is started by /apply, once it is final.
     if (page === 0.5 && to === 1) post('/installs/start', { claude: pickedTools().includes('claude'),
-      claudeApp: mainTool() === 'claude', chatgptApp: mainTool() === 'codex' }).then(showInstalls)
-    // With Codex as the primary agent the flow is 4.5, 4.2, 5, 7, 9, 10: the Claude-only pages are stepped over.
+      claudeApp: false, chatgptApp: false, antigravityApp: false }).then(showInstalls)
+    // With Codex as the primary agent the flow is 4.5, 4.2, 5, 7, 9, 9.5, 10, 11: the Claude-only pages are stepped over.
     if (codexMain() && to === 4) show(4.5)
     else if (codexMain() && to === 8) show(page === 7 ? 9 : 7)
     // The phone page is Claude's Remote control: without it, Chrome and practice meet.
@@ -978,6 +1225,7 @@ function refresh() {
   }
   for (const b of $('colors').children) b.setAttribute('aria-pressed', String(b.dataset.color === color))
   if (options.integrations) refreshSystems()
+  sayHello()
 }
 
 // A color's hue, so the background light can follow the chosen color.
@@ -990,10 +1238,62 @@ function hueOf(hex) {
 }
 
 // How each way of talking sounds, in one line.
+// The assistant introduces itself in the voice picked, and reacts when anything about it changes.
+const GREETING = {
+  Professional: n => `I'm ${n}. Tell me what needs doing and I will get it done.`,
+  Casual: n => `Hey, I'm ${n}! Glad to be on the team. What are we working on?`,
+  Sarcastic: n => `I'm ${n}. Another day, another inbox to rescue. Fine, let's go.`,
+  Coach: n => `I'm ${n}, and I'm in your corner. What's the one win we're going after today?`,
+}
+let saidKey = '', saidColor = '', sayTimer = null
+function pulseMeet() {
+  $('meet').classList.remove('react')
+  void $('meet').offsetWidth  // restarts the animation
+  $('meet').classList.add('react')
+}
+function sayHello(force) {
+  const name = chosenName(), style = $('style').value, key = `${name}|${style}`
+  if (color !== saidColor) { saidColor = color; if (page === 1) pulseMeet() }
+  if (!force && key === saidKey) return
+  saidKey = key
+  const line = (GREETING[style] || GREETING.Professional)(name), box = $('meet-line')
+  clearInterval(sayTimer)
+  $('meet-said').textContent = line
+  $('meet').classList.remove('typing')
+  if (page !== 1 || matchMedia('(prefers-reduced-motion: reduce)').matches) { box.textContent = line; return }
+  pulseMeet()
+  $('meet').classList.add('typing')
+  let shown = 0
+  box.textContent = ''
+  sayTimer = setInterval(() => {
+    shown += 1
+    box.textContent = line.slice(0, shown)
+    if (shown >= line.length) { clearInterval(sayTimer); $('meet').classList.remove('typing') }
+  }, 20)
+}
+
 const VOICE = {
   Professional: 'Three jobs moved stage today. Two need a call back.',  Casual: 'Nice, three jobs moved today! Two folks still need a ring.',
   Sarcastic: 'Three jobs moved. Thrilling. Two still want a call, naturally.',
   Coach: 'Three jobs moved, good work. Which of the two call-backs first?',
+}
+
+// Each company's logo (MIT, @lobehub/icons), inline so the page works offline. The mono ones follow the text colour.
+const LOGOS = {
+  claude: `<svg aria-hidden="true" focusable="false" height="1em" style="flex:none;line-height:1" viewBox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z" fill="#D97757" fill-rule="nonzero"></path></svg>`,
+  codex: `<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" height="1em" style="flex:none;line-height:1" viewBox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z"></path></svg>`,
+  agy: `<svg aria-hidden="true" focusable="false" height="1em" style="flex:none;line-height:1" viewBox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z" fill="#3186FF"></path><path d="M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z" fill="url(#lobe-icons-gemini-0-_R_0_)"></path><path d="M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z" fill="url(#lobe-icons-gemini-1-_R_0_)"></path><path d="M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z" fill="url(#lobe-icons-gemini-2-_R_0_)"></path><defs><linearGradient gradientUnits="userSpaceOnUse" id="lobe-icons-gemini-0-_R_0_" x1="7" x2="11" y1="15.5" y2="12"><stop stop-color="#08B962"></stop><stop offset="1" stop-color="#08B962" stop-opacity="0"></stop></linearGradient><linearGradient gradientUnits="userSpaceOnUse" id="lobe-icons-gemini-1-_R_0_" x1="8" x2="11.5" y1="5.5" y2="11"><stop stop-color="#F94543"></stop><stop offset="1" stop-color="#F94543" stop-opacity="0"></stop></linearGradient><linearGradient gradientUnits="userSpaceOnUse" id="lobe-icons-gemini-2-_R_0_" x1="3.5" x2="17.5" y1="13.5" y2="12"><stop stop-color="#FABC12"></stop><stop offset=".46" stop-color="#FABC12" stop-opacity="0"></stop></linearGradient></defs></svg>`,
+  grok: `<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" height="1em" style="flex:none;line-height:1" viewBox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M9.27 15.29l7.978-5.897c.391-.29.95-.177 1.137.272.98 2.369.542 5.215-1.41 7.169-1.951 1.954-4.667 2.382-7.149 1.406l-2.711 1.257c3.889 2.661 8.611 2.003 11.562-.953 2.341-2.344 3.066-5.539 2.388-8.42l.006.007c-.983-4.232.242-5.924 2.75-9.383.06-.082.12-.164.179-.248l-3.301 3.305v-.01L9.267 15.292M7.623 16.723c-2.792-2.67-2.31-6.801.071-9.184 1.761-1.763 4.647-2.483 7.166-1.425l2.705-1.25a7.808 7.808 0 00-1.829-1A8.975 8.975 0 005.984 5.83c-2.533 2.536-3.33 6.436-1.962 9.764 1.022 2.487-.653 4.246-2.34 6.022-.599.63-1.199 1.259-1.682 1.925l7.62-6.815"></path></svg>`,
+}
+const NAMES = { claude: 'Claude', codex: 'ChatGPT', agy: 'Gemini', grok: 'Grok' }
+let logoCopies = 0
+// Gemini's gradients have ids: each copy gets its own, or the second one renders blank.
+const logoFor = id => {
+  const wrap = Object.assign(document.createElement('span'), { className: 'logo' })
+  if (!LOGOS[id]) return null
+  logoCopies += 1
+  wrap.innerHTML = LOGOS[id].replace(/(lobe-icons-gemini-\d)-_R_0_/g, `$1-c${logoCopies}`)
+  return wrap
 }
 
 async function load() {
@@ -1001,21 +1301,23 @@ async function load() {
   for (const n of document.querySelectorAll('.mac-only')) n.hidden = options.system !== 'mac'
   fill($('name'), [...options.names.map(n => [n, n]), ['__custom', 'Something else…']])
   fill($('style'), options.styles.map(s => [s, s]))
-  fill($('role'), options.roles.map(r => [r, r]))
   fill($('mode'), Object.entries(options.modes))
   $('user').value = options.user
   for (const el of document.querySelectorAll('.the-contact')) el.textContent = options.contact || 'your manager'
   setupBusiness()
-  for (const tool of options.tools || []) {
+  const toolOrder = ['claude', 'codex', 'agy', 'grok']
+  for (const tool of [...(options.tools || [])].sort((a, b) => toolOrder.indexOf(a.id) - toolOrder.indexOf(b.id))) {
     const add = (type, list, checked) => {
       const row = Object.assign(document.createElement('label'), { className: 'check' })
       const box = Object.assign(document.createElement('input'), { type, value: tool.id, checked })
       if (type === 'radio') box.name = 'main'
       const words = document.createElement('span')
-      words.append(Object.assign(document.createElement('b'), { textContent: tool.label }),
-        `${tool.maker}. Needs ${tool.account}.`
+      words.append(Object.assign(document.createElement('b'), { textContent: NAMES[tool.id] || tool.label }),
+        (type === 'radio' ? `${tool.maker}. Needs ${tool.account}.`
+          : `${tool.maker.split(',')[0]}. Works for your main assistant behind the scenes. Needs ${tool.account}.`)
         + (tool.here ? (tool.signedIn ? ' Already on this computer, and signed in.' : ' Already on this computer.') : ''))
-      row.append(box, words)
+      const logo = logoFor(tool.id)
+      row.append(box, ...(logo ? [logo] : []), words)
       box.onchange = refreshTools
       list.append(row)
     }
@@ -1060,11 +1362,10 @@ $('go').onclick = async () => {
       body: JSON.stringify({
         assistant: chosenName(), color, style: $('style').value, user: $('user').value, role: $('role').value,
         company: $('company').value, industry: $('industry').value, business: $('business').value,
-        crm: $('crm').value, crm_other: $('crm-other').value, crm_name: $('crm-name').value,
-        phone: $('phone').value, phone_other: $('phone-other').value,
-        keys: { crm: $('crm-key').value, phone: $('phone-key').value },
+        crm: (systemOf('crm').row || {}).id || '', crm_other: systemOf('crm').name, crm_name: $('crm-name').value,
+        phone: (systemOf('phone').row || {}).id || '', phone_other: systemOf('phone').name,
         mode: $('mode').value, remote: $('remote').checked, colors: $('tint').checked,
-        tools: pickedTools(), main: mainTool(), extrasBypass: $('extras-bypass').checked,
+        tools: pickedTools(), main: mainTool(),  // extra assistants never stop to ask: the server's default
       }),
     })
     result = await response.json()
@@ -1072,20 +1373,25 @@ $('go').onclick = async () => {
     $('done-name').textContent = result.assistant
     $('done-folder').textContent = result.folder
     $('remote-step').hidden = !$('remote').checked  // only for those who kept Remote control on
-    for (const list of [$('log'), $('log-codex')]) {
-      list.replaceChildren(...result.log.map(line => Object.assign(document.createElement('li'), { textContent: line })))
+    // Only what needs their attention: the rest of the log is for us, not for them.
+    const problems = result.log.filter(line => /could not|did not|still to install|ask for help/i.test(line))
+    for (const box of document.querySelectorAll('.setup-issues')) {
+      box.hidden = !problems.length
+      box.textContent = problems.join(' ')
     }
     for (const el of document.querySelectorAll('.the-folder')) el.textContent = result.folder
     for (const el of document.querySelectorAll('.the-name')) el.textContent = result.assistant
     drillAt = 0
     $('drill-log').replaceChildren()
     askDrill()  // the practice follows the primary agent
-    show(codexMain() ? 4.5 : 4)
+    show(codexMain() ? 4.5 : agyMain() ? 4.6 : 4)
+    installsLooks = 0
     post('/installs/status').then(showInstalls)
     post('/github/status').then(showGithub)
+    post('/publish/status').then(showPublish)
     if (codexMain()) {
       post('/codex/status').then(showCodex)
-    } else {
+    } else if (!agyMain()) {
       post('/app/status').then(showApp)
       post('/account/status').then(showAccount)
     }
@@ -1122,13 +1428,32 @@ function showAccount(a) {
   } else {
     text.textContent = `You will sign in when the Claude app opens. Use your ${workEmail()}.`
   }
-  if (a.waiting && page === 4) setTimeout(async () => showAccount(await post('/account/status')), 3000)
+  stopTimers('acct')
+  if (a.waiting && page === 4) later('acct', async () => { if (page === 4) showAccount(await post('/account/status')) }, 3000)
 }
 $('acct-login').onclick = async () => showAccount(await post('/account/login'))
 
 // The one big button: get the Claude app if it is missing, then open it.
 let appState = 'unknown'
+// The claude-app install row decides while it is queued or running, even if /app/status has not caught up.
+let claudeRowBusy = false
+function syncClaudeApp(row) {
+  if (!row) return
+  const busy = row.state === 'waiting' || row.state === 'working'
+  if (busy) {
+    claudeRowBusy = true
+    appState = 'installing'
+    $('open').disabled = true
+    $('open').textContent = 'Getting the Claude app…'
+    $('open-note').textContent = `Setup is installing the Claude app (${row.note || 'starting'}). The button works as soon as it is done.`
+  } else if (claudeRowBusy) {
+    claudeRowBusy = false
+    post('/app/status').then(showApp).catch(() => {})
+  }
+}
 function showApp(status) {
+  stopTimers('app')
+  if (claudeRowBusy && status.state !== 'installed') status = { ...status, state: 'installing' }
   appState = status.state
   const where = status.system === 'mac' ? 'your Applications folder' : 'your Start menu'
   const open = $('open')
@@ -1140,7 +1465,7 @@ function showApp(status) {
     open.disabled = true
     open.textContent = 'Getting the Claude app…'
     $('open-note').textContent = 'It is a large download, so give it a few minutes. The button turns into "Open Claude" when it is ready.'
-    setTimeout(async () => showApp(await post('/app/status')), 3000)
+    if (page === 4) later('app', async () => { if (page === 4) showApp(await post('/app/status')) }, 3000)
   } else {
     open.disabled = false
     open.textContent = status.state === 'failed' ? 'Download Claude' : 'Install Claude'
@@ -1148,11 +1473,12 @@ function showApp(status) {
       ? `Setup could not install it by itself${status.error ? ` (${status.error})` : ''}. This opens the download page: install it there and this button will change to "Open Claude".`
       : 'The Claude app is not on this computer yet. One click installs it.'
     // Notice when the person has installed it by hand.
-    if (status.state === 'failed') setTimeout(async () => { if (appState === 'failed') showApp(await post('/app/status')) }, 5000)
+    if (status.state === 'failed' && page === 4) later('app', async () => { if (appState === 'failed' && page === 4) showApp(await post('/app/status')) }, 5000)
   }
 }
 
 $('open').onclick = async () => {
+  if (appState === 'installing') return  // one installer at a time
   if (appState === 'installed') {
     const opened = await post('/open', { folder: result ? result.folder : '' })
     $('open-note').dataset.opened = '1'
@@ -1177,26 +1503,21 @@ const workEmail = () => (options.workDomain ? `${options.workDomain} email` : 'w
 const el = (tag, props = {}, ...kids) => { const n = Object.assign(document.createElement(tag), props); n.append(...kids); return n }
 const findSystem = (kind, id) => ((options.integrations || {})[kind] || []).find(row => row.id === id)
 
-// One dropdown per kind: the systems common in their trade first, then the rest.
-function fillSystems(kind) {
-  const select = $(kind), keep = select.value, industry = $('industry').value
-  const rows = (options.integrations || {})[kind] || []
-  const fits = row => row.for === '*' || row.for.includes(industry)
-  const special = row => row.nokey || row.named
-  const top = rows.filter(row => !special(row) && row.for !== '*' && row.for.includes(industry))
-  const rest = rows.filter(row => !special(row) && !top.includes(row))
-  select.replaceChildren(el('option', { value: '', textContent: 'Choose one…' }))
-  const group = (label, list) => {
-    if (!list.length) return
-    const g = el('optgroup', { label })
-    for (const row of list) g.append(el('option', { value: row.id, textContent: row.label }))
-    select.append(g)
-  }
-  const trade = (options.industries || {})[industry]
-  group(trade ? `Popular for ${trade.toLowerCase()}` : 'Popular', top)
-  group(top.length ? 'More' : 'All', rest.filter(fits).concat(rest.filter(row => !fits(row))))
-  group('Other', rows.filter(special))
-  select.value = [...select.options].some(o => o.value === keep) ? keep : ''
+// People type the system's name. A name we know gets its row; anything else is kept as typed.
+const plainName = text => (text || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+const NO_SYSTEM = ['none', 'no', 'nope', 'nothing', 'na', 'notsure', 'idk', 'dontknow']
+const SYSTEM_WORDS = {
+  crm: { 'housecall-pro': ['housecall', 'hcp'], gohighlevel: ['highlevel', 'ghl'], zoho: ['zoho'], servicetitan: ['titan'],
+    none: [...NO_SYSTEM, 'nocrm', 'spreadsheet', 'spreadsheets', 'excel', 'sheets', 'googlesheets'] },
+  phone: { ctm: ['calltracking', 'calltrackingmetric'], quo: ['openphone'], 'zoom-phone': ['zoom'], 'google-voice': ['gvoice'],
+    cell: [...NO_SYSTEM, 'cell', 'cells', 'cellphone', 'cellphones', 'ourcellphones', 'mycell', 'mycellphone', 'mobile'] },
+}
+function systemOf(kind) {
+  const typed = $(kind).value.trim(), key = plainName(typed), rows = (options.integrations || {})[kind] || []
+  if (!key) return { row: null, name: '' }
+  const row = rows.find(r => !r.named && (plainName(r.id) === key || plainName(r.label) === key
+    || (SYSTEM_WORDS[kind][r.id] || []).includes(key)))
+  return row ? { row, name: '' } : { row: rows.find(r => r.named) || null, name: typed }
 }
 
 function refreshSystems() {
@@ -1204,22 +1525,18 @@ function refreshSystems() {
   for (const n of document.querySelectorAll('.the-company')) n.textContent = company || 'your company'
   $('intro-company').textContent = company || 'Your business'
   for (const kind of ['crm', 'phone']) {
-    const row = findSystem(kind, $(kind).value), card = $(`${kind}-card`)
-    $(`${kind}-other`).hidden = !(row && row.named)
-    const label = row ? (row.named ? ($(`${kind}-other`).value.trim() || 'It') : row.label) : ''
+    const { row, name } = systemOf(kind), card = $(`${kind}-card`)
+    const label = row ? (row.named ? name : row.label) : ''
     const state = !row ? '' : row.nokey ? 'none' : (row.live && options.bridge) ? 'live' : 'pending'
     card.hidden = !row
-    $(`${kind}-key-row`).hidden = state !== 'pending'
     if (row) {
       const [badge, title, words] = state === 'live'
         ? ['Connected', `${label} is ready`, `${chosenName()} can look things up in ${label} as soon as setup finishes. Read-only.`]
         : state === 'pending'
-          ? ['Pending', `${label} integration`, `Paste an API key if you have one. The Technomancer finishes this connection, and nothing else is needed from you.`]
+          ? ['First chat', label, `Nothing to do here. ${chosenName()} will help you connect it in your first chat.`]
           : ['Nothing to connect', label, `${chosenName()} works with what you paste in or describe.`]
       card.replaceChildren(el('span', { className: `badge ${state}`, textContent: badge }),
         el('p', {}, el('b', { textContent: title }), words))
-      $(`${kind}-key-label`).textContent = `${label} API key (optional)`
-      $(`${kind}-key-hint`).textContent = `Usually under Settings, then API or Integrations, in ${label}. Saved only on this computer.`
     }
     if (kind === 'crm') {
       $('crm-name-row').hidden = state !== 'live'
@@ -1228,6 +1545,12 @@ function refreshSystems() {
   }
 }
 
+// How many problems are picked, said back so the choice feels like it counts.
+$('rs-problems').addEventListener('change', () => {
+  const picked = $('rs-problems').querySelectorAll('input:checked').length
+  $('rs-count').textContent = picked ? `${picked} picked. ${chosenName()} will start there.` : ''
+})
+
 function setupBusiness() {
   const p = options.preset || {}
   $('business-list').replaceChildren(...Object.entries(options.industries || {})
@@ -1235,22 +1558,28 @@ function setupBusiness() {
   $('company').value = p.company || ''
   $('business').value = (options.industries || {})[p.industry] && p.industry !== 'other' ? options.industries[p.industry] : ''
   $('industry').value = tradeOf($('business').value)
-  fillSystems('crm'); fillSystems('phone')
-  if (p.crm) $('crm').value = p.crm
-  if (p.phone) $('phone').value = p.phone
-  $('business').oninput = () => {
-    const trade = tradeOf($('business').value)
-    if (trade === $('industry').value) return
-    $('industry').value = trade
-    fillSystems('crm'); fillSystems('phone'); refreshSystems()
+  for (const kind of ['crm', 'phone']) {  // the install file names a system by its id
+    const preset = findSystem(kind, p[kind])
+    if (preset && !preset.named) $(kind).value = preset.label
   }
-  for (const id of ['company', 'crm-other', 'phone-other']) $(id).oninput = refreshSystems
-  // A key typed for one system must not ride along to the next one picked.
-  for (const id of ['crm', 'phone']) $(id).onchange = () => { $(`${id}-key`).value = ''; refreshSystems() }
+  $('business').oninput = () => { $('industry').value = tradeOf($('business').value) }
+  $('company').oninput = refreshSystems
+  // A name we know shows its card at once; anything else waits for a pause, so a half-typed
+  // word does not flash up as a system of its own.
+  const pause = {}
+  for (const id of ['crm', 'phone']) {
+    $(id).oninput = () => {
+      clearTimeout(pause[id])
+      const { row } = systemOf(id)
+      if (!row || !row.named) refreshSystems()
+      else pause[id] = setTimeout(refreshSystems, 700)
+    }
+    $(id).onchange = () => { clearTimeout(pause[id]); refreshSystems() }
+  }
   refreshSystems()
 }
 
-// What they typed about the business, matched to a trade only to order the CRM and phone lists.
+// What they typed about the business, matched to a trade (saved with the company's settings).
 const TRADE_HINTS = {
   roofing: ['roof'], 'general-contractor': ['general contractor', 'construction', 'builder', 'home build'],
   remodeling: ['remodel', 'renovat'], hvac: ['hvac', 'heating', 'air condition', 'cooling'], plumbing: ['plumb'],
@@ -1296,6 +1625,11 @@ function showResearch(r) {
     say.textContent = `Looking up ${company} on the web. This takes about a minute; you can type below meanwhile.`
     again(3000)
   } else if (r.state === 'no-account') {
+    if (agyMain()) {
+      // Nothing here can run the lookup, so it is not polled: they describe the company below.
+      say.textContent = 'Describe your company in the box below, and anything that is a problem for you in the last box. It saves the same way.'
+      return
+    }
     say.textContent = codexMain() ? 'Sign in to ChatGPT first (Back), and the lookup starts by itself. It runs on your own account.'
       : 'Sign in to Claude first (Back), and the lookup starts by itself. It runs on your own account.'
     again(5000)
@@ -1407,7 +1741,115 @@ function createOrg(company) {
 }
 const slugify = text => (text || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 39)
 
+// Vercel and Supabase. A tick means the tool itself confirmed the sign-in. While one waits, its
+// button stays live, so a closed window or a change of mind can always start over.
+let publishTimer = null, sbChecking = false, sbError = ''
+const PUBLISH_NOTES = { vc: $('vc-note').innerHTML, sb: $('sb-note').innerHTML }
+function showPublish(s) {
+  clearTimeout(publishTimer)
+  if (!s || !s.vercel) return
+  for (const [id, st, label] of [['vc', s.vercel, 'Vercel'], ['sb', s.supabase, 'Supabase']]) {
+    const button = $(id + '-connect'), note = $(id + '-note')
+    const on = st.state === 'connected', waiting = st.state === 'waiting'
+    const keepNote = id === 'sb' && sbChecking, prevNote = note.innerHTML  // a check in flight owns this line
+    if (id === 'sb' && (on || st.error)) sbError = ''
+    button.disabled = on || !st.installed
+    button.classList.toggle('done', on)
+    button.textContent = on ? `✓ ${label} connected${st.user ? ` as ${st.user}` : ''}`
+      : waiting ? `Waiting for ${label}. Start over` : `Connect ${label}`
+    if (on) note.textContent = waited[id] ? `Done. If the ${label} window is still open, you can close it.` : `Already signed in on this computer.`
+    else if (st.error || (id === 'sb' && sbError)) note.textContent = st.error || sbError
+    else if (!st.installed) note.textContent = st.failed
+      ? `The ${label} tool could not be installed. You can skip this, or send ${options.contact || 'your manager'} a screenshot.`
+      : `The ${label} tool is still installing (see the panel at the bottom right). This button works once it is done.`
+    else if (waiting && id === 'vc') note.textContent = 'Finish in the Vercel window: sign up or sign in, then click Allow. Closed it? Click the button to start over.'
+    else note.innerHTML = PUBLISH_NOTES[id]
+    if (keepNote) note.innerHTML = prevNote
+  }
+  $('sb-token-box').hidden = !(s.supabase.state === 'waiting' && s.supabase.askToken)
+  $('pub-skip').hidden = s.vercel.state === 'connected' && s.supabase.state === 'connected'
+  done.publish = [s.vercel, s.supabase].filter(st => st.state === 'connected').length
+  const open = st => st.state === 'waiting' || (!st.installed && !st.failed) || (st.state === 'none' && st.installed)
+  if (page === 9.5 && [s.vercel, s.supabase].some(open)) {
+    publishTimer = setTimeout(async () => {
+      if (page !== 9.5) return
+      try { showPublish(await post('/publish/status')) } catch (error) {}
+    }, 3000)
+  }
+}
+for (const [id, path] of [['vc', '/vercel/connect'], ['sb', '/supabase/connect']]) {
+  $(id + '-connect').onclick = async () => {
+    $(id + '-connect').disabled = true  // one click, one sign-in
+    waited[id] = true
+    if (id === 'sb') sbError = ''
+    showPublish(await post(path))
+  }
+}
+$('sb-token-send').onclick = async () => {
+  $('sb-token-send').disabled = true
+  sbChecking = true
+  sbError = ''
+  $('sb-note').textContent = 'Checking that with Supabase…'
+  let reply = {}
+  try { reply = await post('/supabase/token', { token: $('sb-token').value }) } catch (error) { reply = { ok: false, error: 'Setup could not reach Supabase. Try again.' } }
+  sbChecking = false
+  $('sb-token-send').disabled = false
+  $('sb-token').value = ''  // never left sitting on the page
+  // The server's own error (s.supabase.error) wins; the reply's is kept here so a poll cannot wipe it.
+  if (!reply.ok) sbError = reply.error || 'That token did not work. Try again.'
+  showPublish(await post('/publish/status'))
+}
+$('sb-token').onkeydown = e => { if (e.key === 'Enter') $('sb-token-send').click() }
+
+// ChatGPT's Gmail, Calendar and Drive: setup adds them, and a tick means ChatGPT says they are connected.
+let appsTimer = null, cxError = null  // cxError: { app, text }, kept until the next Connect click or that app connecting
+const APP_TOTAL = $('cx-apps').children.length
+function showApps(s) {
+  clearTimeout(appsTimer)
+  if (!s || !s.ok) return
+  const rows = s.rows || []
+  let on = 0
+  for (const li of $('cx-apps').children) {
+    const row = rows.find(r => r.id === li.dataset.app)
+    const yes = Boolean(row && row.connected)
+    li.classList.toggle('on', yes)
+    const button = li.querySelector('button')
+    if (button) button.hidden = yes || !(row && row.canConnect)
+    if (yes) on += 1
+  }
+  done.apps = on
+  if (cxError && rows.some(r => r.id === cxError.app && r.connected)) cxError = null
+  $('cx-apps-note').textContent = cxError ? cxError.text : s.state === 'signed-out' ? 'Sign in to ChatGPT first. Then each one can be connected here.'
+    : s.state === 'known' ? (on === APP_TOTAL ? 'All of them are connected.' : 'Click Connect and sign in, with your work Google account for the Google ones. Each one ticks here when it is done.')
+      : s.checking ? 'Checking what is connected. This can take a minute.' : 'Setup could not check these. In the ChatGPT app, open Plugins and connect them there.'
+  if (page === 4.5 && codexMain() && on < APP_TOTAL) appsTimer = setTimeout(watchApps, 3000)
+}
+async function watchApps() {
+  clearTimeout(appsTimer)
+  if (page !== 4.5 || !codexMain()) return
+  try {
+    const s = await post('/chatgpt/apps')
+    if (page === 4.5 && codexMain()) showApps(s)
+  } catch (error) {
+    clearTimeout(appsTimer)
+    if (page === 4.5 && codexMain()) appsTimer = setTimeout(watchApps, 6000)
+  }
+}
+for (const button of $('cx-apps').querySelectorAll('button')) {
+  button.onclick = async () => {
+    const app = button.closest('li').dataset.app
+    cxError = null
+    let reply = {}
+    try { reply = await post('/chatgpt/apps/connect', { app }) } catch (error) {}
+    if (!reply.ok) {
+      cxError = { app, text: 'That page could not be opened. In the ChatGPT app, open Plugins and connect it there.' }
+      $('cx-apps-note').textContent = cxError.text
+    }
+  }
+}
+
 function showGithub(s) {
+  stopTimers('gh')
   $('gh-missing').hidden = s.installed
   $('gh-steps').hidden = !s.installed
   if (s.state === 'connected') {
@@ -1427,7 +1869,7 @@ function showGithub(s) {
     $('gh-code').hidden = !s.code
     $('gh-code-value').textContent = s.code
     $('gh-connect').textContent = 'Waiting for GitHub…'
-    setTimeout(async () => showGithub(await post('/github/status')), 2500)
+    if (page === 9) later('gh', async () => { if (page === 9) showGithub(await post('/github/status')) }, 2500)
   } else {
     $('gh-connect').textContent = 'Connect my GitHub'
     $('gh-code').hidden = true
@@ -1464,7 +1906,13 @@ const DRILL_CODEX = [
   ['/new', () => 'Starts a fresh, empty chat in the same folder. Run $save first if you want this one remembered.', BUILT_IN_KEYS],
 ]
 const markOf = command => command[0] === '$' ? 'dollar sign' : 'slash'
-const drillList = () => (codexMain() ? DRILL_CODEX : DRILL)
+const DRILL_AGY = [
+  ['/start', n => `Begins your day. ${n} reads its notes and tells you where things stand.`],
+  ['/save', n => `Ends your session. ${n} writes down what you did, so tomorrow picks up from here.`],
+  ['/compact', n => `For when a chat gets long. It shrinks the chat to a summary so ${n} stays quick and keeps going.`],
+  ['/publish', n => `Puts a web page or small app that ${n} built online, so you can share the link.`],
+]
+const drillList = () => (codexMain() ? DRILL_CODEX : agyMain() ? DRILL_AGY : DRILL)
 const DRILL = [
   ['/start', n => `Begins your day. ${n} reads its notes and tells you where things stand.`],
   ['/save', n => `Ends your session. ${n} writes down what you did, so tomorrow picks up from here.`],
@@ -1475,7 +1923,7 @@ let drillAt = 0
 function askDrill() {
   const list = drillList()
   const done = drillAt >= list.length
-  $('drill-where').textContent = codexMain() ? 'ChatGPT' : 'Claude'
+  $('drill-where').textContent = codexMain() ? 'ChatGPT' : agyMain() ? 'Antigravity' : 'Claude'
   $('drill').hidden = done
   $('drill-hint').textContent = done ? '' : [`Start with the ${markOf(list[drillAt][0])}.`, list[drillAt][2]].filter(Boolean).join(' ')
   $('drill-next').disabled = !done
@@ -1517,20 +1965,20 @@ function showConnectors(c) {
     row.classList.toggle('on', yes)
     if (yes) on += 1
   }
-  if (on >= 3 && done.connectors < 3) closeSite('connectors')
+  const total = $('conn-list').children.length
+  if (on >= total && done.connectors < total) closeSite('connectors')
   done.connectors = on
   done.connectorsKnown = c.state !== 'unknown'
   $('conn-note').textContent = c.state === 'unknown'
-    ? 'Setup cannot see your connectors from here, so there are no ticks. If the page shows "Connected" for all three, you are done.'
-    : on === 3 ? 'All three are connected.' : c.checking ? 'Checking…' : 'Each one gets a tick here once it is connected.'
+    ? 'Setup cannot see your connectors from here, so there are no ticks. Check on that page that each one says "Connected".'
+    : on === total ? 'All of them are connected.' : c.checking ? 'Checking…' : 'Each one gets a tick here once it is connected.'
   clearTimeout(connTimer)
-  if (page === 8 && on < 3 && c.state !== 'unknown') {
+  if (page === 8 && on < total && c.state !== 'unknown') {
     connTimer = setTimeout(async () => showConnectors(await post('/connectors/status')), 6000)
   }
 }
 $('conn-open').onclick = async () => {
-  await openSite('connectors')
-  $('conn-open').classList.add('done')
+  await openSite('connectors')  // opening the page is not a connection: only the checked list ticks
   showConnectors(await post('/connectors/status'))
 }
 $('conn-check').onclick = async () => showConnectors(await post('/connectors/status', { fresh: true }))
@@ -1554,6 +2002,16 @@ $('gh-backup').onclick = async () => {
 // setup closes once its step is done (on a Mac, after the person allows it once). Steps
 // Chrome already has (its Google account, the Claude extension) are ticked by themselves.
 const chromeSteps = { google: false, extension: false, claude: false }
+// Steps the person confirmed by a button: setup cannot see these, so they are worded as theirs.
+const chromeSaid = { google: false, claude: false }
+// Only what setup itself confirmed counts: Google (not just the person's word) and the extension.
+function chromeRow(app) {
+  if (chromeSteps.google && chromeSteps.extension) {
+    return [true, 'Chrome', `Google and the ${app} extension are confirmed. Your first chat tests that ${app} is signed in.`, 0]
+  }
+  const said = chromeSaid.google ? ' You said you signed in to Google, but setup could not confirm it.' : ''
+  return [false, 'Chrome', `Not finished: this is what lets it work in your web tools for you.${said}`, 5]
+}
 let chromeTimer = null
 function tickStep(page, words) {
   const button = document.querySelector(`button.step[data-page="${page}"]`)
@@ -1561,15 +2019,27 @@ function tickStep(page, words) {
   done.chrome = Object.values(chromeSteps).filter(Boolean).length
   button.classList.add('done')
   button.textContent = '✓ ' + button.textContent.replace(/^✓ /, '')
+  button.classList.remove('said')
   if (words) $('cs-' + page).textContent = words
+}
+// The person's own word: neutral, no tick, no green, and it never counts as confirmed.
+function markSaid(page, words) {
+  const button = document.querySelector(`button.step[data-page="${page}"]`)
+  chromeSaid[page] = true
+  button.classList.add('said')
+  button.classList.remove('done')
+  button.textContent = button.textContent.replace(/^✓ /, '')
+  $('cs-' + page).textContent = words
 }
 // The same three steps for either assistant; ChatGPT's open its own store page and site.
 const chromeApp = () => codexMain() ? 'ChatGPT' : 'Claude'
 const sitePage = step => codexMain() ? ({ extension: 'extension-chatgpt', claude: 'chatgpt' }[step] || step) : step
-const openSite = page => post('/window/open', { page: sitePage(page) }).catch(() => ({}))
+// Already in Chrome with a different account: Google's add-an-account page, not an instant return.
+const openSite = page => post('/window/open', { page: sitePage(page),
+  add: page === 'google' && Boolean(lastChrome && lastChrome.google && !lastChrome.work) }).catch(() => ({}))
 const closeSite = page => post('/window/close', { page: sitePage(page) }).then(r => Boolean(r.closed)).catch(() => false)
 const CHROME_WORDS = { claude: {}, codex: {
-  'cs-extension': 'Click <b>Add to Chrome</b> in the window that opens. If Chrome already asked you to turn on "ChatGPT", click <b>Enable</b> instead. This page ticks it when Chrome has it; then close that window.',
+  'cs-extension': 'Click <b>Add to Chrome</b> in the window that opens. If Chrome already asked you to turn on "ChatGPT", click <b>Enable</b> instead. This page ticks it and closes the window once Chrome has it.',
   'cs-claude': 'Sign in to ChatGPT with your work account in the window that opens. Then, in the ChatGPT app, open <b>Settings</b> and then <b>Computer use</b>: under <b>Google Chrome</b>, click <b>Install</b> if it shows. It is ready when Google Chrome says <b>Installed</b>.',
 } }
 for (const id of Object.keys(CHROME_WORDS.codex)) CHROME_WORDS.claude[id] = $(id).innerHTML
@@ -1580,10 +2050,13 @@ function chromeCopy() {
   if (app === chromeFor) return
   chromeFor = app
   for (const step of Object.keys(chromeSteps)) chromeSteps[step] = false
+  chromeSaid.google = chromeSaid.claude = false
+  $('cs-google-done').hidden = true
+  $('cs-error').hidden = true
   done.chrome = 0
   lastChrome = null
   for (const button of document.querySelectorAll('button.step[data-page]')) {
-    button.classList.remove('done')
+    button.classList.remove('done', 'said')
     button.textContent = button.dataset[app] || button.textContent.replace(/^✓ /, '')
   }
   for (const [id, words] of Object.entries(CHROME_WORDS[app])) $(id).innerHTML = words
@@ -1602,13 +2075,16 @@ function showChrome(s) {
     }
     // Clicked when it was already done (say, to add another account): setup cannot tell
     // when they are finished, so the person closes that window.
-    if (clickedDone[key]) return ' Close that window when you are finished there.'
+    if (clickedDone[key] && key !== 'google') return ' Close that window when you are finished there.'
     return doneWhileOpen[key] === 'open' ? ' You can close that window now.' : ''
   }
+  if (s.google || s.googleSignedIn) { chromeSaid.google = false; $('cs-google-done').hidden = true }  // setup confirmed it after all
   if (s.google) {
     const work = s.work ? '' : ` That is not your ${workEmail()}: if this Chrome is for work, click the button and add your work account.`
     const profile = s.profile ? ` (Chrome profile "${s.profile}", where setup opens its windows)` : ''
     tickStep('google', `✓ Chrome is signed in as ${s.google}${profile}.${work}${gone('google')}`)
+  } else if (s.googleSignedIn) {
+    tickStep('google', '✓ Signed in to Google in Chrome.')
   }
   // Signed in to the work account already: nothing to ask, so the step is a line, not a button.
   const googleDone = Boolean(s.google && s.work)
@@ -1620,35 +2096,48 @@ function showChrome(s) {
   const have = [s.google && 'signed in to Google', s.extension && `${app} is added`].filter(Boolean)
   $('cs-summary').hidden = !have.length
   $('cs-summary').textContent = have.length === 2
-    ? (chromeSteps.claude ? `Chrome is signed in and ${app} is added. All three steps are done.`
+    ? (chromeSaid.claude ? `Google and ${app} are confirmed. You said you signed in to ${app} in Chrome.`
       : `Chrome is already signed in and ${app} is added. Only the last step is left: sign in to ${app} in Chrome.`)
-    : have.length ? `Already done: ${have[0]}. Setup ticked it for you.` : ''
+    : have.length ? `Already done: ${have[0]}. Setup confirmed it.` : ''
 }
 async function watchChrome() {
   clearTimeout(chromeTimer)
   if (page !== 5) return
   try { showChrome(await post('/chrome/status', { assistant: codexMain() ? 'codex' : 'claude' })) } catch (error) {}  // a failed check must not end the checking
+  clearTimeout(chromeTimer)  // another poll may have started while this one waited
   if (page === 5) chromeTimer = setTimeout(watchChrome, 2500)
 }
 for (const button of document.querySelectorAll('button.step[data-page]')) {
   button.onclick = async () => {
     const step = button.dataset.page
     if (lastChrome && lastChrome[step]) clickedDone[step] = true
-    await openSite(step)
+    const opening = await openSite(step)
+    // A click never ticks. A tick means setup saw it: the extension in Chrome's files, Google's
+    // sign-in reaching google.com. A window setup cannot watch, or a sign-in inside the extension,
+    // gets an "I signed in" button instead, and that is the person's word, shown as theirs.
+    if (!opening || !opening.ok) {
+      $('cs-error').textContent = 'That window did not open, so nothing is ticked. Try the button again, or open Chrome yourself and go to the page.'
+      $('cs-error').hidden = false
+      if (lastChrome) showChrome(lastChrome)
+      return
+    }
+    $('cs-error').hidden = true
     if (step === 'claude') $('cs-claude-done').hidden = false
+    if (step === 'google' && opening.how !== 'tracked' && !chromeSteps.google) $('cs-google-done').hidden = false
     if (lastChrome) showChrome(lastChrome)
-    // Google and the extension: the click counts (someone may say no to signing in to Chrome
-    // itself), and a check that sees it done adds the detail. Claude's sign-in inside the
-    // extension cannot be seen from here, so that one is ticked when they say they are done.
-    if (step !== 'claude') tickStep(step)
     watchChrome()
   }
 }
 
 $('cs-claude-done').onclick = async () => {
   $('cs-claude-done').hidden = true
-  tickStep('claude')
-  if (!(await closeSite('claude'))) $('cs-claude').textContent = `Close the ${chromeApp()} window yourself: setup could not close it.`
+  markSaid('claude', 'Marked done by you. Setup cannot see inside the extension, so your first chat tests it.')
+  if (!(await closeSite('claude'))) $('cs-claude').textContent += ` Close the ${chromeApp()} window yourself: setup could not close it.`
+}
+$('cs-google-done').onclick = async () => {
+  $('cs-google-done').hidden = true
+  markSaid('google', 'Marked done by you. Setup could not watch this sign-in, so it cannot confirm it.')
+  if (!(await closeSite('google'))) $('cs-google').textContent += ' Close that window yourself: setup could not close it.'
 }
 
 $('copy-folder').onclick = async () => {
@@ -1670,10 +2159,10 @@ function showChatGPTApp(row) {
     if (button === $('final-open') && !codexMain()) continue
     button.disabled = busy
     if (busy) button.textContent = 'Installing ChatGPT…'
-    else if (button.textContent === 'Installing ChatGPT…') button.textContent = 'Open ChatGPT'
+    else if (button.textContent === 'Installing ChatGPT…') button.textContent = button === $('final-open') ? finalLabel() : 'Open ChatGPT'
   }
   if (busy) {
-    $('cx-note').textContent = `Setup is installing the ChatGPT app (${row.note || 'starting'}). The button below works as soon as it is done.`
+    $('cx-note').textContent = `Setup is installing the ChatGPT app (${row.note || 'starting'}). The button works as soon as it is done.`
   } else if (row.state === 'failed') {
     $('cx-note').textContent = `The ChatGPT app could not be installed${row.note ? ` (${row.note})` : ''}. Get it from chatgpt.com/codex, or send ${options.contact || 'your manager'} a screenshot of this page.`
   } else if (wantChatGPT) {
@@ -1690,25 +2179,73 @@ async function openChatGPT() {
   if (!reply.opened && app && (app.state === 'waiting' || app.state === 'working')) {
     wantChatGPT = true
     showChatGPTApp(app)
+    post('/installs/status').then(showInstalls).catch(() => {})  // so the button recovers when the install ends
     return false
   }
   if (!reply.opened && app && app.state === 'failed') {
     showChatGPTApp(app)  // keeps the reason and where to get it, not a terminal installer
     return false
   }
-  $('cx-note').textContent = reply.opened ? 'ChatGPT is opening. Follow the steps below, then come back here and click Next.'
+  $('cx-note').textContent = reply.opened ? 'ChatGPT is opening. Sign in if it asks, then come back here and click Next.'
     : !reply.installed ? 'ChatGPT\'s Codex tool is still installing. Watch the panel at the bottom right, then click again.'
       : 'It did not open by itself. In your folder, double-click "Open Codex".'
   return reply.opened
 }
 $('cx-open').onclick = openChatGPT
-$('cx-copy').onclick = async () => {
-  try { await navigator.clipboard.writeText(result.folder); $('cx-copy').textContent = 'Copied' } catch (error) { $('cx-copy').textContent = 'Select it and copy' }
-}
 $('cx-login').onclick = async () => showCodex(await post('/codex/login'))
+
+// The Antigravity app, the same way: installs in the background, and the Open button waits for it.
+let wantAgy = false
+function showAgyApp(row) {
+  if (!row) return
+  const busy = row.state === 'waiting' || row.state === 'working'
+  for (const button of [$('ag-open'), $('final-open')]) {
+    if (button === $('final-open') && !agyMain()) continue
+    button.disabled = busy
+    if (busy) button.textContent = 'Installing Antigravity…'
+    else if (button.textContent === 'Installing Antigravity…') button.textContent = button === $('final-open') ? finalLabel() : 'Open Antigravity'
+  }
+  if (busy) {
+    $('ag-note').textContent = `Setup is installing the Antigravity app (${row.note || 'starting'}). The button works as soon as it is done.`
+  } else if (row.state === 'failed') {
+    $('ag-note').textContent = `The Antigravity app could not be installed${row.note ? ` (${row.note})` : ''}. Get it from antigravity.google/download, or send ${options.contact || 'your manager'} a screenshot of this page.`
+  } else if (wantAgy) {
+    wantAgy = false
+    openAntigravity()
+  } else if ($('ag-note').textContent.startsWith('Setup is installing')) {
+    $('ag-note').textContent = 'The Antigravity app is installed. Click Open Antigravity.'
+  }
+}
+async function openAntigravity() {
+  const reply = await post('/tool/open', { tool: 'agy', folder: result ? result.folder : '' })
+  if (reply.opened) opened.agy = true
+  const app = reply.app
+  if (!reply.opened && app && (app.state === 'waiting' || app.state === 'working')) {
+    wantAgy = true
+    showAgyApp(app)
+    post('/installs/status').then(showInstalls).catch(() => {})  // so the button recovers when the install ends
+    return false
+  }
+  if (!reply.opened && app && app.state === 'failed') {
+    showAgyApp(app)
+    return false
+  }
+  $('ag-note').textContent = reply.opened ? 'Antigravity is opening. Sign in if it asks, then come back here and click Next.'
+    : 'It did not open by itself. Find Antigravity in your Applications folder or Start menu.'
+  return reply.opened
+}
+$('ag-open').onclick = openAntigravity
 
 $('final-open').onclick = async () => {
   $('final-open').dataset.clicked = '1'
+  const copied = await copyFirst()  // while the click still counts: browsers allow copying only then
+  $('fc-note').textContent = copied ? `${firstCommand()} is copied. Paste it into the message box and press Enter.`
+    : `Type ${firstCommand()} in the message box and press Enter.`
+  if (agyMain()) {
+    const opening = await openAntigravity()
+    if (!wantAgy) $('final-open').textContent = opening ? 'Antigravity is opening…' : 'Open Antigravity from your Applications or Start menu'
+    return
+  }
   if (codexMain()) {
     const opening = await openChatGPT()
     if (!wantChatGPT) $('final-open').textContent = opening ? 'ChatGPT is opening…' : 'In your folder, double-click "Open Codex"'
@@ -1717,12 +2254,15 @@ $('final-open').onclick = async () => {
   const opened = await post('/open', { folder: result ? result.folder : '' })
   $('final-open').textContent = opened.claude ? 'Claude is opening…' : 'Open Claude from your Applications or Start menu'
 }
+$('fc-copy').onclick = async () => {
+  $('fc-copy-tag').textContent = (await copyFirst()) ? 'Copied' : 'Select it and copy'
+}
 
 $('finish').onclick = async () => {
   await fetch('/quit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
   $('finish').disabled = true
   $('finish-note').textContent = 'Setup is finished. You can close this tab and the setup window.'
-  for (const el of document.querySelectorAll('.page[data-page="10"] .back')) el.disabled = true
+  for (const el of document.querySelectorAll('.page[data-page="11"] .back')) el.disabled = true
 }
 
 load().then(() => { show(0); startIntro(); post('/installs/status').then(showInstalls) })

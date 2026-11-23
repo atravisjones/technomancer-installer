@@ -106,19 +106,6 @@ WORK_DOMAIN = _install_setting("ASSISTANT_WORK_DOMAIN", "a-z0-9.-").lower()
 
 NAMES = ["Jarvis", "HAL", "WALL-E", "Friday", "Marvin", "Alfred", "Samantha", "Cortana", "Data", "R2"]
 
-ROLES = [
-    "Owner / General Manager",
-    "Office Manager",
-    "Customer Service / Call Center",
-    "Sales / Estimator",
-    "Project Manager / Production",
-    "Field Tech / Crew Lead",
-    "Bookkeeping / Admin",
-    "Marketing",
-    "Developer",
-    "Other",
-]
-
 STYLES = {
     "Professional": "Direct and business-like. Clear communication without fluff.",
     "Casual": "Friendly and conversational. Like talking to a helpful colleague.",
@@ -350,6 +337,30 @@ DEFAULT_KIT = {
     ],
 }
 
+# People type their role in their own words. These pick the closest set of examples; the
+# first match wins, so the more specific jobs come before the words they might contain.
+ROLE_WORDS = [
+    ("Customer Service / Call Center", r"customer|\bcsrs?\b|call cent|receptionist|front desk|dispatch"),
+    ("Office Manager", r"\boffice\b"),
+    ("Bookkeeping / Admin", r"bookkeep|account(ant|ing|s payable|s receivable)|controller|payroll|\badmin"),
+    ("Marketing", r"marketing|social media|\bseo\b|advertis"),
+    ("Sales / Estimator", r"\bsales|estimat|account exec|\bclosers?\b|\breps?\b"),
+    ("Project Manager / Production", r"project|production|operations|\bops\b|superintendent"),
+    ("Developer", r"software|programmer|web dev|(?<!estate )(?<!land )(?<!property )\bdeveloper"),
+    ("Field Tech / Crew Lead", r"\btechs?\b|technician|crew|foreman|installer|roofer|plumber|electrician|\bfield\b"),
+    ("Owner / General Manager", r"owner|founder|\bceo\b|(?<!vice )president|general manager|\bgm\b"),
+]
+
+
+def role_kit_name(role):
+    """The set of examples closest to what the person typed, or "" for none."""
+    text = str(role or "").lower()
+    return next((kit for kit, words in ROLE_WORDS if re.search(words, text)), "")
+
+
+def kit_for(role):
+    return KITS.get(role_kit_name(role), DEFAULT_KIT)
+
 
 def tries(a):
     """The role's example prompts, with the business's own system names in them."""
@@ -358,7 +369,7 @@ def tries(a):
     crm_name = system_label(a, "crm") if crm and not crm.get("nokey") else ""
     phone_name = system_label(a, "phone") if phone and not phone.get("nokey") else ""
     return [line.format(crm=crm_name or "the CRM", phone=phone_name or "the phones")
-            for line in KITS.get(a.get("role"), DEFAULT_KIT)["try"]]
+            for line in kit_for(a.get("role"))["try"]]
 
 
 def slug(name):
@@ -425,7 +436,20 @@ def local_zone():
     return f"{now.tzname()} (UTC{'+' if hours >= 0 else '-'}{abs(hours):g})"
 
 
-def systems_section(a):
+def env_has_value(workspace, name):
+    """Whether the workspace's .env holds a non-empty value for `name`. The value is never returned."""
+    try:
+        text = (Path(workspace) / ".env").read_text(encoding="utf-8", errors="ignore")
+    except (OSError, TypeError):
+        return False
+    for line in text.splitlines():
+        key, _, value = line.partition("=")
+        if key.strip() == name and value.strip().strip("\"'"):
+            return True
+    return False
+
+
+def systems_section(a, workspace=None):
     """The business's systems, between markers so a later run can replace just this part."""
     lines = [SYSTEMS_START, f"## Part 3: {company_name(a)}'s Systems", ""]
     industry = INDUSTRIES.get(a.get("industry"), ("", []))[0]
@@ -451,11 +475,14 @@ def systems_section(a):
                 lines += ["", f"**{a['user']}'s name in {label}:** {a['crm_name']}. Jobs owned by this name are",
                           f"\"my jobs\": use it as the `owner` filter when {a['user']} asks about their own work."]
         elif state == "pending":
-            saved = (f"Its key is saved as `{env_key(kind, row['id'])}` in `.env`. "
-                     if (a.get("keys") or {}).get(kind) else "")
-            lines += [f"Not connected yet. {saved}{BRAND} is finishing this connection.",
-                      "Do not call its API yourself. Until it is connected, say so plainly and help",
-                      f"with what {a['user']} pastes in or describes."]
+            key_name = env_key(kind, row["id"])
+            lines += ([f"A key is saved as `{key_name}` in `.env`. Test it with one read-only request before relying on it."]
+                      if (a.get("keys") or {}).get(kind) or (workspace and env_has_value(workspace, key_name)) else
+                      [f"Not connected yet. The first chat walks {a['user']} through it, and its key goes in `.env`",
+                       f"as `{key_name}`. If they skipped that, offer again when it would help."])
+            lines += ["Never ask anyone to paste a key into a chat, and never print one. Read only, unless they",
+                      f"ask for a change and confirm it. Until it works, say so plainly and help with what {a['user']}",
+                      "pastes in or describes."]
         else:
             lines += ["Nothing to connect. Help with what they paste in or describe."]
         lines.append("")
@@ -463,13 +490,40 @@ def systems_section(a):
     return "\n".join(lines)
 
 
+def other_assistants(a):
+    """The "Other assistants" paragraph, from the assistants this person really picked."""
+    main = chosen_main(a)
+    names = {"claude": "Claude", "codex": "Codex", "grok": "Grok", "agy": "Gemini (Antigravity)"}
+    side = [names[t] for t in team_tools(a)]
+    lines = []
+    if main == "codex":
+        lines.append("Codex is the main assistant: its `Open Codex` file opens this folder in the ChatGPT desktop app.")
+    if main == "agy":
+        lines.append("Gemini (Antigravity) is the main assistant: its `Open Antigravity` file opens this folder in the "
+                     "Antigravity desktop app (or its terminal tool if the app is missing).")
+    if side:
+        lines.append(", ".join(side) + (" runs" if len(side) == 1 else " run")
+                     + " in a terminal on this same folder: double-click the matching `Open ...` file in this folder.")
+    if not lines:
+        return "No other assistant was chosen in setup.\n"
+    reads = ["AGENTS.md"] + (["GEMINI.md"] if "agy" in chosen_extras(a) else [])
+    lines.append("Each reads the same notes through " + " and ".join(f"`{r}`" for r in reads)
+                 + " and asks you to sign in with its own account the first time.")
+    if "codex" in chosen_extras(a):
+        lines.append("In ChatGPT, type the commands with a dollar sign instead of a slash: `$start`, `$save`.")
+    if "agy" in chosen_extras(a):
+        lines.append("In Antigravity, type the commands with a slash as usual.")
+    return "\n".join(lines) + "\n"
+
+
 def claude_md(a, workspace):
     name = a["assistant"]
     upper = name.upper()
     today = datetime.date.today().isoformat()
-    kit = KITS.get(a["role"], DEFAULT_KIT)
+    kit = kit_for(a["role"])
     tools = a.get("tools") if isinstance(a.get("tools"), list) else []
     codex_on = chosen_main(a) == "codex" or "codex" in tools
+    agy_on = chosen_main(a) == "agy" or "agy" in tools
     tint_on = uses_claude(a) and bool(a.get("colors", True))  # color modes and the usage bar are Claude's mod
     safety_lead = ("Permission prompts are off on this machine, so nothing stops a mistake but you.\n"
                    if a.get("mode", "bypassPermissions") == "bypassPermissions" else "")
@@ -480,6 +534,15 @@ def claude_md(a, workspace):
                     "shows usage limits (when asked whether everything is connected, follow\n"
                     "`.claude/commands/status.md`).\n"
                     + ("Colors, `/tint` and the usage bar exist only in the Claude app.\n" if tint_on else "")) if codex_on else ""
+    agy_note = ("\nIn Antigravity, type the commands with `/` as usual (`/start`, `/save`; treat `/name` as the\n"
+                "skill of that name). `/compact` is built in. `/clear` and `/new` exist only in its terminal\n"
+                "tool: in the app, a new chat starts with the + button. `/help` is Antigravity's own built-in,\n"
+                "so when asked for help or whether everything is connected, answer from `.claude/commands/help.md`\n"
+                "and `.claude/commands/status.md`. Antigravity plans come with a personal Google account\n"
+                "(Gmail), not a Google Workspace one.\n"
+                + ("Colors, `/tint` and the usage bar exist only in the Claude app.\n" if tint_on else "")) if agy_on else ""
+    team_line = ("\nOther assistants are set up on this computer: the `team` skill (`.claude/skills/team/SKILL.md`)\n"
+                 "says when and how to ask them for a second opinion.\n") if team_tools(a) else ""
     colors_part = f"""### Color modes
 
 Each chat is colored by its topic, with a matching shape on its title:
@@ -537,7 +600,7 @@ creating or changing a calendar event. When in doubt, ask.
 
 ---
 
-{systems_section(a)}
+{systems_section(a, workspace)}
 ---
 
 ## Part 4: System Architecture
@@ -574,7 +637,8 @@ and today's session log (or yesterday's), then give a briefing.
 | `/help` | List every command and connected tool |
 | `/report` | Weekly summary of the work done |
 | `/status` | Check that everything is connected and healthy |
-{tint_row}{chatgpt_note}
+| `/publish` | Put a web page or app online (Vercel), with a database if it needs one (Supabase) |
+{tint_row}{chatgpt_note}{agy_note}{team_line}
 If {a["user"]} seems unsure what to type, point them to `START-HERE.md`.
 
 {colors_part}### Company GitHub
@@ -587,12 +651,7 @@ the username first.
 
 ### Other assistants
 
-If you chose them in setup, Gemini (Antigravity) and Grok run in a terminal on this
-same folder, and Codex opens it in the ChatGPT desktop app: double-click the matching
-`Open ...` file in this folder. Each reads the same notes through `AGENTS.md` (Gemini
-through `GEMINI.md`) and asks you to sign in with its own account the first time.
-In ChatGPT, type the commands with a dollar sign instead of a slash: `$start`, `$save`.
-
+{other_assistants(a)}
 {usage_part}---
 
 *Set up {today} by {BRAND} ({BRAND_SITE}).*
@@ -621,8 +680,8 @@ to send. `/compact` and `/new` run as soon as you pick them.
 
 Think of `$start` and `$save` as bookends. Everything in between is just conversation.
 
-The very first `$start` is longer: {name} checks that its tools work and asks you a few
-questions about your work, so it knows what to help with. Give it about ten minutes.
+The very first `$start` is longer: {name} gets to know you and your work, shows you what
+it can do in Chrome, and checks that its tools work. Give it about fifteen minutes.
 
 ## Handy extras
 
@@ -631,6 +690,7 @@ questions about your work, so it knows what to help with. Give it about ten minu
 | `$update` | A quick checkpoint in the middle of work, so nothing is lost |
 | `$help` | Lists every command and what {name} can do |
 | `$report` | A summary of your week |
+| `$publish` | Puts a web page or small app online and gives you the link |
 | "Is everything connected?" | Checks that everything is connected and working. Ask it in words: ChatGPT's own `/status` shows its usage limits instead |
 
 ## Things to try
@@ -649,82 +709,223 @@ questions about your work, so it knows what to help with. Give it about ten minu
 """
 
 
+START_HERE_AGY = """# Start here
+
+{name} is your AI assistant, running in Google Antigravity. You talk to it in plain English.
+The commands below are shortcuts you type in the chat box, starting with a slash.
+
+## The three commands
+
+| Type this | When | What happens |
+|-----------|------|--------------|
+| `/start` | First thing, in a new chat | {name} reads its notes and tells you where things stand |
+| `/save` | When you are done | {name} writes a summary and saves it, so tomorrow's chat picks up from here |
+| `/compact` | When a chat has got long | Shrinks the chat to a summary, so {name} stays quick and keeps going |
+
+For a fresh start, click the **+** button to start a new chat. (The app has no `/clear`.)
+Run `/save` first if you want the old chat remembered.
+
+A list pops up as you type a slash. Pick the command and press Enter to send it.
+
+Think of `/start` and `/save` as bookends. Everything in between is just conversation.
+
+The very first `/start` is longer: {name} gets to know you and your work, shows you what
+it can do, and checks that its tools work. Give it about fifteen minutes.
+
+## Handy extras
+
+| Type this | What happens |
+|-----------|--------------|
+| `/update` | A quick checkpoint in the middle of work, so nothing is lost |
+| `/report` | A summary of your week |
+| `/publish` | Puts a web page or small app online and gives you the link |
+| "What can you do?" or "Is everything connected?" | Ask these in words. `/help` is Antigravity's own command and does something else |
+
+## Things to try
+
+{examples}
+- "Remember that I work Tuesday to Saturday."
+
+## Good to know
+
+- **It remembers.** Tell it something once and it writes it down.
+- **It asks before it sends.** {name} will check with you before sending a message,
+  deleting anything, or changing a company system.
+- **Sign in with a personal Google account** (a Gmail address). Google Workspace (business)
+  accounts do not include Antigravity plans. A business can use Google Cloud instead.
+- **Open it from your desktop.** The shortcut named {name} opens Antigravity on your folder.
+- **Stuck?** Type "I'm stuck" and say what you were trying to do, or send {contact} a screenshot.
+"""
+
+
 def first_chat(name, a, main="claude"):
     """The one-time first chat: the start command follows this file instead of its briefing, once.
 
-    It checks for real that what setup installed works, then asks about the person's work and
-    writes the answers into the notes, so later chats know what to work on. Nothing in it is
-    tied to choices that can change after it is written (company GitHub can swap the systems,
-    and Claude and ChatGPT read the same file): it points at `CLAUDE.md` and covers both apps.
+    A get-to-know-you: the person, their business (if they have one) and their life outside
+    work, then a live look at Chrome, tab groups and running tasks from the phone, then a
+    real check of the tools, and the answers written into the notes so later chats know what
+    to work on. Nothing in it is tied to choices that can change after it is written (company
+    GitHub can swap the systems, and Claude and ChatGPT read the same file): it points at
+    `CLAUDE.md` and covers both apps.
     """
     user = a["user"]
-    chrome = ("- **Chrome.** Open the company's website (or google.com if you do not know it) and read\n"
-              "  the page title. In Claude, use Claude in Chrome; if it is not set up, add the Claude\n"
-              "  extension to Chrome and sign in to it. In ChatGPT, use the Chrome extension (`@Chrome`\n"
-              "  in the message box); if it is not set up, in the ChatGPT app go to Settings, then\n"
-              "  Computer use, then Google Chrome.\n") if a.get("chrome", True) else ""
+    chrome_on = a.get("chrome", True)
+    chrome = f"""## 4. Show them Chrome
+
+Tell {user} you can work in Google Chrome for them: open pages, read them, compare things,
+fill in forms (always asking before you submit anything).
+
+Then show it, live. Pick one small example that fits what they told you, say what you are
+about to do, and do it. It must only read: never sign in, buy, send or submit anything.
+Good examples: look up their company's reviews on Google, check a competitor's prices, find
+the opening hours and phone number of a supplier, or compare two products they mentioned.
+In Claude, use Claude in Chrome. In ChatGPT, use the Chrome extension (`@Chrome` in the
+message box). If it is not set up, say so in one line, finish this chat without it, and
+tell them how: in Claude, add the Claude extension to Chrome and sign in to it; in ChatGPT,
+the app's Settings, then Computer use, then Google Chrome.
+
+Then explain tab groups, in plain words:
+
+- Chrome can gather tabs into a named, coloured group at the top of the window. Clicking
+  the group's name folds its tabs away or brings them back.
+- When you work in Chrome, your tabs stay together in a group of their own, so {user} can
+  see what you are doing, fold it out of the way, and keep using their own tabs alongside.
+  Closing the group stops what you were doing in it. Point at the group you just made.
+- They can make their own groups too: right-click a tab, then "Add tab to new group".
+
+""" if chrome_on else ""
+    if chrome_on and main == "agy":  # Antigravity has its own browser, not Chrome
+        chrome = f"""## 4. Show them the built-in browser
+
+Tell {user} you can work in the browser built into Antigravity, in the side panel: open
+pages, read them, compare things, fill in forms (always asking before you submit anything).
+It has its own sign-ins, separate from Chrome's, and is rolling out for personal accounts.
+Do not mention Google Chrome or tab groups.
+
+Then show it, live. Pick one small example that fits what they told you, say what you are
+about to do, and do it. It must only read: never sign in, buy, send or submit anything.
+Good examples: look up their company's reviews on Google, check a competitor's prices, find
+the opening hours and phone number of a supplier, or compare two products they mentioned.
+If the built-in browser is not there for them yet, say so in one line and finish this chat
+without it.
+
+"""
+    n = 5 if chrome_on else 4
     return f"""# First chat
 
 This is {user}'s first chat with you. The start command (`/start`, or `$start` in ChatGPT)
-follows this file instead of its usual briefing, once. Keep it warm, plain and short: about
-ten minutes in all.
+follows this file instead of its usual briefing, once. It is a conversation, not a form:
+warm, plain and unhurried, about fifteen minutes in all. Ask one question at a time and
+wait for the answer. Follow up once if an answer is vague, then move on. If {user} wants to
+skip a part, skip it; if they want to stop, go straight to step {n + 3} and then step {n + 4}.
 
 ## 1. Say hello
 
-Greet {user} by name. In two or three sentences, show that you already know the company:
-what it does and the problems {user} said are big (both are in `CLAUDE.md`). Then say this
-first chat has two parts: a quick check that your tools work, and a few questions so you
-know what to work on.
+Greet {user} by name. Say this first chat is for getting to know them, so you know what to
+help with, and that you will show them a couple of things along the way. If `CLAUDE.md`
+already says what the company does and the problems {user} picked, show in one or two
+sentences that you know it, and ask them to correct anything wrong.
 
-## 2. Check the tools
+## 2. Get to know them and their work
 
-Try each one for real, quickly, and show a list with a check mark or a cross for each.
-For a cross, add one plain sentence on how to fix it. Do not stop at a failure: finish the
+1. What do you do, and do you run a business or work for one? (If `CLAUDE.md` already
+   says, confirm it instead of asking. If they have no business, skip to step 3.)
+2. What does a normal week look like?
+3. What are the three most important things you need done in the next 30 days?
+4. What takes up your time, or keeps coming back, that you wish someone else handled?
+5. Who do you work with most, inside the company and outside it?
+6. What would make the next 90 days a win?
+
+## 3. Their life outside work
+
+Say you can help at home too, not just at work. Ask what would make their week easier
+outside work, and give three short examples to get them thinking, picked from what you know
+so far: planning a trip, keeping a budget, meal plans and shopping lists, keeping track of
+family dates and appointments, learning something new, or writing a hard email or letter.
+Note anything they would like help with.
+
+{chrome}## {n}. Run tasks from your phone
+
+Explain it plainly: this computer is where you live, and {user} can reach you from their
+phone while it is on.
+
+- **In Claude:** Remote Control links this chat to the Claude app on their phone (menu,
+  then Code). From the phone they can see what you are doing, answer your questions and
+  give you new tasks, and you do the work here, with this computer's Chrome and files.
+  To turn it on for a chat, type `/remote-control` (or `/rc`) in it; the Claude app on the
+  computer can also turn it on for every chat in its settings. Offer to turn it on now.
+- **In ChatGPT:** say that the phone side works differently there, and that the simplest way
+  to give this computer tasks from a phone is Claude's Remote Control. Do not promise a
+  ChatGPT feature you cannot see.
+- **In Antigravity:** in the app, Settings, then Application, then turn on
+  Enable Remote Control. Then on the phone, open antigravity.google in the browser, sign in
+  with the same Google account, and pick this computer. Offer to walk them through it.
+  Promise nothing more.
+- **Either way:** the computer has to be on, awake and online, with the app open. Suggest
+  keeping it plugged in and setting it not to sleep while plugged in (on a Mac: System
+  Settings, then Battery or Energy; on Windows: Settings, then System, then Power).
+
+## {n + 1}. Check the tools
+
+Try each one for real, quickly, and show a list with a check mark or a cross for each. For
+a cross, add one plain sentence on how to fix it. Do not stop at a failure: finish the
 list. This check only reads: never send, change or delete anything.
 
-{chrome}- **Email, calendar and files.** Count today's unread emails in Gmail, list today's events
+- **Email, calendar and files.** In Antigravity, Gmail, Calendar and Drive have no built-in
+  connection: say that plainly, do not test them, and move on. Otherwise, count today's unread emails in Gmail, list today's events
   in Google Calendar, and name the three most recently changed files in Google Drive. If they
   are not connected: in Claude, claude.ai, then Settings, then Connectors; in ChatGPT, the
-  app's Plugins, then Gmail, Google Calendar and Google Drive, with the work Google account.
+  app's Plugins, then Gmail, Google Calendar and Google Drive, with their Google account.
 - **The company's systems.** For each system in Part 3 of `CLAUDE.md`: if it is connected,
   pull one recent record (a job from the CRM, a call from the phone system) with the skill it
-  names, and say what you found in one line. If it is still being connected, just say it is
-  on its way.
+  names, and say what you found in one line. If it is not connected yet, say so: the next
+  step connects it.
+- **Publishing.** Run `vercel whoami` and `supabase projects list`. Signed in to both means
+  you can put a web page or app online for them today (`/publish`, or `$publish` in
+  ChatGPT). If either is not signed in, say they can sign in the first time they publish.
 - **Company GitHub.** Only if this folder has a `.company-github` file: run `gh auth status`
   and say whether it is signed in. Otherwise leave this line out.
 
-## 3. Ask about the work
+## {n + 2}. Connect their business systems
 
-Ask one question at a time and wait for each answer. Follow up once if an answer is vague,
-then move on: this is a conversation, not a form.
+Look at Part 3 of `CLAUDE.md`. Do not assume {user} has an API key, or knows what one is. For
+each system marked "Not connected yet" (their CRM, their phone system), one at a time:
 
-1. What does a normal week look like for you?
-2. What are the three most important things you need done in the next 30 days?
-3. What takes up your time, or keeps coming back, that you wish someone else handled?
-4. Who do you work with most, inside the company and outside it?
-5. What would make the next 90 days a win?
+1. Ask whether they want to connect it now, and whether they have admin access to it. If
+   someone else does, write down who to ask in `state/todos.md` and move on.
+2. Look up on that product's official help pages how it gives API access, and whether their
+   plan includes it. If it has none, say so plainly and offer what still works: reading it
+   through the browser, or exports they hand you.
+3. Walk them through getting a key, one small step at a time. If you can use the browser, open
+   the right settings page for them. Creating the key is their click.
+4. Never have them paste a key into this chat. Add the empty line Part 3 names (for example
+   `JOBBER_API_KEY=`) to `.env` in this folder, open that file for them, and have them paste
+   the key after the equals sign and save.
+5. Test it with one read-only request, without printing the key, and say what you found in one
+   line. Then update that system's entry in Part 3 of `CLAUDE.md` to say it is connected.
+6. If it does not work, or they would rather not now, add it to `state/todos.md` and carry on.
 
-If {user} wants to stop partway, write down what you have (step 4) and finish (step 5).
+## {n + 3}. Write it down
 
-## 4. Write it down
-
-- `state/goals.md`: put their 30-day and 90-day goals in the Work Goals table. Remove the
-  example rows and the "SETUP NOT COMPLETE" line, and set "Last updated" to today.
+- `state/goals.md`: put their 30-day and 90-day goals in the Work Goals table, and anything
+  they want help with outside work in the Personal Goals table. Remove the example rows and the
+  "SETUP NOT COMPLETE" line, and set "Last updated" to today.
 - `state/current.md`: Active Priorities are their top three things. Open Threads are
   anything they mentioned that needs a follow-up.
 - `state/todos.md`: the concrete tasks from their answers, dated today.
-- `CLAUDE.md`, under Part 1: a short "How they work" paragraph (their week, the people
-  they work with, what a win looks like).
+- `CLAUDE.md`, under Part 1: a short "How they work" paragraph (their week, the people they
+  work with, what a win looks like) and a line on what they want help with at home.
 
 Show {user} a short summary of what you wrote, and fix anything they correct.
 
-## 5. Finish, then get going
+## {n + 4}. Finish, then get going
 
 Delete this file (`state/first-chat.md`) now, whatever happens next, and do what
 `.claude/commands/save.md` says, so every chat after this one opens with the normal briefing.
 
 Then suggest three specific things you can do for {user} right now, based on their answers
-and the tools that passed the check, and ask which one to start.
+and the tools that passed the check: one for work, one for home, and one small web page you
+could build and publish for them. Ask which one to start.
 """
 
 
@@ -732,6 +933,8 @@ def start_here(name, a, main="claude"):
     examples = "\n".join(f'- "{line}"' for line in tries(a))
     if main == "codex":
         return START_HERE_CODEX.format(name=name, examples=examples, contact=CONTACT)
+    if main == "agy":
+        return START_HERE_AGY.format(name=name, examples=examples, contact=CONTACT)
     colors = bool(a.get("colors", True))
     tint_row = "| `/tint company` | Colors this chat. Try `company`, `personal`, or `off` |\n" if colors else ""
     colors_line = ("- **Colors mean topics.** Orange is work, green is personal. The shape on\n"
@@ -754,8 +957,9 @@ are shortcuts: type one in the chat box and press Enter.
 
 Think of `/start` and `/save` as bookends. Everything in between is just conversation.
 
-The very first `/start` is longer: {name} checks that its tools work and asks you a few
-questions about your work, so it knows what to help with. Give it about ten minutes.
+The very first `/start` is longer: {name} gets to know you and your work, shows you what
+it can do in Chrome and from your phone, and checks that its tools work. Give it about
+fifteen minutes.
 
 ## Handy extras
 
@@ -765,6 +969,7 @@ questions about your work, so it knows what to help with. Give it about ten minu
 | `/help` | Lists every command and what {name} can do |
 | `/report` | A summary of your week |
 | `/status` | Checks that everything is connected and working |
+| `/publish` | Puts a web page or small app online and gives you the link |
 {tint_row}
 ## Things to try
 
@@ -890,7 +1095,7 @@ def write_settings(a, mod_dir, log):
         settings.setdefault("agentPushNotifEnabled", True)  # phone alert when a task finishes
     settings.setdefault("cleanupPeriodDays", 3650)  # keep old chats; the default deletes them after 30 days
     settings.setdefault("voiceEnabled", True)
-    settings.setdefault("model", KITS.get(a.get("role"), DEFAULT_KIT)["model"])
+    settings.setdefault("model", kit_for(a.get("role"))["model"])
 
     env = settings.setdefault("env", {})
     if a.get("colors", True):
@@ -930,15 +1135,17 @@ def write_shortcut(name, workspace, log, main="claude"):
     if IS_WINDOWS:
         shortcut = desktop / f"{name}.cmd"
         lines = ["@echo off", "chcp 65001 >nul", f"title {name}", f'cd /d "{workspace}"',
-                 'set "PATH=%USERPROFILE%\\.local\\bin;%LOCALAPPDATA%\\Programs\\OpenAI\\Codex\\bin;%PATH%"',
-                 "call codex app ." if main == "codex" else "claude --desktop || claude",
-                 "if errorlevel 1 pause", ""]
+                 'set "PATH=%USERPROFILE%\\.local\\bin;%LOCALAPPDATA%\\agy\\bin;%LOCALAPPDATA%\\Programs\\OpenAI\\Codex\\bin;%PATH%"']
+        lines += agy_open_lines(str(workspace), "cmd") if main == "agy" else []
+        lines += ["call codex app ." if main == "codex" else "call agy" if main == "agy" else "claude --desktop || claude",
+                  "if errorlevel 1 pause", ""]
         shortcut.write_bytes("\r\n".join(lines).encode("utf-8"))
     else:
         shortcut = desktop / f"{name}.command"
+        opener = "\n".join(agy_open_lines(str(workspace), "sh")) + "\n" if main == "agy" else ""
         shortcut.write_text(
-            f'#!/bin/bash\nexport PATH="$HOME/.local/bin:$PATH"\ncd "{workspace}" && '
-            + ("codex app .\n" if main == "codex" else "(claude --desktop || exec claude)\n"),
+            f'#!/bin/bash\nexport PATH="$HOME/.local/bin:$PATH"\ncd "{workspace}" || exit 1\n' + opener
+            + ("codex app .\n" if main == "codex" else "agy\n" if main == "agy" else "(claude --desktop || exec claude)\n"),
             encoding="utf-8")
         shortcut.chmod(0o755)
     log.append(f"Desktop shortcut made: {shortcut.name}")
@@ -960,7 +1167,9 @@ def clean_business(a, log):
     a["keys"] = {}
     for kind in ("crm", "phone"):
         chosen = a.get(kind) if integration(kind, str(a.get(kind) or "")) else ""
-        a[kind] = chosen or (PRESET[kind] if integration(kind, PRESET[kind]) else "")
+        if a.get(kind) is None:  # only when the page sent nothing: a box the person cleared stays empty
+            chosen = PRESET[kind] if integration(kind, PRESET[kind]) else ""
+        a[kind] = chosen
         a[kind + "_other"] = re.sub(r"[^A-Za-z0-9 &.'()-]", "", str(a.get(kind + "_other") or "")).strip()[:40]
         key = str(keys.get(kind) or "").strip()
         if key and system_state(kind, a[kind]) == "pending":
@@ -997,9 +1206,9 @@ def write_systems(a, workspace, log):
         elif state == "pending":
             if a["keys"].get(kind):
                 env[env_key(kind, row["id"])] = a["keys"][kind]
-                log.append(f"{label} key saved. {BRAND} finishes this connection.")
+                log.append(f"{label} key saved.")
             else:
-                log.append(f"{label} noted. {BRAND} finishes this connection.")
+                log.append(f"{label} noted. Your assistant connects it with you in your first chat.")
     if not live:
         drop_env(workspace / ".env", ("TM_BRIDGE_URL", "TM_BRIDGE_TOKEN"))
     if env:
@@ -1011,7 +1220,7 @@ def write_systems(a, workspace, log):
         if SYSTEMS_START in current and SYSTEMS_END in current:
             head, rest = current.split(SYSTEMS_START, 1)
             tail = rest.split(SYSTEMS_END, 1)[1]
-            claude.write_text(head + systems_section(a).rstrip("\n") + tail, encoding="utf-8")
+            claude.write_text(head + systems_section(a, workspace).rstrip("\n") + tail, encoding="utf-8")
 
 
 def company_settings(a):
@@ -1041,7 +1250,7 @@ def configure(a):
     name = re.sub(r"[^A-Za-z0-9 _-]", "", str(a.get("assistant") or "")).strip()[:30] or "Marvin"
     a["assistant"] = name
     a["user"] = re.sub(r"[\r\n`<>]", "", str(a.get("user") or "")).strip()[:40] or "the owner of this computer"
-    a["role"] = a.get("role") if a.get("role") in ROLES else "Team member"
+    a["role"] = re.sub(r"[\r\n`<>]", "", str(a.get("role") or "")).strip()[:60] or "Team member"
     a["style"] = a.get("style") if a.get("style") in STYLES else "Professional"
     if a.get("mode") not in MODES:
         a["mode"] = "bypassPermissions"
@@ -1058,7 +1267,7 @@ def configure(a):
     workspace.mkdir(parents=True, exist_ok=True)
 
     # The swarm layer stays out of employee installs: it needs other paid accounts.
-    skip = () if a["role"] == "Developer" else ("the-boys.md",)
+    skip = () if role_kit_name(a["role"]) == "Developer" else ("the-boys.md",)
     copy_missing(TEMPLATE / ".claude", workspace / ".claude", skip=skip)
     copy_missing(TEMPLATE / "state", workspace / "state")
     for folder in ("sessions", "reports", "content"):
@@ -1066,6 +1275,7 @@ def configure(a):
     if (TEMPLATE / ".env.example").exists() and not (workspace / ".env.example").exists():
         shutil.copy2(TEMPLATE / ".env.example", workspace / ".env.example")
     (workspace / ".gitignore").exists() or shutil.copy2(TEMPLATE / ".gitignore", workspace / ".gitignore")
+    ignore_secrets(workspace)
     (workspace / ".assistant-name").write_text(name + "\n", encoding="utf-8")
     (workspace / ".marvin-source").write_text(str(TEMPLATE) + "\n", encoding="utf-8")
 
@@ -1089,7 +1299,7 @@ def configure(a):
         today = datetime.date.today().isoformat()
         (workspace / "state" / "current.md").write_text(
             f"# Current State\n\nLast updated: {today}\n\n## Active Priorities\n\n"
-            f"1. Get to know {name}: try `/start`, then ask a question about your work\n\n"
+            f"1. Get to know {name}: try `{'$start' if main == 'codex' else '/start'}`, then ask a question about your work\n\n"
             "## Open Threads\n\n- None yet\n", encoding="utf-8")
         # A new folder's first /start checks the tools and asks about the work (it deletes this).
         (workspace / "state" / "first-chat.md").write_text(first_chat(name, a, main), encoding="utf-8")
@@ -1118,7 +1328,8 @@ def configure(a):
     if not os.environ.get("ASSISTANT_SKIP_INSTALLS"):
         # Claude's pieces, if they were not started with the page; the desktop app only for the main one.
         run_installs(claude=with_claude, claude_app=main == "claude",
-                     chatgpt_app=main == "codex" and not os.environ.get("CI"))
+                     chatgpt_app=main == "codex" and not os.environ.get("CI"),
+                     antigravity_app=main == "agy" and not os.environ.get("CI"))
         for tool in extras:
             install_extra(tool)
     try:
@@ -1143,14 +1354,14 @@ def configure(a):
     if preset["state"] in ("added", "there"):
         log.append(f"In the Claude app, a new chat can start in this folder: pick \"{preset['name']}\" in the new-chat menu.")
 
-    side = [t for t in extras if not (t == "codex" and main == "codex")]
+    side = [t for t in extras if t != main]
     tools = ([{"id": "claude", "label": "Claude", "account": CLAUDE_SIDE["account"], "where": "in a terminal"}]
              if with_claude and main != "claude" else [])
     tools += [{"id": t, "label": "Codex" if t == "codex" else EXTRAS[t]["label"], "account": EXTRAS[t]["account"],
                "where": "in a terminal"} for t in side]
-    if main == "codex":
-        tools.append({"id": "codex", "label": EXTRAS["codex"]["label"], "account": EXTRAS["codex"]["account"],
-                      "where": EXTRAS["codex"]["where"]})
+    if main in APP_WHERE:
+        tools.append({"id": main, "label": EXTRAS[main]["label"], "account": EXTRAS[main]["account"],
+                      "where": APP_WHERE[main]})
     return {"ok": True, "log": log, "folder": str(workspace), "assistant": name, "main": main,
             "tools": tools,
             "user": a["user"] if a["user"] != "the owner of this computer" else "",
@@ -1329,7 +1540,7 @@ def chrome_status(extension_id=CLAUDE_EXTENSION):
                 # Turned off shows as state 0 (older Chrome) or a list of reasons (newer).
                 extension = row.get("state", 1) != 0 and not row.get("disable_reasons")
                 break
-    return {"ok": True, "chrome": _has_chrome(), "google": email, "work": is_work(email),
+    return {"ok": True, "chrome": _has_chrome(), "google": email, "googleSignedIn": GOOGLE_WINDOW["signedIn"], "work": is_work(email),
             "profile": str(_dict(cache, name).get("name") or "") if len(cache) > 1 else "",
             "extension": extension}
 
@@ -1487,6 +1698,64 @@ def close_window(step):
     return False
 
 
+# Google's sign-in ends on google.com, whose title is plain "Google" in every language, so
+# setup can tell the sign-in finished and close the window it opened.
+GOOGLE_ADD_ACCOUNT = "https://accounts.google.com/AddSession?continue=https%3A%2F%2Fwww.google.com%2F"
+GOOGLE_WINDOW = {"signedIn": False, "watching": False, "gen": 0}
+
+
+def _window_on_google(step):
+    """True once the window reached google.com, False while it has not, None if it is gone."""
+    handles = OPENED.get(step) or []
+    if not handles:
+        return None
+    if IS_WINDOWS:
+        import ctypes
+        alive = _chrome_windows()
+        handles = [hwnd for hwnd in handles if hwnd in alive]
+        if not handles:
+            return None
+        for hwnd in handles:
+            title = ctypes.create_unicode_buffer(256)
+            ctypes.windll.user32.GetWindowTextW(hwnd, title, 256)
+            if title.value.strip() == "Google":
+                return True
+        return False
+    if IS_MAC:
+        worked, out = _osascript(f'tell application "Google Chrome" to get URL of active tab of window id {int(handles[0])}')
+        return out.startswith("https://www.google.com") if worked else None
+    return None
+
+
+def watch_google_window():
+    """Watch the newest Google window. An older watcher sees the number move on and steps aside."""
+    import time
+    GOOGLE_WINDOW["gen"] += 1
+    mine = GOOGLE_WINDOW["gen"]
+    GOOGLE_WINDOW["watching"] = True
+
+    def work():
+        try:
+            for _ in range(900):
+                time.sleep(1)
+                if GOOGLE_WINDOW["gen"] != mine:
+                    return
+                reached = _window_on_google("google")
+                if reached is None:
+                    return
+                if reached:
+                    GOOGLE_WINDOW["signedIn"] = True
+                    close_window("google")
+                    return
+        except Exception:
+            pass
+        finally:
+            if GOOGLE_WINDOW["gen"] == mine:
+                GOOGLE_WINDOW["watching"] = False
+
+    threading.Thread(target=work, daemon=True).start()
+
+
 # The Claude tool's sign-in opens its page through $BROWSER: point that at a small helper
 # that hands the address to this server, which opens it in a window of its own.
 HOOK = {"path": ""}
@@ -1519,13 +1788,18 @@ def make_browser_hook(port):
 
 def hooked_page(url):
     """An address the Claude tool asked to show: in a tracked window if it is one of Anthropic's."""
-    url = str(url or "")
-    host = re.match(r"https://([^/:?#]+)", url)
-    if host and (host.group(1) in HOOK_HOSTS or host.group(1).endswith(tuple("." + h for h in HOOK_HOSTS))):
-        return open_window("claude-login", url)
-    if re.match(r"https?://", url):
-        webbrowser.open(url)
-    return "browser"
+    from urllib.parse import urlparse
+    if re.search(r"[\\\s\x00-\x1f\x7f]", str(url or "")):  # a browser reads these differently from urlparse
+        return "refused"
+    try:
+        parts = urlparse(str(url or ""))
+        host = (parts.hostname or "").lower()
+        plain = parts.scheme == "https" and parts.username is None and parts.password is None
+    except ValueError:
+        return "refused"
+    if plain and re.fullmatch(r"[a-z0-9.-]+", host) and any(host == h or host.endswith("." + h) for h in HOOK_HOSTS):
+        return open_window("claude-login", str(url))
+    return "refused"  # never some other address
 
 
 # --- GitHub (optional): sign in and keep a private backup of the workspace ---------
@@ -1655,6 +1929,307 @@ def github_connect():
     threading.Thread(target=watch, daemon=True).start()
 
 
+# Signing in to Vercel and Supabase from the page. Vercel's tool shows a link to approve.
+# Supabase's own sign-in needs a real terminal, so the person makes an access token on
+# Supabase's page and pastes it here; it is checked, then handed to the tool to keep.
+VERCEL = {"state": "none", "user": "", "error": ""}
+SUPABASE = {"state": "none", "user": "", "error": "", "askToken": False}
+SIGN_INS = {}
+PUBLISH_LOCK = threading.Lock()
+PUBLISH_CHECKED = {}
+SIGN_IN_LIMIT = 900  # seconds; an abandoned sign-in ends by itself
+SUPABASE_TOKENS = "https://supabase.com/dashboard/account/tokens"
+
+
+def _cli_env():
+    return dict(plain_env(), NO_COLOR="1", FORCE_COLOR="0", VERCEL_TELEMETRY_DISABLED="1")
+
+
+def _quiet(command, timeout=30):
+    try:
+        done = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                              timeout=timeout, stdin=subprocess.DEVNULL, env=_cli_env())
+        return done.returncode == 0, done.stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        return False, ""
+
+
+def _stop(proc):
+    """End a tool and whatever it started (on Windows, npm's tools run behind a small wrapper)."""
+    if proc is None or proc.poll() is not None:
+        return
+    try:
+        if IS_WINDOWS:
+            subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"], capture_output=True, timeout=15)
+        else:
+            proc.kill()
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
+def _vercel_user():
+    exe = vercel_path()
+    if exe is None:
+        return ""
+    worked, out = _quiet([exe, "whoami"])
+    user = (out.splitlines() or [""])[-1].strip()
+    return user if worked and re.fullmatch(r"[\w.@-]{1,80}", user) else ""
+
+
+def _supabase_signed_in():
+    exe = supabase_path()
+    return bool(exe) and _quiet([exe, "projects", "list", "-o", "json"])[0]
+
+
+def publish_refresh():
+    """Notice sign-ins that are already there, without asking each tool on every poll."""
+    import time
+    for tool, state in (("vercel", VERCEL), ("supabase", SUPABASE)):
+        with PUBLISH_LOCK:
+            due = state["state"] == "none" and time.time() - PUBLISH_CHECKED.get(tool, 0) >= 15
+            if due:
+                PUBLISH_CHECKED[tool] = time.time()
+        if not due:
+            continue
+        user = _vercel_user() if tool == "vercel" else ("yes" if _supabase_signed_in() else "")
+        if user:
+            with PUBLISH_LOCK:
+                if state["state"] == "none":
+                    state.update(state="connected", user="" if tool == "supabase" else user, error="")
+
+
+def publish_status():
+    publish_refresh()
+    with INSTALL_LOCK:
+        rows = {row["id"]: row["state"] for row in INSTALLS}
+    with PUBLISH_LOCK:
+        return {"ok": True,
+                "vercel": dict(VERCEL, installed=vercel_path() is not None, failed=rows.get("vercel") == "failed"),
+                "supabase": dict(SUPABASE, installed=supabase_path() is not None, failed=rows.get("supabase") == "failed")}
+
+
+def vercel_connect():
+    """Start Vercel's sign-in. Clicking again while it waits starts it over."""
+    exe = vercel_path()
+    with PUBLISH_LOCK:
+        if VERCEL["state"] == "connected":
+            return
+        if exe is None:
+            VERCEL["error"] = ""
+            return
+        _stop(SIGN_INS.pop("vercel", None))
+        try:
+            proc = subprocess.Popen([exe, "login"], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                    text=True, encoding="utf-8", errors="replace", env=_cli_env())
+        except OSError as error:
+            VERCEL.update(state="none", error=str(error)[:160])
+            return
+        SIGN_INS["vercel"] = proc
+        VERCEL.update(state="waiting", error="")
+    timer = threading.Timer(SIGN_IN_LIMIT, _stop, args=(proc,))
+    timer.daemon = True
+    timer.start()
+
+    def watch():
+        opened = False
+        for line in proc.stdout:
+            link = re.search(r"https://vercel\.com/oauth/device\?user_code=[A-Za-z0-9-]+", line)
+            if link and not opened:
+                opened = True
+                CHROME_PAGES["vercel-login"] = link.group(0)
+                open_window("vercel-login", link.group(0))
+        proc.wait()
+        timer.cancel()
+        user = _vercel_user() if proc.returncode == 0 else ""
+        with PUBLISH_LOCK:
+            if SIGN_INS.get("vercel") is not proc:
+                return  # a newer attempt owns the state now
+            del SIGN_INS["vercel"]
+            if user:
+                VERCEL.update(state="connected", user=user, error="")
+            else:
+                VERCEL.update(state="none", error="Vercel sign-in did not finish. Click Connect Vercel to try again.")
+        if user:
+            close_window("vercel-login")
+
+    threading.Thread(target=watch, daemon=True).start()
+
+
+def supabase_connect():
+    """Open Supabase's token page. Clicking again reopens it."""
+    with PUBLISH_LOCK:
+        if SUPABASE["state"] == "connected" or supabase_path() is None:
+            return
+        SUPABASE.update(state="waiting", error="", askToken=True)
+    CHROME_PAGES["supabase-token"] = SUPABASE_TOKENS
+    open_window("supabase-token", SUPABASE_TOKENS)
+
+
+def _supabase_fail(message):
+    with PUBLISH_LOCK:
+        SUPABASE["error"] = message  # the page keeps showing it between its status checks
+    return {"ok": False, "error": message}
+
+
+def supabase_token(token):
+    """Check the pasted token with Supabase, then let the tool keep it. It is never written down here."""
+    token = (token or "").strip()
+    exe, curl = supabase_path(), shutil.which("curl")
+    if exe is None or curl is None:
+        return _supabase_fail("The Supabase tool is not ready yet. Try again in a minute.")
+    if not re.fullmatch(r"sbp_[A-Za-z0-9_]{20,120}", token):
+        return _supabase_fail("That does not look like a Supabase token. It starts with sbp_.")
+    try:
+        # The token goes in on stdin, so it never shows in the list of running programs for this check.
+        done = subprocess.run([curl, "-sS", "-o", os.devnull, "-w", "%{http_code}", "-K", "-",
+                               "https://api.supabase.com/v1/projects"], input=f'header = "Authorization: Bearer {token}"\n',
+                              capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return _supabase_fail("Setup could not reach Supabase. Check the internet and try again.")
+    if done.stdout.strip() in ("401", "403"):
+        return _supabase_fail("Supabase did not accept that token. Copy it again and paste it here.")
+    if done.stdout.strip() != "200":
+        return _supabase_fail("Setup could not check that with Supabase. Try again in a minute.")
+    if not _quiet([exe, "login", "--token", token])[0] or not _supabase_signed_in():
+        return _supabase_fail("The Supabase tool could not save that sign-in. Try again.")
+    with PUBLISH_LOCK:
+        SUPABASE.update(state="connected", error="", askToken=False)
+    close_window("supabase-token")
+    return {"ok": True}
+
+
+# The apps ChatGPT should have: (id, name, the plugin that brings it). Docs and Sheets come
+# with the Google Drive plugin, so they share its one connection. The Codex app server says
+# which are connected; setup adds the plugins itself, and each connection opens ChatGPT's own page.
+CHATGPT_APPS = (("gmail", "Gmail", "gmail"), ("google-calendar", "Google Calendar", "google-calendar"),
+                ("google-drive", "Google Drive", "google-drive"), ("google-docs", "Google Docs", "google-drive"),
+                ("google-sheets", "Google Sheets", "google-drive"), ("vercel", "Vercel", "vercel"),
+                ("supabase", "Supabase", "supabase"))
+CHATGPT_MARKET = "openai-curated-remote"
+APPS = {"state": "unknown", "rows": [], "checking": False, "at": 0.0}
+APP_LINKS = {}  # plugin -> its connector's id and the ChatGPT page that connects it
+
+
+def _with_codex_server(work):
+    """Run `work(call)` against a short-lived Codex app server, then end it."""
+    hidden = {"creationflags": 0x08000000} if IS_WINDOWS else {}  # CREATE_NO_WINDOW
+    proc = subprocess.Popen([tool_path("codex"), "app-server"], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                            stderr=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace", **hidden)
+    replies, ready, ids = {}, threading.Condition(), [0]
+
+    def read():
+        for line in proc.stdout:
+            try:
+                message = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(message, dict) and "id" in message and ("result" in message or "error" in message):
+                with ready:
+                    replies[message["id"]] = message
+                    ready.notify_all()
+
+    threading.Thread(target=read, daemon=True).start()
+
+    def send(message):
+        proc.stdin.write(json.dumps(message) + "\n")
+        proc.stdin.flush()
+
+    def call(method, params, wait=45):
+        ids[0] += 1
+        ident = ids[0]
+        send({"id": ident, "method": method, "params": params})
+        with ready:
+            ready.wait_for(lambda: ident in replies, wait)
+        got = replies.get(ident)
+        if not got or "error" in got:
+            raise OSError(f"{method} did not answer")
+        return got["result"]
+
+    try:
+        call("initialize", {"clientInfo": {"name": "assistant_setup", "title": "Assistant setup", "version": "1"},
+                            "capabilities": {"experimentalApi": True}})
+        send({"method": "initialized"})
+        return work(call)
+    finally:
+        _stop(proc)
+
+
+def _read_chatgpt_apps():
+    import time
+    try:
+        if tool_path("codex") is None or not codex_signed_in():
+            APPS.update(state="signed-out", rows=[])
+            return
+
+        def work(call):
+            listed = call("plugin/list", {"cwds": []})
+            plugins = {}
+            for market in listed.get("marketplaces") or []:
+                if market.get("name") == CHATGPT_MARKET:
+                    plugins = {row.get("name"): row for row in market.get("plugins") or []}
+            for plugin in sorted({row[2] for row in CHATGPT_APPS}):
+                if plugin in plugins and not plugins[plugin].get("installed") and not os.environ.get("CI"):
+                    try:
+                        call("plugin/install", {"remoteMarketplaceName": CHATGPT_MARKET, "pluginName": plugin}, wait=90)
+                    except OSError:
+                        pass  # one that cannot be added must not stop the others being checked
+                if plugin in plugins and plugin not in APP_LINKS:
+                    try:
+                        read = call("plugin/read", {"remoteMarketplaceName": CHATGPT_MARKET, "pluginName": plugin})
+                        apps = (read.get("plugin") or {}).get("apps") or []
+                        if apps:
+                            APP_LINKS[plugin] = {"id": apps[0].get("id"), "url": str(apps[0].get("installUrl") or "")}
+                    except Exception:
+                        pass  # one that cannot be read must not stop the others being checked
+            return {row.get("id"): row for row in call("app/installed", {"forceRefresh": True}, wait=60).get("apps") or []}
+
+        installed = _with_codex_server(work)
+        rows = []
+        for ident, label, plugin in CHATGPT_APPS:
+            link = APP_LINKS.get(plugin) or {}
+            app = installed.get(link.get("id")) or {}
+            url = link.get("url", "")
+            rows.append({"id": ident, "label": label, "plugin": plugin, "connected": bool(app.get("enabled") and app.get("callable")),
+                         "url": url if re.fullmatch(r"https://chatgpt\.com/apps/[a-z0-9-]+/[A-Za-z0-9_]+", url) else ""})
+            if rows[-1]["connected"] and ident == plugin:
+                close_window(f"chatgpt-app-{ident}")
+        APPS.update(state="known", rows=rows)
+    except Exception:  # the page says it could not check, and offers ChatGPT's own Plugins page
+        APPS["state"] = "unknown"
+    finally:
+        APPS.update(checking=False, at=time.time())
+
+
+def chatgpt_apps_status():
+    """What is connected, from the last look. A new look runs in the background."""
+    import time
+    if time.time() - APPS["at"] > 3 and not APPS["checking"]:
+        APPS["checking"] = True
+        threading.Thread(target=_read_chatgpt_apps, daemon=True).start()
+    return {"ok": True, "state": APPS["state"], "checking": APPS["checking"],
+            "rows": [{"id": row["id"], "label": row["label"], "connected": row["connected"],
+                      "canConnect": bool(row["url"]) and row["id"] == row["plugin"]} for row in APPS["rows"]]}
+
+
+def chatgpt_app_connect(ident):
+    row = next((row for row in APPS["rows"] if row["id"] == ident and row["id"] == row["plugin"]), None)
+    if row is None or not row["url"]:
+        return {"ok": False}
+    page = f"chatgpt-app-{ident}"
+    CHROME_PAGES[page] = row["url"]
+    return {"ok": True, "how": open_window(page, row["url"])}
+
+
+def ignore_secrets(workspace):
+    """Keep every kind of secrets file out of git, in folders set up before these lines existed too."""
+    path = workspace / ".gitignore"
+    text = path.read_text(encoding="utf-8") if path.exists() else ""
+    active = {line.strip() for line in text.splitlines() if line.strip() and not line.lstrip().startswith("#")}
+    missing = [line for line in (".env", ".env.*", "!.env.example", ".vercel/") if line not in active]
+    if missing:
+        path.write_text(text.rstrip("\n") + "\n" + "\n".join(missing) + "\n", encoding="utf-8")
+
+
 def github_backup(folder, org=""):
     """Put the workspace in a private repository: in the company's GitHub when the person
     is a member of it, otherwise on their own account."""
@@ -1667,9 +2242,7 @@ def github_backup(folder, org=""):
         return {"ok": False, "error": "Connect GitHub first."}
     if git is None or not _has_git():
         return {"ok": False, "error": "Git is still installing. Try again when it shows as done."}
-    ignore = (workspace / ".gitignore").read_text(encoding="utf-8") if (workspace / ".gitignore").exists() else ""
-    if ".env" not in ignore.split():
-        (workspace / ".gitignore").write_text(ignore.rstrip("\n") + "\n.env\n", encoding="utf-8")
+    ignore_secrets(workspace)
 
     def run(*args):
         return subprocess.run([git, *args], cwd=str(workspace), capture_output=True, text=True, encoding="utf-8", errors="replace")
@@ -1826,7 +2399,7 @@ def org_status(org=""):
         settings = read_company_settings(org)
         reply["settings"] = settings
         reply["differs"] = bool(settings) and LAST["answers"] is not None and any(
-            settings.get(k) and settings.get(k) != (LAST["answers"] or {}).get(k) for k in ("industry", "crm", "phone"))
+            settings.get(k) and settings.get(k) != (LAST["answers"] or {}).get(k) for k in ("industry", "crm", "phone", "crm_other", "phone_other"))
         reply["summary"] = settings_words(settings) if settings else ""
     return reply
 
@@ -1881,8 +2454,14 @@ def org_apply():
         if settings.get(key):
             answers[key] = settings[key]
     # A key typed for one system must never be saved under another system's name.
-    answers["keys"] = {kind: key for kind, key in (answers.get("keys") or {}).items()
-                       if answers.get(kind) == LAST["answers"].get(kind)}
+    before = LAST["answers"]
+
+    def same_system(kind):
+        if answers.get(kind) != before.get(kind):
+            return False
+        return answers.get(kind) != "other" or answers.get(kind + "_other") == before.get(kind + "_other")
+
+    answers["keys"] = {kind: key for kind, key in (answers.get("keys") or {}).items() if same_system(kind)}
     log = []
     clean_business(answers, log)
     write_systems(answers, Path(LAST["workspace"]), log)
@@ -2078,7 +2657,16 @@ def ensure_claude_app():
     threading.Thread(target=work, daemon=True).start()
 
 
+def claude_app_row_active():
+    """Whether the install list is already getting the Claude app (queued or running)."""
+    with INSTALL_LOCK:
+        return any(r["id"] == "claude-app" and r["state"] in ("waiting", "working") for r in INSTALLS)
+
+
 def claude_app_status():
+    if claude_app_row_active():
+        return dict(CLAUDE_APP, state="installing", ok=True,
+                    system="mac" if IS_MAC else "windows" if IS_WINDOWS else "other")
     if CLAUDE_APP["state"] != "installing":
         CLAUDE_APP["state"] = "installed" if claude_app_installed() else (
             "failed" if CLAUDE_APP["state"] == "failed" else "missing")
@@ -2400,7 +2988,7 @@ def add_app_preset():
     taken = {p.get("name") for p in presets if isinstance(p, dict)}
     label = name if name not in taken else f"{name} (assistant)"
     now = int(__import__("time").time() * 1000)
-    model = APP_MODELS.get(KITS.get(a.get("role"), DEFAULT_KIT)["model"], APP_MODELS["sonnet"])
+    model = APP_MODELS.get(kit_for(a.get("role"))["model"], APP_MODELS["sonnet"])
     presets.append({"id": str(__import__("uuid").uuid4()), "name": label, "createdAt": now, "lastUsedAt": now,
                     "target": {"kind": "local", "cwd": workspace},
                     "settings": {"modelId": model, "effort": "medium", "fastMode": False, "worktree": False}})
@@ -2428,7 +3016,7 @@ def _read_connectors():
     if exe:
         try:
             done = subprocess.run([exe, "mcp", "list"], capture_output=True, text=True, encoding="utf-8",
-                                  errors="replace", timeout=120, stdin=subprocess.DEVNULL)
+                                  errors="replace", timeout=120, stdin=subprocess.DEVNULL, env=plain_env())
             for line in done.stdout.splitlines():
                 match = re.match(r"\s*claude\.ai ([^:]+):.*?(Connected|Needs authentication|Failed)", line)
                 if match:
@@ -2474,6 +3062,7 @@ def refresh_path():
     extra = [str(Path.home() / ".local" / "bin")]
     if IS_WINDOWS:
         import winreg
+        extra += [str(Path.home() / ".local" / "node"), str(Path(os.environ.get("APPDATA", "")) / "npm")]
         for root, key in ((winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"),
                           (winreg.HKEY_CURRENT_USER, "Environment")):
             try:
@@ -2487,10 +3076,10 @@ def refresh_path():
     os.environ["PATH"] = os.pathsep.join(have + [p for p in extra if p and p not in have])
 
 
-def _run(command, timeout=1800):
+def _run(command, timeout=1800, env=None):
     try:
         done = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace",
-                              timeout=timeout, stdin=subprocess.DEVNULL)
+                              timeout=timeout, stdin=subprocess.DEVNULL, env=env)
         return done.returncode == 0, ((done.stderr or done.stdout or "").strip().splitlines() or [""])[-1][:160]
     except (OSError, subprocess.TimeoutExpired) as error:
         return False, str(error)[:160]
@@ -2626,6 +3215,88 @@ def chatgpt_app_installed():
     return found
 
 
+def _fetch_with_progress(row, url, dest, least):
+    """Download a big file, showing "Downloading: N%" in the install row. True if it arrived whole."""
+    import time
+    import urllib.request
+    dest = Path(dest)
+    curl = shutil.which("curl")
+    if curl is None:
+        try:
+            _download(url, dest, least=least)
+        except OSError:
+            return False
+        return dest.exists() and dest.stat().st_size >= least
+    try:
+        head = urllib.request.Request(url, method="HEAD", headers={"User-Agent": BROWSER_AGENT})
+        with urllib.request.urlopen(head, timeout=30) as reply:
+            size = int(reply.headers.get("Content-Length") or 0)
+    except (OSError, ValueError):
+        size = 0
+    fetch = subprocess.Popen([curl, "-fL", "--retry", "2", "-sS", "-A", BROWSER_AGENT, "-o", str(dest), url],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL)
+    while fetch.poll() is None:
+        have = dest.stat().st_size if dest.exists() else 0
+        _mark(row, "working", f"Downloading: {min(99, have * 100 // size)}%" if size else
+              f"Downloading: {have // 1_000_000} MB")
+        time.sleep(1)
+    return fetch.returncode == 0 and dest.exists() and dest.stat().st_size >= least
+
+
+def _authority_ok(text, signer):
+    """The first Authority line (the certificate that signed the app) is that company's Developer ID."""
+    authority = [line.strip() for line in text.splitlines() if line.strip().startswith("Authority=")]
+    return bool(authority) and authority[0].startswith("Authority=Developer ID Application: " + signer)
+
+
+def _codesign_ok(app, signer):
+    """The app's signature is intact, Apple-anchored, and made by `signer`'s own Developer ID."""
+    try:
+        if subprocess.run(["codesign", "--verify", "--deep", "--strict", "-R=anchor apple generic", str(app)],
+                          capture_output=True, timeout=300).returncode != 0:
+            return False
+        info = subprocess.run(["codesign", "-dvv", str(app)], capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return info.returncode == 0 and _authority_ok(info.stderr + info.stdout, signer)
+
+
+def _mac_app_from_dmg(row, url, dmg_name, pick, what, signer):
+    """Download a disk image, copy the app `pick` chooses into Applications, and return (ok, why).
+
+    Never over a different app of the same name: the two are told apart by bundle id.
+    """
+    import tempfile
+    work = Path(tempfile.mkdtemp(prefix="app-dmg-"))
+    try:
+        dmg, mount = work / dmg_name, work / "mount"
+        if not _fetch_with_progress(row, url, dmg, 50_000_000):
+            return False, "the download did not finish"
+        _mark(row, "working", "Copying it into Applications")
+        mount.mkdir()
+        subprocess.run(["hdiutil", "attach", str(dmg), "-nobrowse", "-quiet", "-mountpoint", str(mount)], check=True)
+        try:
+            app = next((a for a in mount.glob("*.app") if pick(a)), None)
+            if app is None:
+                return False, f"the download did not hold {what}"
+            if not _codesign_ok(app, signer):
+                return False, f"{what} was not signed by {signer}, so it was not installed"
+            wanted = _mac_app_id(app)
+            folders = ([Path("/Applications")] if os.access("/Applications", os.W_OK) else []) + [Path.home() / "Applications"]
+            target = next((f for f in folders if not (f / app.name).exists() or _mac_app_id(f / app.name) == wanted), None)
+            if target is None:
+                return False, f"another app called {app.name} is in the way"
+            target.mkdir(exist_ok=True)
+            subprocess.run(["ditto", str(app), str(target / app.name)], check=True)
+        finally:
+            subprocess.run(["hdiutil", "detach", str(mount), "-quiet"], check=False)
+        return True, ""
+    except Exception as error:
+        return False, f"{type(error).__name__}: {error}"[:160]
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
 def _get_chatgpt_app():
     import time
     if IS_WINDOWS:
@@ -2646,47 +3317,149 @@ def _get_chatgpt_app():
         return False, "not installed from the Microsoft Store yet"
     if not IS_MAC:
         return False, "no desktop app for this system"
+    worked, why = _mac_app_from_dmg("chatgpt-app", CHATGPT_DMG, "ChatGPT.dmg",
+                                    lambda app: "codex" in _mac_app_id(app).lower(), "the ChatGPT (Codex) app", "OpenAI")
+    if not worked:
+        return False, why
+    CHATGPT_SEEN["installed"] = False
+    return chatgpt_app_installed(), ""
+
+
+# --- The Antigravity desktop app (Google), the main assistant's home when Antigravity is main ---
+# The download address holds the version, so it is read from Google's download page each time.
+
+ANTIGRAVITY_PAGE = "https://antigravity.google/download"
+ANTIGRAVITY_FILES = "https://storage.googleapis.com/antigravity-public/antigravity-hub/"
+
+
+def _antigravity_bundle(app):
+    """The Antigravity app itself: not "Antigravity IDE.app", and not some other app's bundle."""
+    ident = _mac_app_id(app).lower()
+    return app.name == "Antigravity.app" and ("antigravity" in ident or "google" in ident)
+
+
+def _antigravity_url():
+    """The installer's address for this computer, read from Google's download page."""
     import tempfile
-    import urllib.request
-    work = Path(tempfile.mkdtemp(prefix="chatgpt-app-"))
+    arm = _arch() == "arm64"
+    if IS_WINDOWS:
+        tail = "windows-arm/Antigravity-arm64.exe" if arm else "windows-x64/Antigravity-x64.exe"
+    else:
+        tail = "darwin-arm/Antigravity.dmg" if arm else "darwin-x64/Antigravity.dmg"
+    work = Path(tempfile.mkdtemp(prefix="antigravity-page-"))
     try:
-        dmg, mount = work / "ChatGPT.dmg", work / "mount"
+        page = work / "download.html"
+        _download(ANTIGRAVITY_PAGE, page, least=1000)
+        text = page.read_text(encoding="utf-8", errors="ignore").replace("\\/", "/")
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    found = re.search(re.escape(ANTIGRAVITY_FILES) + r"[0-9][0-9.-]*/" + re.escape(tail), text)
+    if not found:
+        raise OSError("Antigravity's download address was not on its download page")
+    return found.group(0)
+
+
+def _google_subject(subject):
+    """The certificate's owner is Google LLC itself, not a name that merely starts that way."""
+    return subject == "CN=Google LLC" or subject.startswith("CN=Google LLC, ")
+
+
+def _signed_by_google(path):
+    """Whether the file carries a valid Windows signature from Google LLC. Anything else is never run."""
+    script = ("$s = Get-AuthenticodeSignature -LiteralPath $env:AGY_FILE; "
+              "if ($s.Status -eq 'Valid' -and $s.SignerCertificate) { $s.SignerCertificate.Subject } else { 'UNSIGNED' }")
+    try:
+        done = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
+                              capture_output=True, timeout=120, stdin=subprocess.DEVNULL,
+                              env=dict(os.environ, AGY_FILE=str(path)))
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    subject = done.stdout.replace(b"\x00", b"").decode("utf-8", "ignore").strip()
+    return done.returncode == 0 and _google_subject(subject)
+
+
+def _windows_antigravity_candidates():
+    import winreg
+    uninstall = r"Software\Microsoft\Windows\CurrentVersion\Uninstall"
+    spots = [(winreg.HKEY_CURRENT_USER, uninstall), (winreg.HKEY_LOCAL_MACHINE, uninstall),
+             (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node" + "\\" + uninstall.split("\\", 1)[1])]
+    for hive, sub in spots:
         try:
-            head = urllib.request.Request(CHATGPT_DMG, method="HEAD", headers={"User-Agent": BROWSER_AGENT})
-            with urllib.request.urlopen(head, timeout=30) as reply:
-                size = int(reply.headers.get("Content-Length") or 0)
-        except (OSError, ValueError):
-            size = 0
-        fetch = subprocess.Popen(["curl", "-fL", "--retry", "2", "-sS", "-A", BROWSER_AGENT, "-o", str(dmg), CHATGPT_DMG],
-                                 stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL)
-        while fetch.poll() is None:
-            have = dmg.stat().st_size if dmg.exists() else 0
-            _mark("chatgpt-app", "working", f"Downloading: {min(99, have * 100 // size)}%" if size else
-                  f"Downloading: {have // 1_000_000} MB")
-            time.sleep(1)
-        if fetch.returncode != 0 or not dmg.exists() or dmg.stat().st_size < 50_000_000:
+            root = winreg.OpenKey(hive, sub)
+        except OSError:
+            continue
+        with root:
+            index = 0
+            while True:
+                try:
+                    key = winreg.EnumKey(root, index)
+                except OSError:
+                    break
+                index += 1
+                try:
+                    with winreg.OpenKey(root, key) as entry:
+                        name = str(winreg.QueryValueEx(entry, "DisplayName")[0]).strip()
+                        if not re.fullmatch(r"Antigravity( [0-9][0-9.-]*)?", name):  # not the IDE, CLI or Tools
+                            continue
+                        for field in ("InstallLocation", "DisplayIcon"):
+                            try:
+                                value = os.path.expandvars(str(winreg.QueryValueEx(entry, field)[0])).strip().strip('"')
+                            except OSError:
+                                continue
+                            value = re.sub(r",\s*-?\d+$", "", value).strip('"')
+                            if value:
+                                yield Path(value) if value.lower().endswith("antigravity.exe") else Path(value) / "Antigravity.exe"
+                                yield Path(value).parent / "Antigravity.exe"
+                except OSError:
+                    continue
+
+
+def antigravity_app():
+    """Where the Antigravity desktop app is on this computer, or None."""
+    if IS_WINDOWS:
+        try:
+            for spot in _windows_antigravity_candidates():
+                if spot.is_file():
+                    return str(spot)
+        except (OSError, ImportError):
+            pass
+        spot = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "Antigravity" / "Antigravity.exe"
+        return str(spot) if spot.is_file() else None
+    if IS_MAC:
+        for base in (Path("/Applications"), Path.home() / "Applications"):
+            app = base / "Antigravity.app"
+            if app.is_dir() and _antigravity_bundle(app):
+                return str(app)
+    return None
+
+
+def _get_antigravity_app():
+    import tempfile
+    import time
+    if not (IS_WINDOWS or IS_MAC):
+        return False, "no desktop app for this system"
+    try:
+        url = _antigravity_url()
+    except OSError as error:
+        return False, str(error)[:160]
+    if IS_MAC:
+        worked, why = _mac_app_from_dmg("agy-app", url, "Antigravity.dmg", _antigravity_bundle, "the Antigravity app", "Google LLC")
+        return (antigravity_app() is not None), why
+    work = Path(tempfile.mkdtemp(prefix="antigravity-app-"))
+    try:
+        setup = work / "Antigravity-setup.exe"
+        if not _fetch_with_progress("agy-app", url, setup, 50_000_000):
             return False, "the download did not finish"
-        _mark("chatgpt-app", "working", "Copying it into Applications")
-        mount.mkdir()
-        subprocess.run(["hdiutil", "attach", str(dmg), "-nobrowse", "-quiet", "-mountpoint", str(mount)], check=True)
-        try:
-            app = next((a for a in mount.glob("*.app") if "codex" in _mac_app_id(a).lower()), None)
-            if app is None:
-                return False, "the download did not hold the ChatGPT (Codex) app"
-            wanted = _mac_app_id(app)
-            folders = ([Path("/Applications")] if os.access("/Applications", os.W_OK) else []) + [Path.home() / "Applications"]
-            # Never over a different app of the same name (the older ChatGPT chat app is ChatGPT.app too).
-            target = next((f for f in folders if not (f / app.name).exists() or _mac_app_id(f / app.name) == wanted), None)
-            if target is None:
-                return False, f"another app called {app.name} is in the way"
-            target.mkdir(exist_ok=True)
-            subprocess.run(["ditto", str(app), str(target / app.name)], check=True)
-        finally:
-            subprocess.run(["hdiutil", "detach", str(mount), "-quiet"], check=False)
-        CHATGPT_SEEN["installed"] = False
-        return chatgpt_app_installed(), ""
-    except Exception as error:
-        return False, f"{type(error).__name__}: {error}"[:160]
+        _mark("agy-app", "working", "Checking that it is from Google")
+        if not _signed_by_google(setup):
+            return False, "the download was not signed by Google, so it was not run"
+        _mark("agy-app", "working", "Installing")
+        worked, note = _run([str(setup), "/S"], timeout=900)  # an NSIS installer: /S is silent
+        for _ in range(30):  # the files can land a moment after the installer returns
+            if antigravity_app():
+                return True, ""
+            time.sleep(2)
+        return False, "" if worked else note
     finally:
         shutil.rmtree(work, ignore_errors=True)
 
@@ -2697,37 +3470,368 @@ def _get_gh():
     return gh_path() is not None, ""
 
 
+# --- Publishing: Vercel puts websites online, Supabase holds the data they save ---
+# Everyone gets both tools, so "put this online" works on day one. Nothing here asks for an
+# admin password: on a Mac, Node and the tools live in the person's own ~/.local folder.
+
+def _arch():
+    import platform
+    return "arm64" if platform.machine().lower() in ("arm64", "aarch64") else "amd64"
+
+
+def _first_file(*spots):
+    return next((str(spot) for spot in spots if spot.is_file()), None)
+
+
+def node_path():
+    if IS_WINDOWS:
+        return shutil.which("node") or _first_file(Path.home() / ".local" / "node" / "node.exe",
+                                                   Path(os.environ.get("ProgramFiles", "")) / "nodejs" / "node.exe")
+    return shutil.which("node") or _first_file(Path.home() / ".local" / "bin" / "node")
+
+
+def npm_path():
+    if IS_WINDOWS:
+        return shutil.which("npm") or _first_file(Path.home() / ".local" / "node" / "npm.cmd",
+                                                  Path(os.environ.get("ProgramFiles", "")) / "nodejs" / "npm.cmd")
+    return shutil.which("npm") or _first_file(Path.home() / ".local" / "bin" / "npm")
+
+
+def vercel_path():
+    if IS_WINDOWS:
+        return shutil.which("vercel") or _first_file(Path(os.environ.get("APPDATA", "")) / "npm" / "vercel.cmd")
+    return shutil.which("vercel") or _first_file(Path.home() / ".local" / "bin" / "vercel")
+
+
+def supabase_path():
+    return shutil.which("supabase") or _first_file(Path.home() / ".local" / "bin" / ("supabase.exe" if IS_WINDOWS else "supabase"))
+
+
+def _check_tar_members(members):
+    """Refuse a tar file with anything outside its folder, behind a link, or a link to or through a link."""
+    def norm(path):  # lower case too: a Mac's disk does not tell Lnk from lnk
+        return os.path.normpath(path).replace("\\", "/").lower()
+
+    links = {norm(m.name) for m in members if m.issym() or m.islnk()}
+
+    def outside(path):
+        path = path.replace("\\", "/")
+        return os.path.isabs(path) or path.startswith("/") or path == ".." or path.startswith("../")
+
+    def through_link(path):
+        while path and path != ".":
+            if path in links:
+                return True
+            above = os.path.dirname(path)
+            if above == path:  # the root: nothing above it
+                break
+            path = above
+        return False
+
+    def walks_through_link(path):
+        """Follow a link's target one step at a time: `..` after a link would leave by way of it."""
+        here = []
+        for part in path.replace("\\", "/").split("/"):
+            part = part.lower()
+            if part in ("", "."):
+                continue
+            if part == "..":
+                if not here:
+                    return False
+                here.pop()
+                continue
+            here.append(part)
+            if "/".join(here) in links:
+                return True
+        return False
+
+    for member in members:
+        if ".." in re.split(r"[/\\]", member.name):
+            raise OSError("the download had a file in an odd place")
+        name = norm(member.name)
+        if outside(name):
+            raise OSError("the download had a file in an odd place")
+        if walks_through_link(member.name.replace("\\", "/").rpartition("/")[0]):
+            raise OSError("the download had a file behind a link")
+        if through_link(os.path.dirname(name)):
+            raise OSError("the download had a file behind a link")
+        if member.issym() or member.islnk():
+            base = os.path.dirname(name) if member.issym() else ""
+            if os.path.isabs(member.linkname):
+                raise OSError("the download had a link in an odd place")
+            target = norm(os.path.join(base, member.linkname))
+            if outside(target):
+                raise OSError("the download had a link in an odd place")
+            if walks_through_link(os.path.join(base, member.linkname)):
+                raise OSError("the download had a link that goes through another link")
+        elif not (member.isreg() or member.isdir()):
+            raise OSError("the download had an odd file in it")
+
+
+def _safe_extract(archive, dest):
+    """Unpack a tar file, refusing anything that would land outside dest."""
+    import tarfile
+    root = Path(dest).resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    if hasattr(tarfile, "data_filter"):
+        archive.extractall(root, filter="data")
+        return
+    # The Mac's own Python 3.9 has no safe mode: nothing may pass through a link, and links come last.
+    members = archive.getmembers()
+    _check_tar_members(members)
+    archive.extractall(root, members=[m for m in members if m.isreg() or m.isdir()])
+    archive.extractall(root, members=[m for m in members if m.issym() or m.islnk()])
+
+
+def _persist_path(*folders):
+    """Keep these folders on the PATH for windows and apps opened later."""
+    if IS_WINDOWS:
+        import ctypes
+        import winreg
+        try:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Volatile Environment") as key:
+                real_home = winreg.QueryValueEx(key, "USERPROFILE")[0]
+            if Path(real_home).resolve() != Path.home().resolve():
+                return  # a test with a pretend home must not touch the real account
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment", 0, winreg.KEY_READ | winreg.KEY_WRITE) as key:
+                try:
+                    current, kind = winreg.QueryValueEx(key, "Path")
+                except FileNotFoundError:
+                    current, kind = "", winreg.REG_EXPAND_SZ
+                parts = [part for part in current.split(";") if part]
+                have = {os.path.normcase(os.path.expandvars(part)).rstrip("\\") for part in parts}
+                add = [str(f) for f in folders if os.path.normcase(str(f)).rstrip("\\") not in have]
+                if add:
+                    winreg.SetValueEx(key, "Path", 0, kind, ";".join(parts + add))
+                    ctypes.windll.user32.SendMessageTimeoutW(0xFFFF, 0x001A, 0, "Environment", 2, 2000, None)
+        except OSError:
+            pass
+        return
+    line = 'export PATH="$HOME/.local/bin:$PATH"  # added by assistant setup\n'
+    for name in (".zprofile", ".zshrc"):
+        path = Path.home() / name
+        try:
+            text = path.read_text(encoding="utf-8", errors="ignore") if path.exists() else ""
+            if ".local/bin" not in text:
+                path.write_text(text + ("" if not text or text.endswith("\n") else "\n") + line, encoding="utf-8")
+        except OSError:
+            pass
+
+
+def _keep_tools_on_path():
+    if IS_WINDOWS:
+        _persist_path(Path.home() / ".local" / "bin", Path.home() / ".local" / "node",
+                      Path(os.environ.get("APPDATA", "")) / "npm")
+    else:
+        _persist_path(Path.home() / ".local" / "bin")
+
+
+def _sha256(path):
+    import hashlib
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for block in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _get_node():
+    """Node's own download, checked against its published checksum and kept in ~/.local/node,
+    so neither Windows nor a Mac asks for an admin password."""
+    import tarfile
+    import tempfile
+    import time
+    system = "win" if IS_WINDOWS else "darwin" if IS_MAC else None
+    if system is None:
+        return False, "only Windows and Mac are covered"
+    work = Path(tempfile.mkdtemp(prefix="node-"))
+    try:
+        _download("https://nodejs.org/dist/index.json", work / "index.json", least=1000)
+        version = next(r["version"] for r in json.loads((work / "index.json").read_text(encoding="utf-8")) if r.get("lts"))
+        if not re.fullmatch(r"v\d+\.\d+\.\d+", version):
+            return False, "Node's list of versions looked wrong"
+        folder = f"node-{version}-{system}-{'arm64' if _arch() == 'arm64' else 'x64'}"
+        name = folder + (".zip" if IS_WINDOWS else ".tar.gz")
+        base = f"https://nodejs.org/dist/{version}/"
+        _download(base + name, work / name)
+        _download(base + "SHASUMS256.txt", work / "sums.txt", least=100)
+        sums = {}
+        for line in (work / "sums.txt").read_text(encoding="utf-8").splitlines():
+            if len(line.split()) == 2:
+                sums[line.split()[1]] = line.split()[0]
+        if sums.get(name) != _sha256(work / name):
+            return False, "the Node download did not match its checksum"
+        if IS_WINDOWS:
+            with zipfile.ZipFile(work / name) as archive:
+                archive.extractall(work / "out")  # zipfile drops anything aimed outside the folder
+        else:
+            with tarfile.open(work / name) as archive:
+                _safe_extract(archive, work / "out")
+        unpacked = work / "out" / folder
+        if not (unpacked / ("node.exe" if IS_WINDOWS else "bin/node")).is_file():
+            return False, "the Node download had no program in it"
+        home = Path.home() / ".local"
+        home.mkdir(parents=True, exist_ok=True)
+        target = home / "node"
+        if target.exists() or target.is_symlink():
+            target.rename(home / f"node.before-setup-{int(time.time())}")  # set aside, never deleted
+        shutil.move(str(unpacked), str(target))
+        if not IS_WINDOWS:
+            (home / "bin").mkdir(exist_ok=True)
+            for tool in ("node", "npm", "npx"):
+                link = home / "bin" / tool
+                if link.is_symlink() or not link.exists():
+                    if link.is_symlink():
+                        link.unlink()
+                    link.symlink_to(target / "bin" / tool)
+        _keep_tools_on_path()
+        return True, ""
+    except Exception as error:
+        return False, str(error)[:160]
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+def _get_vercel():
+    """Vercel's own command-line tool, from npm, in a folder of the person's own (no admin password)."""
+    npm = npm_path()
+    if npm is None:
+        return False, "Node.js has to install first"
+    prefix = Path(os.environ.get("APPDATA", "")) / "npm" if IS_WINDOWS else Path.home() / ".local"
+    prefix.mkdir(parents=True, exist_ok=True)
+    # The prefix goes in the environment: two quoted paths on one command line break cmd.exe's .cmd files.
+    worked, note = _run([npm, "install", "--global", "vercel@latest", "--no-fund", "--no-audit"],
+                        timeout=900, env=dict(os.environ, NPM_CONFIG_PREFIX=str(prefix)))
+    if worked:
+        _keep_tools_on_path()
+    return worked, note
+
+
+def _get_supabase():
+    """Supabase's command-line tool: one file from its latest GitHub release, checked against
+    the release's checksums and put in ~/.local/bin (npm does not offer it as a global tool)."""
+    import tarfile
+    import tempfile
+    system = "windows" if IS_WINDOWS else "darwin" if IS_MAC else None
+    if system is None:
+        return False, "only Windows and Mac are covered"
+    want = f"supabase_{system}_{_arch()}.tar.gz"
+    base = "https://github.com/supabase/cli/releases/latest/download/"
+    work = Path(tempfile.mkdtemp(prefix="supabase-"))
+    try:
+        _download(base + want, work / want)
+        _download(base + "checksums.txt", work / "sums.txt", least=100)
+        digest = _sha256(work / want)
+        good = {line.split()[0] for line in (work / "sums.txt").read_text(encoding="utf-8").splitlines()
+                if len(line.split()) == 2 and line.split()[1].lstrip("*").endswith(f"_{system}_{_arch()}.tar.gz")}
+        if digest not in good:
+            return False, "the Supabase download did not match its checksum"
+        exe = "supabase.exe" if IS_WINDOWS else "supabase"
+        target = Path.home() / ".local" / "bin" / exe
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if target.exists() and not target.is_symlink():
+            return False, f"another {exe} is in the way"
+        if target.is_symlink():
+            target.unlink()
+        fresh = target.with_name(exe + ".new")
+        with tarfile.open(work / want) as archive:
+            member = next((m for m in archive.getmembers() if m.isreg() and Path(m.name).name == exe), None)
+            if member is None:
+                return False, "the Supabase download had no program in it"
+            with archive.extractfile(member) as source, open(fresh, "wb") as out:
+                shutil.copyfileobj(source, out)
+        if not IS_WINDOWS:
+            fresh.chmod(0o755)
+        os.replace(fresh, target)  # all at once: a cut-off download never looks installed
+        _keep_tools_on_path()
+        return True, ""
+    except Exception as error:
+        return False, str(error)[:160]
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+# Claude's add-ons for both, from Anthropic's official plugin list: Vercel's own guide to
+# deploying (its context loads only in website folders) and Supabase's database tools.
+CLAUDE_PLUGINS = ("vercel@claude-plugins-official", "supabase@claude-plugins-official")
+
+
+def claude_plugins_in():
+    listed = Path.home() / ".claude" / "plugins" / "installed_plugins.json"
+    try:
+        have = json.loads(listed.read_text(encoding="utf-8-sig")).get("plugins")
+    except (OSError, ValueError, AttributeError):
+        return False
+    if not isinstance(have, dict):
+        return False
+    return all(isinstance(have.get(plugin), list)
+               and any(isinstance(entry, dict) and entry.get("scope") == "user" for entry in have[plugin])
+               for plugin in CLAUDE_PLUGINS)
+
+
+def _get_claude_plugins():
+    import time
+    for _ in range(360):  # Claude Code and git may still be installing; on a Mac git waits on a click
+        if claude_cli() and _has_git():
+            break
+        with INSTALL_LOCK:
+            states = {row["id"]: row["state"] for row in INSTALLS}
+        if "failed" in (states.get("claude-code"), states.get("git")):
+            return False, "Claude Code or Git could not be installed first"
+        _mark("claude-plugins", "working", "Waiting for Claude Code and Git to finish")
+        time.sleep(10)
+    claude = claude_cli()
+    if claude is None or not _has_git():
+        return False, "Claude Code or Git is not ready"
+    _mark("claude-plugins", "working", "")
+    env = plain_env()
+    _run([claude, "plugin", "marketplace", "add", "anthropics/claude-plugins-official"], timeout=300, env=env)
+    note = ""
+    for plugin in CLAUDE_PLUGINS:
+        worked, said = _run([claude, "plugin", "install", plugin, "--scope", "user"], timeout=600, env=env)
+        note = note or ("" if worked else said)
+    return claude_plugins_in(), note
+
+
 def install_plan():
     """What this kind of computer needs, in the order it is fetched."""
     plan = [
         ("claude-code", "Claude Code", lambda: claude_cli() is not None, _get_claude_code, "the engine your assistant runs on"),
         ("claude-app", "The Claude app", claude_app_installed, _get_claude_app, "where you will talk to it"),
         ("chatgpt-app", "The ChatGPT app", chatgpt_app_installed, _get_chatgpt_app, "where you will talk to it"),
+        ("agy-app", "The Antigravity app", lambda: antigravity_app() is not None, _get_antigravity_app,
+         "where you will talk to it"),
         ("chrome", "Google Chrome", _has_chrome, _get_chrome, "for your web tools"),
         ("gh", "GitHub tool", lambda: gh_path() is not None, _get_gh, "for backing up your notes"),
     ]
     if IS_WINDOWS:
         plan.insert(0, ("git", "Git", _has_git, _get_git, "Claude needs it to run commands"))
-        plan.append(("node", "Node.js", lambda: shutil.which("node") is not None,
-                     lambda: _winget("OpenJS.NodeJS.LTS"), "for add-on skills"))
     elif IS_MAC:
         plan.append(("git", "Apple developer tools (Git)", _has_git, _get_git, "for backups; the slow one"))
+    plan += [
+        ("node", "Node.js", lambda: node_path() is not None, _get_node, "for add-on skills and publishing"),
+        ("vercel", "Vercel tool", lambda: vercel_path() is not None, _get_vercel, "puts your websites online"),
+        ("supabase", "Supabase tool", lambda: supabase_path() is not None, _get_supabase, "databases for your apps"),
+        ("claude-plugins", "Vercel and Supabase add-ons for Claude", claude_plugins_in, _get_claude_plugins,
+         "so Claude knows how to publish"),
+    ]
     return plan
 
 
-LONG_STEPS = {"chatgpt-app"} | ({"git"} if IS_MAC else set())
+LONG_STEPS = {"chatgpt-app", "agy-app", "claude-plugins"} | ({"git"} if IS_MAC else set())
 
 
-def run_installs(blocking=False, claude=True, claude_app=None, chatgpt_app=False):
+def run_installs(blocking=False, claude=True, claude_app=None, chatgpt_app=False, antigravity_app=False):
     """Fetch whatever is missing. Each row moves waiting -> working -> done or failed.
 
     Every assistant picked gets its command-line tool; only the main one gets its desktop
-    app (`claude_app`, `chatgpt_app`). Safe to call again: it only adds what an earlier call
+    app (`claude_app`, `chatgpt_app`, `antigravity_app`). Safe to call again: it only adds what an earlier call
     left out (Claude's pieces, when the person turned out to want Claude after all).
     """
     refresh_path()
     claude_app = claude if claude_app is None else claude_app
-    wanted = {"claude-code": claude, "claude-app": claude and claude_app, "chatgpt-app": chatgpt_app}
+    wanted = {"claude-code": claude, "claude-app": claude and claude_app, "chatgpt-app": chatgpt_app,
+              "agy-app": antigravity_app, "claude-plugins": claude}
     plan = [step for step in install_plan() if wanted.get(step[0], True)]
     with INSTALL_LOCK:
         here = {row["id"] for row in INSTALLS}
@@ -2803,7 +3907,7 @@ is its `SKILL.md`) and follow it. Access tokens they mention are in `.env` in th
 EXTRAS = {
     "agy": {
         "label": "Gemini (Antigravity)", "short": "Antigravity", "command": "agy", "maker": "Google's assistant",
-        "account": "your work Google account", "never": "",
+        "account": "a personal Google account (Gmail)", "never": "",  # Workspace accounts have no Antigravity plan
         "windows": "irm https://antigravity.google/cli/install.ps1 | iex",
         "unix": "curl -fsSL https://antigravity.google/cli/install.sh | bash",
     },
@@ -2869,9 +3973,75 @@ def chosen_extras(a):
     picked = {t for t in a["tools"] if isinstance(t, str)} if isinstance(a.get("tools"), list) else set()
     if a.get("agy"):  # answers written before there was a picker
         picked.add("agy")
-    if chosen_main(a) == "codex":
-        picked.add("codex")
+    if chosen_main(a) in ("codex", "agy"):
+        picked.add(chosen_main(a))
     return [tool for tool in EXTRAS if tool in picked]
+
+
+# Where each non-Claude main assistant lives, for the page's list of what was set up.
+APP_WHERE = {"codex": EXTRAS["codex"]["where"], "agy": "in the Antigravity app"}
+
+
+def team_tools(a):
+    """The assistants picked beside the main one, in a fixed order."""
+    main = chosen_main(a)
+    picked = [t for t in ["claude"] + list(EXTRAS) if (uses_claude(a) if t == "claude" else t in chosen_extras(a))]
+    return [t for t in picked if t != main]
+
+
+TEAM_CALLS = {
+    "claude": ("Claude", 'claude -p "<task>" --permission-mode plan', ""),
+    "codex": ("Codex", 'echo "" | codex exec -s read-only "<task>"', ""),
+    "grok": ("Grok", 'echo "" | grok -p "<task>" --tools "read_file,grep,list_dir" --disable-web-search '
+                     '--output-format json --max-turns 60 --cwd "<this folder>"', " (the answer is the `.text` field)"),
+    "agy": ("Antigravity", 'agy -p "<task>" --mode plan --print-timeout 5m',
+            " (it can print nothing: treat that as a failure)"),
+}
+
+
+def write_team_skill(a, workspace):
+    """A skill that lets the main assistant ask the others for help. Only for assistants this person picked."""
+    team = team_tools(a)
+    spots = [workspace / ".claude" / "skills" / "team", workspace / ".agents" / "skills" / "team"]
+    if not team:
+        for spot in spots:
+            shutil.rmtree(spot, ignore_errors=True)
+        return
+    calls = "\n".join(f"- {TEAM_CALLS[t][0]}: `{TEAM_CALLS[t][1]}`{TEAM_CALLS[t][2]}" for t in team)
+    text = f"""---
+name: team
+description: "Ask the other assistants on this computer for help. Use when the person asks for a second opinion, says check this or review this, wants big research split up, or when you hit a usage limit."
+---
+
+# Ask the other assistants
+
+The person set up more than one assistant. You can ask the others for help from this folder.
+
+## When to use them
+
+- A second opinion on important work before it goes out.
+- Splitting big research into parts.
+- Carrying on when you hit your own usage limit.
+
+Not for small tasks. At most three at once.
+
+## Rules
+
+- They only read. They never change files or send anything.
+- Give the reviewer the work and what good looks like. Never give them your own conclusion.
+- Never pass them `.env`, keys, tokens or passwords.
+- Treat their answer as advice to check, then tell the person which assistant said what.
+- If one fails or returns nothing, say so in one line and carry on yourself.
+
+## How to call each one
+
+Run these from this folder, with the task in place of `<task>`:
+
+{calls}
+"""
+    for spot in spots:
+        spot.mkdir(parents=True, exist_ok=True)
+        (spot / "SKILL.md").write_text(text, encoding="utf-8")
 
 
 # Claude when another assistant is the main one: its command-line tool, opened in a terminal.
@@ -2886,6 +4056,17 @@ def launcher(tool, workspace):
     return workspace / f"Open {side_spec(tool)['short']}{'.cmd' if IS_WINDOWS else '.command'}"
 
 
+def agy_open_lines(folder, shell):
+    """Open the Antigravity app on the folder if it is installed, else fall through to the terminal tool."""
+    if shell == "cmd":
+        return ['set "AGYAPP=%LOCALAPPDATA%\\Programs\\Antigravity\\Antigravity.exe"',
+                'if not exist "%AGYAPP%" set "AGYAPP=%ProgramFiles%\\Antigravity\\Antigravity.exe"',
+                f'if exist "%AGYAPP%" start "" "%AGYAPP%" "{folder}"',
+                'if exist "%AGYAPP%" exit']
+    return ['APP=""', 'for d in /Applications "$HOME/Applications"; do [ -d "$d/Antigravity.app" ] && APP="$d/Antigravity.app"; done',
+            f'if [ -n "$APP" ]; then open -a "$APP" "{folder}"; exit 0; fi']
+
+
 def write_launcher(tool, workspace, never_asks, main="claude"):
     """A file in the folder that opens the tool there. Rewritten each run, so it follows the latest choice.
 
@@ -2896,15 +4077,18 @@ def write_launcher(tool, workspace, never_asks, main="claude"):
     run = (spec.get("run") if tool != "codex" or main == "codex" else None) \
         or spec["command"] + (" " + spec["never"] if never_asks and spec["never"] else "")
     target = launcher(tool, workspace)
+    app_first = tool == "agy" and main == "agy"  # the app when it is there, else the terminal tool
     if IS_WINDOWS:
         lines = ["@echo off", f"title {spec['short']}", 'cd /d "%~dp0"',
                  'set "PATH=%LOCALAPPDATA%\\agy\\bin;%LOCALAPPDATA%\\Programs\\OpenAI\\Codex\\bin;'
-                 '%USERPROFILE%\\.grok\\bin;%USERPROFILE%\\.local\\bin;%PATH%"',
-                 f"call {run}", "if errorlevel 1 pause"] + (["exit"] if "run" in spec else []) + [""]
+                 '%USERPROFILE%\\.grok\\bin;%USERPROFILE%\\.local\\bin;%PATH%"']
+        lines += agy_open_lines("%~dp0.", "cmd") if app_first else []
+        lines += [f"call {run}", "if errorlevel 1 pause"] + (["exit"] if "run" in spec else []) + [""]
         target.write_bytes("\r\n".join(lines).encode("ascii"))
     else:
+        head = "\n".join(agy_open_lines("$PWD", "sh")) + "\n" if app_first else ""
         target.write_text('#!/bin/bash\ncd "$(dirname "$0")" || exit 1\n'
-                          'export PATH="$HOME/.local/bin:$HOME/.grok/bin:$PATH"\n' + run + "\n", encoding="utf-8")
+                          'export PATH="$HOME/.local/bin:$HOME/.grok/bin:$PATH"\n' + head + run + "\n", encoding="utf-8")
         target.chmod(0o755)
 
 
@@ -2936,7 +4120,7 @@ def write_agy_settings(workspace, never_asks, log):
 
 # --- Which assistant is the main one: detected from what is already here ---------------
 
-MAINS = ("claude", "codex")   # the ones setup can build its walk-through around
+MAINS = ("claude", "codex", "agy")   # the ones setup can build its walk-through around
 CODEX_LOGIN = {"running": False}
 DETECTED = {}
 OURS = "  # set by assistant setup"
@@ -2953,14 +4137,70 @@ def codex_signed_in():
         return False
 
 
+def _grok_signed_in():
+    """True/False from `grok models` (it exits 0 either way and says which); None if it says neither."""
+    exe = tool_path("grok")
+    if exe is None:
+        return False
+    try:
+        done = subprocess.run([exe, "models"], capture_output=True, timeout=30, stdin=subprocess.DEVNULL)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return _grok_login_text(done.stdout + done.stderr)
+
+
+def _grok_login_text(raw):
+    text = raw.decode("utf-8", "ignore").lower() if isinstance(raw, bytes) else str(raw).lower()
+    if "not authenticated" in text:
+        return False
+    if "you are logged in" in text:
+        return True
+    return None
+
+
+def _in_parallel(jobs):
+    """Run each job in its own thread; a job that fails gives None. Returns {name: result}."""
+    results = {}
+
+    def run(name, job):
+        try:
+            results[name] = job()
+        except Exception:
+            results[name] = None
+
+    threads = [threading.Thread(target=run, args=item, daemon=True) for item in jobs.items()]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(60)
+    return {name: results.get(name) for name in jobs}
+
+
+def _claude_signed_in():
+    return bool(claude_cli()) and claude_account().get("state") in ("work", "other")
+
+
+def _assistant_rows():
+    """Each assistant's sign-in and desktop app, checked side by side. None means "cannot tell"."""
+    got = _in_parallel({
+        "claude": _claude_signed_in, "claude_app": claude_app_installed,
+        "codex": codex_signed_in, "codex_app": chatgpt_app_installed,
+        "grok": _grok_signed_in, "agy_app": lambda: antigravity_app() is not None,
+    })
+    return {"claude": {"signedIn": got["claude"], "app": got["claude_app"]},
+            "codex": {"signedIn": got["codex"], "app": got["codex_app"]},
+            "grok": {"signedIn": got["grok"], "app": None},
+            "agy": {"signedIn": None, "app": got["agy_app"]}}  # nothing proves an Antigravity sign-in
+
+
 def detect():
     """What was on this computer before setup installed anything: each assistant, and whether it is signed in."""
     cli = claude_cli()
+    rows = _assistant_rows()
     found = {
-        "claude": {"installed": bool(cli) or claude_app_installed(),
-                   "signedIn": bool(cli) and claude_account().get("state") in ("work", "other")},
-        "codex": {"installed": tool_path("codex") is not None, "signedIn": codex_signed_in()},
-        "grok": {"installed": tool_path("grok") is not None, "signedIn": (Path.home() / ".grok" / "auth.json").is_file()},
+        "claude": {"installed": bool(cli) or bool(rows["claude"]["app"]), "signedIn": bool(rows["claude"]["signedIn"])},
+        "codex": {"installed": tool_path("codex") is not None, "signedIn": bool(rows["codex"]["signedIn"])},
+        "grok": {"installed": tool_path("grok") is not None, "signedIn": bool(rows["grok"]["signedIn"])},
         "agy": {"installed": tool_path("agy") is not None, "signedIn": None},  # no quiet way to ask it
     }
     DETECTED.clear()
@@ -2968,9 +4208,30 @@ def detect():
     return found
 
 
+ASSISTANTS = {"rows": {}, "checking": False, "at": 0.0}  # no rows until the first real look is done
+
+
+def _read_assistants():
+    try:
+        ASSISTANTS["rows"] = _assistant_rows()
+    finally:
+        ASSISTANTS.update(checking=False, at=__import__("time").time())
+
+
+def assistants_status():
+    """Who is signed in and which apps are here, from the last look. A new look runs in the background."""
+    import time
+    if time.time() - ASSISTANTS["at"] > 5 and not ASSISTANTS["checking"]:
+        ASSISTANTS["checking"] = True
+        threading.Thread(target=_read_assistants, daemon=True).start()
+    return {"ok": True, "checking": ASSISTANTS["checking"], "rows": ASSISTANTS["rows"]}
+
+
 def default_main():
     """The install file's first choice if it names one; else what the person already uses; else Claude."""
-    named = [w for w in _install_setting("ASSISTANT_DEFAULT_TOOLS", "A-Za-z,").lower().split(",") if w in MAINS]
+    other_names = {"gemini": "agy", "antigravity": "agy"}
+    words = [other_names.get(w, w) for w in _install_setting("ASSISTANT_DEFAULT_TOOLS", "A-Za-z,").lower().split(",")]
+    named = [w for w in words if w in MAINS]
     if named:
         return named[0]
     for wanted in ("signedIn", "installed"):
@@ -3095,6 +4356,7 @@ def write_extras(a, workspace, name, extras, log):
             launcher(tool, workspace).unlink()
     if claude_side:  # Claude beside another main assistant: the terminal tool, not the app
         write_launcher("claude", workspace, False, main)
+    write_team_skill(a, workspace)  # before the agents' own copy of the skills is made below
     if not extras:
         return
     never_asks = bool(a.get("extrasBypass", a.get("agyBypass", True)))
@@ -3108,7 +4370,10 @@ def write_extras(a, workspace, name, extras, log):
     for tool in extras:
         write_launcher(tool, workspace, never_asks, main)
     if "agy" in extras:
-        write_agy_settings(workspace, never_asks, log)
+        # As the main assistant, Antigravity follows the Permissions choice, the way Codex does.
+        write_agy_settings(workspace, a.get("mode", "bypassPermissions") == "bypassPermissions" if main == "agy"
+                           else never_asks, log)
+        write_agent_skills(workspace)  # Antigravity runs .agents/skills/<name> when you type /<name>
     if "codex" in extras:
         # As the main assistant, Codex follows the Permissions choice, the way Claude does.
         as_main = chosen_main(a) == "codex"
@@ -3159,6 +4424,19 @@ def open_extra(tool, folder=""):
         try:
             hidden = {"creationflags": 0x08000000} if IS_WINDOWS else {"start_new_session": True}  # CREATE_NO_WINDOW
             subprocess.Popen([tool_path("codex"), "app", str(workspace)], cwd=str(workspace), stdin=subprocess.DEVNULL,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **hidden)
+            return True
+        except OSError:
+            return False
+    if tool == "agy" and chosen_main(LAST["answers"] or {}) == "agy":
+        app = antigravity_app()
+        if not app:
+            return False  # the page shows the app's install row instead of a terminal installer
+        try:
+            if IS_MAC:
+                return subprocess.run(["open", "-a", app, str(workspace)], capture_output=True).returncode == 0
+            hidden = {"creationflags": 0x08000000} if IS_WINDOWS else {"start_new_session": True}
+            subprocess.Popen([app, str(workspace)], cwd=str(workspace), stdin=subprocess.DEVNULL,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **hidden)
             return True
         except OSError:
@@ -3215,7 +4493,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send((PAGE.parent / self.path[1:]).read_bytes(), "image/png")
         elif self.path == "/options":
             self.send({
-                "names": NAMES, "roles": ROLES, "styles": list(STYLES), "colors": {k: v[0] for k, v in COLORS.items()},
+                "names": NAMES, "styles": list(STYLES), "colors": {k: v[0] for k, v in COLORS.items()},
                 "modes": MODES, "home": str(Path.home()), "sep": os.sep,
                 "bridge": bridge_ready(), "workDomain": WORK_DOMAIN, "brand": BRAND,
                 "preset": PRESET, "industries": {k: v[0] for k, v in INDUSTRIES.items()},
@@ -3226,11 +4504,11 @@ class Handler(BaseHTTPRequestHandler):
                 "main": default_main(),
                 "tools": [dict(row, here=bool(DETECTED.get(row["id"], {}).get("installed")),
                                signedIn=DETECTED.get(row["id"], {}).get("signedIn"), canMain=row["id"] in MAINS,
-                               on=row["on"] or bool(DETECTED.get(row["id"], {}).get("installed")) or row["id"] == default_main())
+                               on=row["on"] or bool(DETECTED.get(row["id"], {}).get("installed")))
                           for row in [{"id": "claude", "label": "Claude", "maker": "Anthropic's assistant, in the Claude desktop app",
                                        "account": "your work Claude account",
                                        "on": "claude" in _install_setting("ASSISTANT_DEFAULT_TOOLS", "A-Za-z,").lower().split(",")}]
-                          + [{"id": t, "label": s["label"], "maker": s["maker"] + ", " + s.get("where", "in the terminal"),
+                          + [{"id": t, "label": s["label"], "maker": s["maker"] + ", " + s.get("where") if s.get("where") else s["maker"] + ", " + APP_WHERE.get(t, "in the terminal"),
                               "account": s["account"], "on": t in DEFAULT_TOOLS} for t, s in EXTRAS.items()]],
             })
         else:
@@ -3257,7 +4535,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send({"ok": True, "claude": open_claude(str(body.get("folder") or ""))})
         elif self.path == "/tool/open":
             tool = body.get("tool") if body.get("tool") in EXTRAS or body.get("tool") == "claude" else ""
-            app = next((dict(r) for r in INSTALLS if r["id"] == "chatgpt-app"), None) if tool == "codex" else None
+            row_id = {"codex": "chatgpt-app", "agy": "agy-app"}.get(tool)
+            app = next((dict(r) for r in INSTALLS if r["id"] == row_id), None) if row_id else None
             self.send({"ok": bool(tool), "opened": bool(tool) and open_extra(tool, str(body.get("folder") or "")),
                        "installed": bool(tool) and tool_path(tool) is not None, "app": app})
         elif self.path == "/codex/status":
@@ -3267,12 +4546,15 @@ class Handler(BaseHTTPRequestHandler):
             self.send(dict(codex_account(), waiting=True))
         elif self.path == "/connectors/status":
             self.send(connectors_status(bool(body.get("fresh"))))
+        elif self.path == "/assistants/status":
+            self.send(assistants_status())
         elif self.path == "/installs/status":
             self.send(installs_status())
         elif self.path == "/installs/start":  # the first question is answered: fetch those assistants' pieces now
             if not os.environ.get("ASSISTANT_SKIP_INSTALLS"):
                 run_installs(claude=body.get("claude") is True, claude_app=body.get("claudeApp") is True,
-                             chatgpt_app=body.get("chatgptApp") is True)
+                             chatgpt_app=body.get("chatgptApp") is True,
+                             antigravity_app=body.get("antigravityApp") is True)
             self.send(installs_status())
         elif self.path == "/account/status":
             self.send(claude_account())
@@ -3282,7 +4564,8 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/app/status":
             self.send(claude_app_status())
         elif self.path == "/app/install":
-            ensure_claude_app()
+            if not claude_app_row_active():  # the install list is already on it: never a second installer
+                ensure_claude_app()
             self.send(claude_app_status())
         elif self.path == "/chrome":
             self.send({"ok": body.get("page") in CHROME_PAGES,
@@ -3294,8 +4577,11 @@ class Handler(BaseHTTPRequestHandler):
                 self.send({"ok": False, "error": f"{type(error).__name__}"})
         elif self.path == "/window/open":
             page = body.get("page")
-            self.send({"ok": page in CHROME_PAGES, "how": open_window(page, CHROME_PAGES[page]) if page in CHROME_PAGES else "",
-                       "mac": MAC_CONTROL["state"]})
+            url = GOOGLE_ADD_ACCOUNT if page == "google" and body.get("add") is True else CHROME_PAGES.get(page)
+            how = open_window(page, url) if page in CHROME_PAGES else ""
+            if page == "google" and how == "tracked":
+                watch_google_window()
+            self.send({"ok": page in CHROME_PAGES, "how": how, "mac": MAC_CONTROL["state"]})
         elif self.path == "/window/close":
             page = str(body.get("page") or "")
             self.send({"ok": True, "closed": page in CHROME_PAGES and close_window(page)})
@@ -3326,6 +4612,20 @@ class Handler(BaseHTTPRequestHandler):
             self.send(org_claim(str(body.get("org") or "").strip()))
         elif self.path == "/github/org/apply":
             self.send(org_apply())
+        elif self.path == "/publish/status":
+            self.send(publish_status())
+        elif self.path == "/vercel/connect":
+            vercel_connect()
+            self.send(publish_status())
+        elif self.path == "/supabase/connect":
+            supabase_connect()
+            self.send(publish_status())
+        elif self.path == "/supabase/token":
+            self.send(supabase_token(str(body.get("token") or "")))
+        elif self.path == "/chatgpt/apps":
+            self.send(chatgpt_apps_status())
+        elif self.path == "/chatgpt/apps/connect":
+            self.send(chatgpt_app_connect(str(body.get("app") or "")))
         elif self.path == "/quit":
             self.send({"ok": True})
             threading.Thread(target=self.server.shutdown, daemon=True).start()
@@ -3343,8 +4643,10 @@ def main():
     if args.answers:
         answers = json.loads(Path(args.answers).read_text(encoding="utf-8"))
         # The test machines skip the ChatGPT app: a 580 MB download proves nothing setup does.
-        run_installs(blocking=True, claude=uses_claude(answers), claude_app=chosen_main(answers) == "claude",
-                     chatgpt_app=chosen_main(answers) == "codex" and not os.environ.get("CI"))
+        if not os.environ.get("ASSISTANT_SKIP_INSTALLS"):
+            run_installs(blocking=True, claude=uses_claude(answers), claude_app=chosen_main(answers) == "claude",
+                         chatgpt_app=chosen_main(answers) == "codex" and not os.environ.get("CI"),
+                         antigravity_app=chosen_main(answers) == "agy" and not os.environ.get("CI"))
         for row in INSTALLS:
             print(f"  {row['label']}: {row['state']}" + (f" ({row['note']})" if row["note"] else ""))
         result = configure(answers)

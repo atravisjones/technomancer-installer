@@ -3,6 +3,7 @@
 
     python check-install.py first    after the first run
     python check-install.py again    after a second run over a changed workspace
+    python check-install.py agy      after a run with Antigravity as the main assistant (folder ~/nova)
     python check-install.py codex    after a run with Codex as the main assistant (folder ~/sol)
 """
 import json
@@ -74,6 +75,7 @@ if sys.argv[1:] == ["codex"]:
     start = read(sol / ".agents" / "skills" / "start" / "SKILL.md")
     check("/start and /save are skills", start.startswith("---\nname: start\ndescription:")
           and (sol / ".agents" / "skills" / "save" / "SKILL.md").exists())
+    check("ChatGPT has $publish", "Use when the person types /publish" in read(sol / ".agents" / "skills" / "publish" / "SKILL.md"))
     check("the folder's Open file opens the ChatGPT app", "codex app ." in read(sol / f"Open Codex{ending}"))
     desktops = [home / "Desktop"] + sorted(home.glob("OneDrive*/Desktop"))
     check("desktop shortcut opens the ChatGPT app", any("codex app ." in read(d / f"Sol{ending}") for d in desktops))
@@ -89,12 +91,48 @@ if sys.argv[1:] == ["codex"]:
     check("first chat covers ChatGPT", "@Chrome" in first and "Plugins" in first and "`$start`" in first)
     check("ChatGPT's $start runs the first chat", "state/first-chat.md" in start)
     check("pending CRM key saved", "JOBBER_API_KEY=test_jobber_key_not_real_123" in read(sol / ".env"))
-    check("pending systems marked in CLAUDE.md", "Jobber" in read(sol / "CLAUDE.md") and "finishing this connection" in read(sol / "CLAUDE.md"))
+    check("pending systems marked in CLAUDE.md", "Jobber" in read(sol / "CLAUDE.md") and "JOBBER_API_KEY" in read(sol / "CLAUDE.md"))
     check("no live skill for a pending CRM", not (sol / ".claude" / "skills" / "crm-roofr").exists())
     spot = (Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "OpenAI" / "Codex" / "bin" / "codex.exe") if os.name == "nt" \
         else (home / ".local" / "bin" / "codex")
     note("Codex installed", shutil.which("codex") is not None or spot.exists())
     check("ChatGPT extension offered to Chrome", offered("hehggadaopoacecdllhhajmbjkdcmajg"))
+    finish()
+
+if sys.argv[1:] == ["agy"]:
+    nova = home / "nova"
+    ending = ".cmd" if os.name == "nt" else ".command"
+    print("Antigravity as the main assistant")
+    check("workspace folder ~/nova", (nova / "CLAUDE.md").exists() and "NOVA" in read(nova / "CLAUDE.md"))
+    check("Antigravity is pointed at the notes", "CLAUDE.md" in read(nova / "GEMINI.md"))
+    start = read(nova / ".agents" / "skills" / "start" / "SKILL.md")
+    check("/start and /save are skills", start.startswith("---\nname: start\ndescription:")
+          and (nova / ".agents" / "skills" / "save" / "SKILL.md").exists())
+    check("Antigravity has /publish", "Use when the person types /publish" in read(nova / ".agents" / "skills" / "publish" / "SKILL.md"))
+    guide = read(nova / "START-HERE.md")
+    check("START-HERE teaches /start, /save, /compact and the + button, not $start",
+          all(c in guide for c in ("`/start`", "`/save`", "`/compact`", "+")) and "$start" not in guide)
+    first = read(nova / "state" / "first-chat.md")
+    check("first chat covers Antigravity", "Enable Remote Control" in first and "antigravity.google" in first
+          and "{" not in first and "}" not in first)
+    opener = read(nova / f"Open Antigravity{ending}")
+    check("the folder's Open file opens the app, else the terminal tool", "Antigravity" in opener and "agy" in opener)
+    desktops = [home / "Desktop"] + sorted(home.glob("OneDrive*/Desktop"))
+    note("desktop shortcut opens the app", any("Antigravity" in read(d / f"Nova{ending}") for d in desktops))
+    try:
+        agy_settings = json.loads(read(home / ".gemini" / "antigravity-cli" / "settings.json") or "{}")
+    except ValueError:
+        agy_settings = {}
+    check("Antigravity never asks, and trusts the folder", agy_settings.get("toolPermission") == "always-proceed"
+          and str(nova) in agy_settings.get("trustedWorkspaces", []))
+    team = read(nova / ".claude" / "skills" / "team" / "SKILL.md")
+    check("team skill lists only the picked assistants, not the main one",
+          "name: team" in team and "grok -p" in team and "agy -p" not in team
+          and "codex exec" not in team and "claude -p" not in team)
+    check("team skill reaches Antigravity's copy", "grok -p" in read(nova / ".agents" / "skills" / "team" / "SKILL.md"))
+    check("CLAUDE.md mentions the team skill", "skills/team/SKILL.md" in read(nova / "CLAUDE.md"))
+    check("Claude's color modes left out", not (nova / ".mods").exists())
+    note("Antigravity installed", shutil.which("agy") is not None)
     finish()
 
 print("Workspace")
@@ -107,9 +145,12 @@ check("/save command present, /end gone",
 check("Roofr and CTM skills present", all((work / ".claude" / "skills" / s / "SKILL.md").exists() for s in ("crm-roofr", "phone-ctm")))
 check("github-team skill present", (work / ".claude" / "skills" / "github-team" / "SKILL.md").exists())
 first = read(work / "state" / "first-chat.md")
-check("first chat checks the tools and asks about the work",
-      "Check the tools" in first and "Ask about the work" in first and "Part 3 of `CLAUDE.md`" in first
-      and "@Chrome" in first and "{" not in first)
+check("first chat gets to know them, shows Chrome and the phone, checks the tools",
+      all(words in first for words in ("Get to know them", "outside work", "tab group", "/remote-control",
+                                       "Check the tools", "Part 3 of `CLAUDE.md`", "@Chrome", "vercel whoami"))
+      and "{" not in first)
+check("/publish command present, with the Supabase rules",
+      all(words in read(work / ".claude" / "commands" / "publish.md") for words in ("vercel --prod --yes", "Row Level Security", "anon")))
 check("/start runs the first chat once", "state/first-chat.md" in read(work / ".claude" / "commands" / "start.md"))
 check("swarm layer left out", not (work / ".claude" / "agents" / "the-boys.md").exists())
 check("bridge token in .env", "TM_BRIDGE_TOKEN=test_token_not_real_0000000000" in read(work / ".env"))
