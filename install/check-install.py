@@ -52,6 +52,17 @@ def codex_settings():
     return text, text.split("\n[", 1)[0]
 
 
+def shortcut(name):
+    """What the shortcut runs. On a Mac it is an app in ~/Applications: the Desktop would ask for permission."""
+    if sys.platform == "darwin":
+        return read(home / "Applications" / f"{name}.app" / "Contents" / "Resources" / "open.command")
+    ending = ".cmd" if os.name == "nt" else ".command"
+    for folder in [home / "Desktop"] + sorted(home.glob("OneDrive*/Desktop")):
+        if (folder / f"{name}{ending}").exists():
+            return read(folder / f"{name}{ending}")
+    return ""
+
+
 def offered(ext):
     """Chrome has been asked to offer this extension (Chrome's own external-extension route)."""
     if os.name == "nt":
@@ -77,8 +88,7 @@ if sys.argv[1:] == ["codex"]:
           and (sol / ".agents" / "skills" / "save" / "SKILL.md").exists())
     check("ChatGPT has $publish", "Use when the person types /publish" in read(sol / ".agents" / "skills" / "publish" / "SKILL.md"))
     check("the folder's Open file opens the ChatGPT app", "codex app ." in read(sol / f"Open Codex{ending}"))
-    desktops = [home / "Desktop"] + sorted(home.glob("OneDrive*/Desktop"))
-    check("desktop shortcut opens the ChatGPT app", any("codex app ." in read(d / f"Sol{ending}") for d in desktops))
+    check("shortcut opens the ChatGPT app", "codex app ." in shortcut("Sol"))
     whole, top = codex_settings()
     check("Codex never asks", 'approval_policy = "never"' in top and 'sandbox_mode = "danger-full-access"' in top)
     check("Codex's settings are written once", whole.count("approval_policy") == 1)
@@ -117,8 +127,7 @@ if sys.argv[1:] == ["agy"]:
           and "{" not in first and "}" not in first)
     opener = read(nova / f"Open Antigravity{ending}")
     check("the folder's Open file opens the app, else the terminal tool", "Antigravity" in opener and "agy" in opener)
-    desktops = [home / "Desktop"] + sorted(home.glob("OneDrive*/Desktop"))
-    note("desktop shortcut opens the app", any("Antigravity" in read(d / f"Nova{ending}") for d in desktops))
+    note("shortcut opens the app", "Antigravity" in shortcut("Nova"))
     try:
         agy_settings = json.loads(read(home / ".gemini" / "antigravity-cli" / "settings.json") or "{}")
     except ValueError:
@@ -157,6 +166,9 @@ check("first chat gets to know them, shows Chrome and the phone, checks the tool
       and "{" not in first)
 check("/publish command present, with the Supabase rules",
       all(words in read(work / ".claude" / "commands" / "publish.md") for words in ("vercel --prod --yes", "Row Level Security", "anon")))
+check("optional extras moved to the first chat", all(words in first for words in (
+    "Optional extras", "Let ChatGPT use this computer", "add-assistant.md")))
+check("/add-assistant command present", "--add-assistant" in read(work / ".claude" / "commands" / "add-assistant.md"))
 check("/start runs the first chat once", "state/first-chat.md" in read(work / ".claude" / "commands" / "start.md"))
 check("swarm layer left out", not (work / ".claude" / "agents" / "the-boys.md").exists())
 check("bridge token in .env", "TM_BRIDGE_TOKEN=test_token_not_real_0000000000" in read(work / ".env"))
@@ -227,8 +239,9 @@ check("Codex's settings are written once", whole.count("approval_policy") == 1)
 check("Codex has the skills too", (work / ".agents" / "skills" / "crm-roofr" / "SKILL.md").exists())
 
 print("Shortcut and tools")
-desktops = [home / "Desktop"] + sorted(home.glob("OneDrive*/Desktop"))
-check("desktop shortcut made", any((d / n).exists() for d in desktops for n in ("Friday.cmd", "Friday.command")))
+check("shortcut made", bool(shortcut("Friday")))
+if sys.platform == "darwin":
+    check("nothing written to the Mac's Desktop", not (home / "Desktop" / "Friday.command").exists())
 os.environ["PATH"] = str(home / ".local" / "bin") + os.pathsep + os.environ.get("PATH", "")
 claude = shutil.which("claude")
 check("Claude Code installed", claude is not None)

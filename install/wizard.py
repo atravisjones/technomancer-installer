@@ -50,6 +50,8 @@ def install_file():
     named = os.environ.get("ASSISTANT_INSTALL_FILE", "")
     if named and Path(named).is_file():
         return Path(named)
+    if IS_MAC:  # looking through Downloads or the Desktop makes macOS ask for permission
+        return None
     found = []
     for folder in (Path.home() / "Downloads", Path.home() / "Desktop"):
         if folder.is_dir():
@@ -847,7 +849,14 @@ so far: planning a trip, keeping a budget, meal plans and shopping lists, keepin
 family dates and appointments, learning something new, or writing a hard email or letter.
 Note anything they would like help with.
 
-{chrome}## {n}. Run tasks from your phone
+{chrome}## {n}. Optional extras
+
+Setup left these for this chat because none of them is needed to get started. Name the ones
+that fit the app you are in, ask which {user} wants now, and set up only those. If they say
+no or later, tell them they can ask you any time, and move on. Some of these make the computer
+ask for a permission: say what is about to appear before it does.
+
+### Run tasks from your phone
 
 Explain it plainly: this computer is where you live, and {user} can reach you from their
 phone while it is on.
@@ -869,6 +878,18 @@ phone while it is on.
   keeping it plugged in and setting it not to sleep while plugged in (on a Mac: System
   Settings, then Battery or Energy; on Windows: Settings, then System, then Power).
 
+### Let ChatGPT use this computer (ChatGPT only)
+
+Computer Use lets you work in desktop programs with the mouse and keyboard. If {user} wants
+it: in the ChatGPT app, Settings, then Computer use, then turn on Any App under Control. On a
+Mac, also turn on Codex Computer Use in System Settings, Privacy & Security, under both Screen
+Recording and Accessibility. On Windows, the computer has to stay unlocked while it works.
+
+### Add another AI they already pay for
+
+If {user} pays for ChatGPT, Gemini or Grok as well and wants a second opinion or extra help,
+follow `.claude/commands/add-assistant.md`.
+
 ## {n + 1}. Check the tools
 
 Try each one for real, quickly, and show a list with a check mark or a cross for each. For
@@ -885,11 +906,9 @@ list. This check only reads: never send, change or delete anything.
   pull one recent record (a job from the CRM, a call from the phone system) with the skill it
   names, and say what you found in one line. If it is not connected yet, say so: the next
   step connects it.
-- **Computer Use (ChatGPT only).** Try `@Computer` with: "Look at my Downloads folder and tell
-  me how many files are in it. Do not move or change anything." If it cannot: in the ChatGPT
-  app, Settings, then Computer use, then turn on Any App under Control. On a Mac, also turn on
-  Codex Computer Use in System Settings, Privacy & Security, under both Screen Recording and
-  Accessibility. On Windows, the computer has to stay unlocked while it works.
+- **Computer Use (ChatGPT only).** Only if {user} turned it on in step {n}. Try `@Computer`
+  with: "Tell me which apps are open. Do not move or change anything." If it cannot, go back
+  over the steps in step {n}.
 - **Publishing.** Run `vercel whoami` and `supabase projects list`. Signed in to both means
   you can put a web page or app online for them today (`/publish`, or `$publish` in
   ChatGPT). If either is not signed in, say they can sign in the first time they publish.
@@ -1137,7 +1156,43 @@ def desktop_folder():
     return None
 
 
+def mac_shortcut(name):
+    return Path.home() / "Applications" / f"{name}.app"
+
+
+def write_mac_shortcut(name, workspace, log, main="claude"):
+    """A small app in ~/Applications that Spotlight and Launchpad find. Unlike the Desktop, that
+    folder needs no permission. It opens a Terminal window through the system, so no prompt either."""
+    app = mac_shortcut(name)
+    runner = app / "Contents" / "Resources" / "open.command"
+    if app.exists() and not runner.is_file():  # an app of the person's own with the same name
+        log.append(f"You already have an app called {name}, so no shortcut was made. Use the folder's own \"Open\" file, or pick the folder in your agent's app.")
+        return
+    runner.parent.mkdir(parents=True, exist_ok=True)
+    (app / "Contents" / "MacOS").mkdir(parents=True, exist_ok=True)
+    opener = "\n".join(agy_open_lines(str(workspace), "sh")) + "\n" if main == "agy" else ""
+    runner.write_text(
+        f'#!/bin/bash\nexport PATH="$HOME/.local/bin:$PATH"\ncd "{workspace}" || exit 1\n' + opener
+        + ("codex app .\n" if main == "codex" else "agy\n" if main == "agy" else "(claude --desktop || exec claude)\n"),
+        encoding="utf-8")
+    runner.chmod(0o755)
+    start = app / "Contents" / "MacOS" / "open"
+    start.write_text('#!/bin/bash\nexec /usr/bin/open -a Terminal "$(dirname "$0")/../Resources/open.command"\n', encoding="utf-8")
+    start.chmod(0o755)
+    (app / "Contents" / "Info.plist").write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" '
+        '"http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict>\n'
+        f'<key>CFBundleName</key><string>{name}</string>\n'
+        f'<key>CFBundleIdentifier</key><string>ai.thetechnomancer.assistant.{slug(name)}</string>\n'
+        '<key>CFBundleExecutable</key><string>open</string>\n<key>CFBundlePackageType</key><string>APPL</string>\n'
+        '</dict></plist>\n', encoding="utf-8")
+    log.append(f"Shortcut made: search for {name} in Spotlight, or look in your Applications folder.")
+
+
 def write_shortcut(name, workspace, log, main="claude"):
+    if IS_MAC:
+        write_mac_shortcut(name, workspace, log, main)
+        return
     desktop = desktop_folder()
     if desktop is None:
         log.append("No Desktop folder was found, so no shortcut was made. Use the folder's own \"Open\" file, or pick the folder in your agent's app.")
@@ -1255,7 +1310,7 @@ def systems_summary(a):
 def configure(a):
     """Build the workspace from the wizard's answers. Returns what it did."""
     log = []
-    main, with_claude = chosen_main(a), uses_claude(a)
+    main = chosen_main(a)
     # The name ends up in a file name and a shortcut script, so keep it to plain characters.
     name = re.sub(r"[^A-Za-z0-9 _-]", "", str(a.get("assistant") or "")).strip()[:30] or "Jarvis"
     a["assistant"] = name
@@ -1275,6 +1330,8 @@ def configure(a):
         raise ValueError(f"You already have a folder called {workspace.name}. Pick a different name.")
     existed = (workspace / "CLAUDE.md").exists()
     workspace.mkdir(parents=True, exist_ok=True)
+    keep_added_assistants(a, workspace)
+    with_claude = uses_claude(a)
 
     # The swarm layer stays out of employee installs: it needs other paid accounts.
     skip = () if role_kit_name(a["role"]) == "Developer" else ("the-boys.md",)
@@ -1379,6 +1436,20 @@ def configure(a):
             "tools": tools,
             "user": a["user"] if a["user"] != "the owner of this computer" else "",
             "try": tries(a)[:3], "systems": systems_summary(a)}
+
+
+def keep_added_assistants(a, workspace):
+    """Another run keeps the assistants added earlier, unless the page listed one and it was unticked."""
+    try:
+        before = json.loads((workspace / ".assistant-setup.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    if not (isinstance(before, dict) and isinstance(before.get("tools"), list)):
+        return
+    shown = a.get("toolsShown") if isinstance(a.get("toolsShown"), list) else []
+    added = [t for t in before["tools"] if isinstance(t, str) and t != before.get("main") and t not in shown]
+    current = a["tools"] if isinstance(a.get("tools"), list) else [chosen_main(a)]
+    a["tools"] = list(dict.fromkeys(current + added))
 
 
 def missing_apps(with_claude=True):
@@ -1570,12 +1641,10 @@ def _profile_args():
 # --- Windows of their own: every outside page opens in a small Chrome window that setup
 # closes again once its step is done, so the setup page never gets lost among tabs.
 # Windows: setup notes the window Chrome made and closes it (no permission needed).
-# Mac: Chrome is driven by AppleScript, which macOS allows only after the person clicks
-# Allow once ("Terminal wants to control Google Chrome"); without it, windows stay open
-# and the page says when to close them.
+# Mac: closing a window from here would make macOS ask whether Terminal may control Chrome,
+# so the window just opens and the page says when to close it.
 
-OPENED = {}            # step -> the window(s) opened for it: hwnds (Windows) or Chrome window ids (Mac)
-MAC_CONTROL = {"state": "unknown"}   # unknown / allowed / denied
+OPENED = {}            # step -> the window(s) opened for it (Windows only)
 WINDOW_SIZE = (600, 780)
 
 
@@ -1610,15 +1679,6 @@ def _chrome_windows():
 
     user32.EnumWindows(each, 0)
     return set(found)
-
-
-def _osascript(script):
-    done = subprocess.run(["osascript", "-e", script], capture_output=True, text=True, timeout=60)
-    if done.returncode != 0 and re.search(r"-1743|not allowed|Not authori[sz]ed", done.stderr, re.I):
-        MAC_CONTROL["state"] = "denied"
-    elif done.returncode == 0:
-        MAC_CONTROL["state"] = "allowed"
-    return done.returncode == 0, done.stdout.strip()
 
 
 def open_setup_window(url):
@@ -1663,25 +1723,7 @@ def open_window(step, url):
                     return "tracked"
             return "opened"
         if IS_MAC and _has_chrome():
-            # AppleScript opens windows in the profile Chrome has in front; another profile
-            # needs the command line, which setup cannot close afterwards.
-            if _profile_args():
-                subprocess.run(["open", "-na", "Google Chrome", "--args", *_profile_args(), "--new-window", url], check=False)
-                return "opened"
-            if MAC_CONTROL["state"] != "denied":
-                quoted = url.replace("\\", "\\\\").replace('"', '\\"')
-                worked, out = _osascript(
-                    'tell application "Google Chrome"\n'
-                    '  set w to make new window\n'
-                    f'  set URL of active tab of w to "{quoted}"\n'
-                    f'  set bounds of w to {{80, 60, {80 + w}, {60 + h}}}\n'
-                    '  activate\n'
-                    '  return id of w\n'
-                    'end tell')
-                if worked and out.isdigit():
-                    OPENED[step] = [int(out)]
-                    return "tracked"
-            subprocess.run(["open", "-na", "Google Chrome", "--args", "--new-window", url], check=False)
+            subprocess.run(["open", "-na", "Google Chrome", "--args", *_profile_args(), "--new-window", url], check=False)
             return "opened"
     except (OSError, subprocess.TimeoutExpired):
         pass
@@ -1702,10 +1744,6 @@ def close_window(step):
                 if hwnd in alive:  # still Chrome's: a reused handle must not close someone else's window
                     ctypes.windll.user32.PostMessageW(hwnd, 0x0010, 0, 0)  # WM_CLOSE
             return True
-        if IS_MAC:
-            ids = ", ".join(str(int(i)) for i in handles)
-            worked, _ = _osascript(f'tell application "Google Chrome" to close (every window whose id is in {{{ids}}})')
-            return worked
     except (OSError, subprocess.TimeoutExpired, ValueError):
         pass
     return False
@@ -1734,9 +1772,6 @@ def _window_on_google(step):
             if title.value.strip() == "Google":
                 return True
         return False
-    if IS_MAC:
-        worked, out = _osascript(f'tell application "Google Chrome" to get URL of active tab of window id {int(handles[0])}')
-        return out.startswith("https://www.google.com") if worked else None
     return None
 
 
@@ -2228,21 +2263,6 @@ def chatgpt_apps_status():
                       "canConnect": bool(row["url"]) and row["id"] == row["plugin"]} for row in APPS["rows"]]}
 
 
-MAC_PRIVACY = {"screen": "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture",
-               "accessibility": "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"}
-
-
-def open_mac_privacy(pane):
-    """Open the Mac's own permission page. Only the person can turn these on."""
-    url = MAC_PRIVACY.get(pane)
-    if not (IS_MAC and url):
-        return {"ok": False}
-    try:
-        return {"ok": subprocess.run(["open", url], capture_output=True, timeout=15).returncode == 0}
-    except (OSError, subprocess.TimeoutExpired):
-        return {"ok": False}
-
-
 def chatgpt_app_connect(ident):
     row = next((row for row in APPS["rows"] if row["id"] == ident and row["id"] == row["plugin"]), None)
     if row is None or not row["url"]:
@@ -2714,7 +2734,8 @@ def open_claude(folder=""):
     """Bring up the Claude desktop app, on the assistant's folder when one is given.
 
     `claude --desktop` opens the app on the folder it is run from. It only works from
-    a real terminal window, so one is opened for a moment to run it.
+    a real terminal window, so one is opened for a moment to run it (on a Mac, by the
+    assistant's shortcut, which needs no permission).
     """
     workspace = Path(folder) if folder else None
     cli = claude_cli()
@@ -2725,10 +2746,9 @@ def open_claude(folder=""):
                                  cwd=str(workspace))
                 return True
             if IS_MAC:
-                quoted = str(workspace).replace("\\", "\\\\").replace('"', '\\"')
-                tool = cli.replace("\\", "\\\\").replace('"', '\\"')
-                script = f'tell application "Terminal" to do script "cd \\"{quoted}\\" && \\"{tool}\\" --desktop; exit"'
-                if subprocess.run(["osascript", "-e", script], capture_output=True).returncode == 0:
+                shortcut = mac_shortcut((workspace / ".assistant-name").read_text(encoding="utf-8").strip())
+                if (shortcut / "Contents" / "Resources" / "open.command").is_file() \
+                        and subprocess.run(["open", str(shortcut)], capture_output=True).returncode == 0:
                     return True
         except OSError:
             pass
@@ -4763,6 +4783,33 @@ def open_extra(tool, folder=""):
     return False
 
 
+def add_assistant(tool, folder):
+    """Add one more assistant to a finished setup, when the person asks for it in a chat."""
+    workspace = Path(folder).resolve()
+    name_file = workspace / ".assistant-name"
+    if tool not in EXTRAS or workspace.parent != Path.home().resolve() or not name_file.is_file():
+        print(json.dumps({"ok": False, "error": "Run this from your assistant's folder, with codex, agy or grok."}))
+        return 1
+    name = name_file.read_text(encoding="utf-8").strip()
+    answers = restored_answers(workspace, name)
+    before = answers.get("tools") if isinstance(answers.get("tools"), list) else []
+    answers["tools"] = list(dict.fromkeys([t for t in before if isinstance(t, str)] + [tool]))
+    state, note = "skipped", ""
+    if not os.environ.get("ASSISTANT_SKIP_INSTALLS"):
+        install_extra(tool)
+        EXTRA_JOBS[tool].join()
+        state, note = _row(tool)["state"], _row(tool)["note"]
+    if state == "failed":  # nothing is written for a tool that is not there
+        print(json.dumps({"ok": False, "tool": tool, "label": EXTRAS[tool]["label"], "installed": state, "note": note}))
+        return 1
+    log = []
+    write_extras(answers, workspace, name, chosen_extras(answers), log)
+    (workspace / ".assistant-setup.json").write_text(json.dumps(saved_answers(answers), indent=2) + "\n", encoding="utf-8")
+    print(json.dumps({"ok": True, "tool": tool, "label": EXTRAS[tool]["label"], "installed": state,
+                      "open": launcher(tool, workspace).name, "account": EXTRAS[tool]["account"], "note": note}))
+    return 0
+
+
 PAGE = (Path(__file__).resolve().parent / "wizard.html")
 
 
@@ -4810,9 +4857,9 @@ class Handler(BaseHTTPRequestHandler):
                 "user": os.environ.get("ASSISTANT_USER_NAME", ""),
                 "contact": CONTACT,
                 "main": default_main(),
+                "appleToolsNeeded": IS_MAC and not _has_git(),
                 "tools": [dict(row, here=bool(DETECTED.get(row["id"], {}).get("installed")),
-                               signedIn=DETECTED.get(row["id"], {}).get("signedIn"), canMain=row["id"] in MAINS,
-                               on=row["on"] or bool(DETECTED.get(row["id"], {}).get("installed")))
+                               signedIn=DETECTED.get(row["id"], {}).get("signedIn"), canMain=row["id"] in MAINS)
                           for row in [{"id": "claude", "label": "Claude", "maker": "Anthropic's assistant, in the Claude desktop app",
                                        "account": "your work Claude account",
                                        "on": "claude" in _install_setting("ASSISTANT_DEFAULT_TOOLS", "A-Za-z,").lower().split(",")}]
@@ -4858,7 +4905,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send(assistants_status())
         elif self.path == "/installs/status":
             self.send(installs_status())
-        elif self.path == "/installs/start":  # the first question is answered: fetch those assistants' pieces now
+        elif self.path == "/installs/start":  # the person clicked through the ready step
             if not os.environ.get("ASSISTANT_SKIP_INSTALLS"):
                 run_installs(claude=body.get("claude") is True, claude_app=body.get("claudeApp") is True,
                              chatgpt_app=body.get("chatgptApp") is True,
@@ -4889,7 +4936,7 @@ class Handler(BaseHTTPRequestHandler):
             how = open_window(page, url) if page in CHROME_PAGES else ""
             if page == "google" and how == "tracked":
                 watch_google_window()
-            self.send({"ok": page in CHROME_PAGES, "how": how, "mac": MAC_CONTROL["state"]})
+            self.send({"ok": page in CHROME_PAGES, "how": how})
         elif self.path == "/window/close":
             page = str(body.get("page") or "")
             self.send({"ok": True, "closed": page in CHROME_PAGES and close_window(page)})
@@ -4941,8 +4988,6 @@ class Handler(BaseHTTPRequestHandler):
             self.send(supabase_token(str(body.get("token") or "")))
         elif self.path == "/chatgpt/apps":
             self.send(chatgpt_apps_status())
-        elif self.path == "/mac/privacy":
-            self.send(open_mac_privacy(str(body.get("pane") or "")))
         elif self.path == "/chatgpt/apps/connect":
             self.send(chatgpt_app_connect(str(body.get("app") or "")))
         elif self.path == "/quit":
@@ -4957,7 +5002,12 @@ def main():
     parser.add_argument("--answers", help="JSON file of answers; applies them with no page")
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--no-browser", action="store_true")
+    parser.add_argument("--add-assistant", help="add codex, agy or grok to a finished setup")
+    parser.add_argument("--folder", default=".", help="the assistant's folder, for --add-assistant")
     args = parser.parse_args()
+
+    if args.add_assistant is not None:
+        sys.exit(add_assistant(args.add_assistant, args.folder))
 
     if args.answers:
         answers = json.loads(Path(args.answers).read_text(encoding="utf-8"))
@@ -4975,11 +5025,7 @@ def main():
         print("\n".join(result["log"]))
         return
 
-    detect()  # before anything is installed: what the person already uses
-    if not os.environ.get("ASSISTANT_SKIP_INSTALLS"):
-        # The common pieces get under way while the person fills in the page. Claude's wait
-        # for the first question, which agents they use: the page then calls /installs/start.
-        run_installs(claude=False)
+    detect()  # what the person already uses. Nothing installs until the page's ready step
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     url = f"http://127.0.0.1:{server.server_address[1]}/"
     print(f"\n  Setup is open in your browser: {url}\n  Leave this window open until setup says it is done.\n", flush=True)

@@ -27,6 +27,7 @@ Display this reference:
 | /publish  | Put a web page or app online        |
 | /help     | Show this help guide                |
 | /sync     | Get the latest setup updates        |
+| /add-assistant | Add another AI you already pay for |
 | /skills   | Search & install agent skills       |
 | /new-project | Scaffold a new software project  |
 | /harden   | Systematic project hardening audit  |

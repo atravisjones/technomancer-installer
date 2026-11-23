@@ -475,7 +475,7 @@
       </div>
       <button class="go" id="begin" data-go="0.5" disabled>Get started</button>
       <p class="hint" id="begin-note" style="text-align:center;margin-top:12px">&nbsp;</p>
-      <button type="button" class="again" id="welcome-back" data-go="0.2">I already set this up on another computer</button>
+      <button type="button" class="again" id="welcome-back" data-go="0.7">I already set this up on another computer</button>
     </div>
   </div>
 
@@ -503,13 +503,13 @@
 
   <div class="page" data-page="0.5" hidden>
     <h1>Which assistant will you use most?</h1>
-    <p class="lede">This is the AI you will talk to every day. Setup installs its app, helps you sign in, and puts a shortcut on your desktop.</p>
+    <p class="lede">This is the AI you will talk to every day. Setup installs its app, helps you sign in, and adds a shortcut to open it.</p>
     <section>
       <div id="main-list"></div>
-      <p class="hint" style="margin-top:12px">Not sure? Pick the one you already pay for. These are AI assistants from three different companies. Gemini's app is called Antigravity.</p>
+      <p class="hint" style="margin-top:12px">Not sure? Pick the one you already pay for. These are AI assistants from three different companies. Gemini's app is called Antigravity. Already pay for another one too? You can add it in your first chat.</p>
     </section>
-    <section>
-      <h2>Already pay for another AI? Add it to your team</h2>
+    <section id="team-section" hidden>
+      <h2>Your company suggests adding these</h2>
       <p class="hint" style="margin:0 0 6px">Tick any you already pay for. Setup adds a small behind-the-scenes version of it, so your main assistant can ask it for help while you keep talking in one place.</p>
       <ul class="done" style="margin:8px 0">
         <li><b>A second opinion.</b> A different company's AI checks the work and catches mistakes the first one missed.</li>
@@ -518,9 +518,26 @@
         <li><b>No dead ends.</b> If one hits its usage limit, another picks up the work.</li>
       </ul>
       <div id="tool-list"></div>
-      <p class="hint" style="margin:12px 0 0">They all share the same notes about your work. Only use one? Skip this. Boxes already ticked were found on this computer or suggested by your company.</p>
+      <p class="hint" style="margin:12px 0 0">They all share the same notes about your work. Only use one? Untick the others.</p>
     </section>
-    <div class="nav"><button class="go quiet back" data-go="0">Back</button><button class="go next" data-go="1">Next</button></div>
+    <div class="nav"><button class="go quiet back" data-go="0">Back</button><button class="go next" data-go="0.7">Next</button></div>
+  </div>
+
+  <div class="page" data-page="0.7" hidden>
+    <h1>Get your computer ready</h1>
+    <p class="lede">Setup installs what your assistant needs while you answer a few questions. This is the one step where your computer may ask you to approve something.</p>
+    <section>
+      <h2>What to expect</h2>
+      <ul class="done" style="margin:8px 0">
+        <li id="ready-apple" hidden><b>A box from Apple appears.</b> It offers to install developer tools. Click <b>Install</b>, then <b>Agree</b>. It takes a while, and you can keep going here.</li>
+        <li id="ready-windows" hidden><b>Windows may ask to allow an installer.</b> If it does, click <b>Yes</b>.</li>
+        <li id="ready-none" hidden><b>Nothing to approve right now.</b> This computer already has what would have asked.</li>
+        <li><b>What gets added.</b> Your assistant's app, Google Chrome if you do not have it, and a few small helper tools.</li>
+        <li id="ready-plugins" hidden><b>Two add-ons for Claude.</b> Vercel and Supabase go on your Claude account, so Claude can publish websites for you.</li>
+      </ul>
+    </section>
+    <p class="error" id="ready-error" role="alert" hidden></p>
+    <div class="nav"><button class="go quiet back" id="ready-back">Back</button><button class="go next" id="ready-go">Get my computer ready</button></div>
   </div>
 
   <div class="page" data-page="1" hidden>
@@ -628,7 +645,6 @@
       <h2>Your Claude account</h2>
       <p id="acct-text" style="margin:0">Checking whether you are already signed in…</p>
       <button class="step" id="acct-login" style="margin-top:12px" hidden>Sign in to Claude</button>
-      <p class="hint mac-only" hidden>Sign-ins open in a small window that setup closes when you are done. The first time, your Mac asks whether Terminal may control Google Chrome. Terminal is the small program running this setup. Click <b>OK</b> (or <b>Allow</b>). Setup uses it only to close the windows it opened.</p>
     </section>
     <button class="go" id="open" disabled>Checking for the Claude app…</button>
     <p class="hint" id="open-note" style="text-align:center;margin:12px 0 20px"></p>
@@ -636,7 +652,6 @@
       <h2>Once Claude is open</h2>
       <ol class="next">
         <li>Sign in with your work email.</li>
-        <li id="remote-step">To use it from your phone, open <b>Settings</b>, then <b>Claude Code</b> (the part of the app your assistant runs in), and turn on <b>Connect new sessions to Remote Control</b>.</li>
       </ol>
     </section>
     <div class="nav"><span></span><button class="go next" data-go="4.2">Next: about your company</button></div>
@@ -715,127 +730,21 @@
     <h1>Connect Chrome</h1>
     <dl class="explain"><div><dt>What it is</dt><dd>A small add-on for Google Chrome, called an extension.</dd></div><div><dt>Why you want it</dt><dd><span class="the-name">Jarvis</span> can do the clicking in the websites you already use.</dd></div><div><dt>How it helps</dt><dd>Ask it to look up a customer, fill in a web form, or pull numbers from a report. It works in your own sign-ins.</dd></div></dl>
     <p class="lede"><span id="cs-lede-count">Three clicks</span>, in order. Each one opens a small window of its own.</p>
-    <p class="hint mac-only" hidden>If your Mac asks whether Terminal (the small program running this setup) may control Google Chrome, click <b>OK</b> (or <b>Allow</b>). That is how setup closes each window when its step is done.</p>
     <p class="note" id="cs-summary" hidden></p>
     <p class="note" id="cs-error" role="alert" hidden></p>
     <section>
       <ol class="next steps">
         <li><button class="step" data-page="google">Sign in to Google</button>
           <button type="button" class="copy" id="cs-google-done" hidden>I signed in to Google</button>
-          <span id="cs-google">Use your work email. This window closes by itself once you are signed in.</span></li>
+          <span id="cs-google">Use your work email. If the window stays open after you sign in, close it.</span></li>
         <li><button class="step" data-page="extension" data-claude="Add Claude to Chrome" data-codex="Add ChatGPT to Chrome">Add Claude to Chrome</button>
-          <span id="cs-extension">Click <b>Add to Chrome</b> in the window that opens. If Chrome already asked you to turn on "Claude", click <b>Enable</b> instead. This page ticks it and closes the window once Chrome has it.</span></li>
+          <span id="cs-extension">Click <b>Add to Chrome</b> in the window that opens. If Chrome already asked you to turn on "Claude", click <b>Enable</b> instead. This page ticks it once Chrome has it. If the window stays open, close it.</span></li>
         <li><button class="step" data-page="claude" data-claude="Sign in to Claude in Chrome" data-codex="Sign in to ChatGPT in Chrome">Sign in to Claude in Chrome</button>
           <button type="button" class="copy" id="cs-claude-done" hidden>I signed in: close that window</button>
           <span id="cs-claude">Adding it is not enough: Claude in Chrome only works once you sign in to it. Sign in with the same work email in the window that opens, and close it. Then click the puzzle piece at the top right of Chrome, pin <b>Claude</b>, and click it: if it asks you to sign in, do that too. It is ready when it shows a box to type in.</span></li>
       </ol>
     </section>
-    <div class="nav"><button class="go quiet back" data-go="4.2">Back</button><button class="go next" data-go="6">Next</button></div>
-  </div>
-
-  <div class="page" data-page="6" hidden>
-    <h1>Claude on your phone</h1>
-    <p class="lede">Start something at your desk, then check on it from anywhere. Your computer does the work, and your phone is the remote.</p>
-    <section>
-      <h2>1. Get the app</h2>
-      <p class="hint" style="margin:0 0 12px">Point your phone's camera at the code for your phone.</p>
-      <div class="stores">
-        <a class="store" href="https://apps.apple.com/us/app/claude-by-anthropic/id6473753684" target="_blank" rel="noopener">
-          <span class="qr"><svg viewBox="0 0 111 111" class="segno"><g transform="scale(3)"><path fill="#fff" d="M0 0h37v37h-37z"/><path class="qrline" stroke="#111" d="M2 2.5h7m4 0h6m1 0h2m2 0h2m2 0h7m-33 1h1m5 0h1m2 0h1m1 0h1m3 0h2m1 0h1m1 0h1m1 0h2m2 0h1m5 0h1m-33 1h1m1 0h3m1 0h1m2 0h1m1 0h1m4 0h5m1 0h1m3 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m2 0h1m5 0h2m3 0h1m1 0h1m1 0h1m1 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m3 0h3m2 0h1m1 0h1m2 0h1m2 0h1m2 0h1m1 0h3m1 0h1m-33 1h1m5 0h1m1 0h3m1 0h1m2 0h1m2 0h4m4 0h1m5 0h1m-33 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-24 1h2m3 0h1m2 0h2m1 0h2m1 0h1m-24 1h1m2 0h1m1 0h2m1 0h2m1 0h4m3 0h1m2 0h1m2 0h2m1 0h1m-28 1h6m2 0h1m1 0h4m2 0h2m2 0h1m1 0h1m2 0h3m4 0h1m-33 1h2m2 0h1m1 0h1m2 0h2m1 0h2m5 0h1m1 0h2m2 0h1m1 0h2m1 0h1m1 0h1m-33 1h2m1 0h3m1 0h1m1 0h1m1 0h1m1 0h3m4 0h4m2 0h1m1 0h2m2 0h1m-33 1h3m1 0h4m1 0h3m2 0h1m2 0h2m1 0h2m2 0h1m1 0h2m1 0h1m2 0h1m-33 1h1m4 0h1m2 0h1m1 0h4m2 0h1m1 0h4m2 0h1m1 0h1m1 0h1m2 0h2m-33 1h1m3 0h5m4 0h2m5 0h1m1 0h5m3 0h2m-30 1h1m1 0h2m1 0h2m2 0h1m5 0h3m1 0h1m1 0h2m1 0h2m3 0h1m-31 1h1m2 0h4m1 0h3m1 0h2m1 0h2m2 0h3m3 0h1m1 0h1m2 0h1m-32 1h1m1 0h1m2 0h1m1 0h4m2 0h1m2 0h1m1 0h1m2 0h5m1 0h1m1 0h1m1 0h1m-32 1h1m2 0h5m2 0h1m1 0h1m4 0h1m2 0h1m1 0h1m1 0h2m4 0h3m-33 1h1m1 0h2m1 0h1m2 0h3m2 0h1m1 0h9m1 0h1m1 0h1m-26 1h1m3 0h1m5 0h3m3 0h2m1 0h1m1 0h1m1 0h1m5 0h2m-30 1h1m1 0h1m2 0h1m1 0h2m1 0h1m3 0h2m1 0h2m2 0h3m4 0h2m-33 1h3m1 0h1m1 0h1m1 0h4m1 0h2m1 0h1m2 0h1m4 0h4m2 0h1m1 0h1m-32 1h2m2 0h1m1 0h3m3 0h4m1 0h1m2 0h1m1 0h2m1 0h1m1 0h2m1 0h1m-32 1h1m1 0h3m1 0h1m1 0h1m2 0h3m2 0h2m1 0h3m1 0h6m2 0h1m-24 1h1m4 0h2m2 0h3m2 0h1m1 0h1m3 0h2m2 0h1m-33 1h7m3 0h3m5 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h4m-32 1h1m5 0h1m1 0h1m1 0h2m4 0h7m1 0h1m3 0h1m3 0h1m-33 1h1m1 0h3m1 0h1m4 0h12m1 0h6m1 0h2m-33 1h1m1 0h3m1 0h1m1 0h2m1 0h4m3 0h1m1 0h1m5 0h1m1 0h2m-30 1h1m1 0h3m1 0h1m2 0h1m4 0h1m2 0h2m5 0h2m2 0h3m1 0h1m-33 1h1m5 0h1m2 0h1m2 0h2m3 0h3m1 0h4m4 0h1m-30 1h7m1 0h5m1 0h1m1 0h1m1 0h1m2 0h1m2 0h2m2 0h2m1 0h1"/></g></svg></span>
-          <b>iPhone</b><span class="hint">App Store</span></a>
-        <a class="store" href="https://play.google.com/store/apps/details?id=com.anthropic.claude" target="_blank" rel="noopener">
-          <span class="qr"><svg viewBox="0 0 123 123" class="segno"><g transform="scale(3)"><path fill="#fff" d="M0 0h41v41h-41z"/><path class="qrline" stroke="#111" d="M2 2.5h7m1 0h2m7 0h3m1 0h4m1 0h1m3 0h7m-37 1h1m5 0h1m3 0h1m1 0h1m2 0h1m1 0h1m1 0h1m1 0h1m3 0h2m1 0h1m1 0h1m5 0h1m-37 1h1m1 0h3m1 0h1m1 0h4m1 0h2m2 0h1m3 0h1m1 0h3m1 0h2m1 0h1m1 0h3m1 0h1m-37 1h1m1 0h3m1 0h1m2 0h2m2 0h2m1 0h2m1 0h4m1 0h4m2 0h1m1 0h3m1 0h1m-37 1h1m1 0h3m1 0h1m4 0h2m1 0h5m6 0h2m3 0h1m1 0h3m1 0h1m-37 1h1m5 0h1m1 0h1m1 0h3m2 0h2m4 0h2m1 0h2m2 0h1m1 0h1m5 0h1m-37 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-27 1h3m2 0h1m2 0h1m2 0h1m1 0h2m1 0h3m-29 1h1m1 0h1m3 0h2m1 0h1m3 0h7m1 0h1m2 0h1m1 0h1m1 0h1m2 0h1m2 0h1m1 0h1m-37 1h1m2 0h2m6 0h1m1 0h1m2 0h3m8 0h2m1 0h2m1 0h1m1 0h2m-34 1h1m2 0h2m1 0h1m2 0h2m2 0h1m2 0h1m1 0h1m1 0h1m3 0h4m1 0h3m1 0h1m-37 1h1m1 0h1m5 0h2m1 0h1m2 0h3m1 0h1m5 0h1m1 0h1m-26 1h2m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m4 0h1m3 0h2m2 0h2m1 0h1m5 0h1m-36 1h2m1 0h2m1 0h2m5 0h4m1 0h2m2 0h1m1 0h1m1 0h2m1 0h2m1 0h1m2 0h1m-31 1h1m1 0h4m3 0h2m2 0h5m3 0h1m5 0h2m1 0h1m-36 1h1m1 0h1m1 0h1m2 0h2m1 0h1m1 0h2m1 0h2m4 0h1m1 0h1m2 0h2m1 0h4m1 0h1m-33 1h2m1 0h1m4 0h4m2 0h1m1 0h4m1 0h1m2 0h1m2 0h2m3 0h1m-34 1h1m5 0h1m2 0h3m6 0h6m1 0h5m1 0h4m-37 1h2m2 0h3m4 0h3m1 0h1m1 0h1m2 0h1m2 0h3m1 0h1m3 0h1m2 0h1m1 0h1m-37 1h3m1 0h1m2 0h2m3 0h1m6 0h2m1 0h1m1 0h1m2 0h2m2 0h3m-33 1h1m4 0h6m2 0h3m6 0h2m3 0h1m1 0h2m1 0h1m1 0h1m-36 1h1m3 0h2m2 0h1m2 0h6m2 0h6m2 0h2m1 0h1m5 0h1m-34 1h1m2 0h3m1 0h1m2 0h1m1 0h1m1 0h3m3 0h1m2 0h3m1 0h1m2 0h2m1 0h1m-34 1h2m6 0h1m1 0h2m3 0h1m2 0h1m1 0h2m1 0h3m2 0h3m1 0h2m-35 1h3m1 0h2m1 0h5m2 0h4m1 0h1m2 0h1m3 0h1m1 0h2m-29 1h1m5 0h1m1 0h1m2 0h1m1 0h1m1 0h1m4 0h2m2 0h2m1 0h1m5 0h1m-37 1h2m1 0h2m1 0h1m1 0h2m4 0h1m1 0h2m1 0h1m2 0h2m1 0h1m1 0h4m1 0h1m3 0h1m-35 1h1m1 0h1m4 0h3m1 0h1m1 0h2m1 0h1m5 0h1m1 0h2m1 0h1m1 0h3m2 0h1m-37 1h3m1 0h4m2 0h2m2 0h1m1 0h1m2 0h2m2 0h2m1 0h8m1 0h2m-29 1h5m1 0h7m2 0h3m2 0h1m3 0h1m2 0h2m-37 1h7m1 0h4m2 0h2m3 0h1m1 0h3m1 0h1m2 0h1m1 0h1m1 0h1m2 0h2m-37 1h1m5 0h1m2 0h1m2 0h3m2 0h1m1 0h2m1 0h2m4 0h1m3 0h1m2 0h2m-37 1h1m1 0h3m1 0h1m2 0h1m1 0h3m1 0h1m1 0h1m2 0h4m3 0h6m2 0h2m-37 1h1m1 0h3m1 0h1m2 0h3m1 0h2m5 0h1m1 0h4m1 0h1m1 0h1m2 0h3m-35 1h1m1 0h3m1 0h1m1 0h1m3 0h1m2 0h1m1 0h1m2 0h2m1 0h1m3 0h1m3 0h2m3 0h1m-37 1h1m5 0h1m5 0h3m4 0h2m1 0h1m4 0h2m1 0h1m1 0h2m-34 1h7m1 0h1m3 0h1m1 0h3m3 0h1m1 0h3m3 0h4m1 0h1m2 0h1"/></g></svg></span>
-          <b>Android</b><span class="hint">Google Play</span></a>
-      </div>
-      <p class="hint">Sign in with the same work email you use on this computer.</p>
-    </section>
-    <section>
-      <h2>2. Find your chats</h2>
-      <div class="phones">
-        <figure><img src="/img/phone-1.png" alt="The Claude app's home screen with the menu button at the top left circled" loading="lazy">
-          <figcaption><b>Tap the menu</b>The lines at the top left.</figcaption></figure>
-        <figure><img src="/img/phone-2.png" alt="The Claude app's menu with Code circled" loading="lazy">
-          <figcaption><b>Tap Code</b>It is near the top of the menu.</figcaption></figure>
-        <figure><img src="/img/phone-3.png" alt="The Code screen listing chats from the computer, the first one circled" loading="lazy">
-          <figcaption><b>Tap a chat</b>Your computer's chats are under Sessions.</figcaption></figure>
-      </div>
-      <p class="hint">A chat shows on your phone while this computer is on with Claude open. These are real screens from an Android phone with example chat names; an iPhone looks nearly the same.</p>
-    </section>
-    <div class="nav"><button class="go quiet back" data-go="5">Back</button><button class="go next" data-go="7">Next</button></div>
-  </div>
-
-  <div class="page" data-page="5.5" hidden>
-    <h1>Let ChatGPT use your computer</h1>
-    <dl class="explain"><div><dt>What it is</dt><dd>A ChatGPT feature that uses your computer's apps the way you would, with the mouse and keyboard.</dd></div><div><dt>Why you want it</dt><dd>It can work in programs that have no other way to connect, like desktop accounting or scheduling software.</dd></div><div><dt>How it helps</dt><dd>Ask <span class="the-name">Jarvis</span> to pull a report from one program and put it in another. ChatGPT asks before it uses each app.</dd></div></dl>
-    <p class="note" id="cu-status" role="status">Checking whether Computer Use is on…</p>
-    <section>
-      <ol class="next steps">
-        <li><button class="step" id="cu-open">Open ChatGPT</button>
-          <span>Open <b>Settings</b>, then <b>Computer use</b>. Under <b>Control</b>, find <b>Any App</b>. If it says <b>Install</b>, click it. If its switch is off, turn it on.</span></li>
-        <li class="mac-only" hidden><b>Give it two Mac permissions</b><br>
-          <span>Turn on <b>Codex Computer Use</b> on both pages (Codex is ChatGPT's work tool). <b>Screen Recording</b> lets it see what is on the screen. <b>Accessibility</b> lets it click and type. Your Mac may ask for your password.</span>
-          <div class="chips" style="margin:10px 0 6px">
-            <button type="button" class="chip" id="cu-screen">Open Screen Recording</button>
-            <button type="button" class="chip" id="cu-access">Open Accessibility</button>
-          </div>
-          <button type="button" class="copy" id="cu-mac-done">I turned on both</button>
-          <span class="hint" id="cu-mac-note"></span></li>
-        <li class="win-only" hidden><b>Nothing else to turn on for Windows</b><br>
-          <span>While it works it uses your mouse and keyboard, so keep the computer unlocked and the app on screen.</span></li>
-        <li><b>Say yes when it asks</b><br>
-          <span>The first time it needs an app, ChatGPT asks. Click <b>Allow</b>, or <b>Always allow</b> for apps you trust. Sign in to those apps yourself first.</span></li>
-      </ol>
-    </section>
-    <p class="hint" style="margin:0 0 14px">It will not work in command-line windows (like Terminal or Command Prompt) or in ChatGPT itself, and it cannot approve security prompts for you. In a company workspace, an admin may need to allow it.</p>
-    <div class="nav"><button class="go quiet back" data-go="5">Back</button><button class="go next" data-go="6.5">Next</button></div>
-  </div>
-
-  <div class="page" data-page="6.5" hidden>
-    <h1 id="ph-title">ChatGPT on your phone</h1>
-    <p class="lede">Start something at your desk, then check on it or give it new work from anywhere. Your computer does the work, and your phone is the remote.</p>
-    <div data-phone="codex">
-      <section>
-        <h2>1. Get the ChatGPT app</h2>
-        <p class="hint" style="margin:0 0 12px">Point your phone's camera at the code for your phone.</p>
-        <div class="stores">
-          <a class="store" href="https://apps.apple.com/us/app/chatgpt/id6448311069" target="_blank" rel="noopener"><span class="qr"><svg viewBox="0 0 111 111" class="segno"><g transform="scale(3)"><path fill="#fff" d="M0 0h37v37h-37z"/><path class="qrline" stroke="#111" d="M2 2.5h7m2 0h3m6 0h4m1 0h1m2 0h7m-33 1h1m5 0h1m8 0h1m2 0h1m1 0h1m3 0h1m1 0h1m5 0h1m-33 1h1m1 0h3m1 0h1m1 0h1m5 0h2m3 0h5m2 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m1 0h5m2 0h1m2 0h2m3 0h1m2 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m1 0h1m1 0h8m2 0h5m1 0h1m1 0h3m1 0h1m-33 1h1m5 0h1m1 0h2m1 0h4m4 0h1m1 0h1m2 0h1m1 0h1m5 0h1m-33 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-25 1h1m1 0h2m2 0h1m1 0h1m2 0h4m1 0h1m-25 1h1m1 0h5m6 0h2m1 0h4m2 0h3m1 0h5m-30 1h1m2 0h2m1 0h1m1 0h5m2 0h9m1 0h2m1 0h4m-32 1h1m4 0h2m3 0h1m1 0h3m1 0h1m2 0h2m4 0h1m1 0h1m1 0h2m-32 1h1m1 0h1m1 0h2m1 0h1m3 0h1m1 0h1m1 0h1m1 0h3m1 0h5m2 0h4m-32 1h2m2 0h1m1 0h1m1 0h1m1 0h3m1 0h3m8 0h1m1 0h3m-27 1h2m2 0h1m3 0h2m2 0h1m1 0h2m2 0h4m1 0h1m2 0h4m-33 1h1m2 0h1m1 0h3m3 0h1m1 0h1m1 0h3m3 0h1m2 0h3m1 0h1m1 0h2m-32 1h1m1 0h4m2 0h1m1 0h2m3 0h1m5 0h1m3 0h2m1 0h3m-30 1h1m1 0h1m2 0h1m1 0h1m1 0h1m1 0h1m2 0h3m4 0h1m2 0h1m1 0h2m3 0h1m-33 1h1m3 0h1m2 0h1m1 0h1m4 0h1m1 0h1m2 0h5m2 0h2m1 0h2m1 0h1m-32 1h1m2 0h1m1 0h3m3 0h5m1 0h1m2 0h1m2 0h2m1 0h2m1 0h2m-32 1h1m3 0h1m3 0h1m3 0h1m2 0h1m3 0h4m1 0h1m2 0h4m-30 1h6m1 0h4m2 0h2m2 0h2m7 0h3m2 0h1m-33 1h1m2 0h1m3 0h1m2 0h1m4 0h2m4 0h7m1 0h2m1 0h1m-33 1h1m3 0h1m1 0h1m2 0h6m5 0h2m2 0h1m2 0h1m1 0h1m1 0h1m-32 1h1m3 0h1m2 0h4m1 0h2m2 0h1m4 0h1m3 0h1m3 0h2m1 0h1m-33 1h1m2 0h1m1 0h2m3 0h1m1 0h2m3 0h1m1 0h1m2 0h1m1 0h6m-22 1h1m3 0h3m1 0h2m1 0h1m1 0h1m1 0h2m3 0h1m1 0h1m1 0h1m-33 1h7m2 0h1m5 0h3m2 0h2m1 0h2m1 0h1m1 0h1m1 0h2m-32 1h1m5 0h1m1 0h1m1 0h1m5 0h3m1 0h2m1 0h2m3 0h5m-33 1h1m1 0h3m1 0h1m1 0h2m3 0h1m2 0h1m3 0h1m3 0h6m-30 1h1m1 0h3m1 0h1m1 0h2m2 0h4m2 0h2m2 0h1m1 0h2m2 0h1m1 0h3m-33 1h1m1 0h3m1 0h1m1 0h1m3 0h1m2 0h4m2 0h2m1 0h4m2 0h1m-31 1h1m5 0h1m4 0h1m1 0h1m1 0h1m3 0h3m1 0h1m1 0h1m2 0h3m-31 1h7m1 0h1m5 0h2m1 0h2m3 0h1m1 0h1m1 0h2m1 0h1m1 0h1"/></g></svg></span><b>iPhone</b><span class="hint">App Store</span></a>
-          <a class="store" href="https://play.google.com/store/apps/details?id=com.openai.chatgpt" target="_blank" rel="noopener"><span class="qr"><svg viewBox="0 0 123 123" class="segno"><g transform="scale(3)"><path fill="#fff" d="M0 0h41v41h-41z"/><path class="qrline" stroke="#111" d="M2 2.5h7m1 0h2m1 0h2m2 0h1m2 0h2m2 0h1m1 0h1m1 0h3m1 0h7m-37 1h1m5 0h1m2 0h3m1 0h1m3 0h2m1 0h2m6 0h1m1 0h1m5 0h1m-37 1h1m1 0h3m1 0h1m6 0h2m1 0h6m1 0h1m2 0h1m1 0h1m1 0h1m1 0h3m1 0h1m-37 1h1m1 0h3m1 0h1m1 0h1m2 0h1m2 0h3m2 0h2m2 0h6m1 0h1m1 0h3m1 0h1m-37 1h1m1 0h3m1 0h1m1 0h1m3 0h2m2 0h1m1 0h1m2 0h3m2 0h3m1 0h1m1 0h3m1 0h1m-37 1h1m5 0h1m1 0h1m1 0h2m1 0h3m2 0h5m2 0h2m1 0h1m1 0h1m5 0h1m-37 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-29 1h1m2 0h5m1 0h2m3 0h1m1 0h1m-25 1h1m3 0h1m1 0h6m6 0h2m2 0h3m2 0h1m1 0h5m2 0h1m-37 1h1m2 0h3m1 0h3m4 0h1m1 0h2m1 0h2m4 0h5m2 0h2m1 0h1m-36 1h4m2 0h1m3 0h1m1 0h3m1 0h1m1 0h1m1 0h2m3 0h5m1 0h4m-35 1h1m1 0h2m3 0h2m2 0h2m4 0h2m2 0h2m1 0h1m1 0h1m2 0h1m1 0h5m-30 1h1m1 0h2m1 0h1m1 0h1m1 0h3m1 0h1m1 0h4m2 0h1m1 0h2m2 0h4m-32 1h1m1 0h2m1 0h2m1 0h6m4 0h6m3 0h2m-32 1h1m1 0h1m1 0h1m1 0h1m1 0h1m3 0h3m1 0h1m2 0h4m2 0h1m1 0h1m1 0h4m-35 1h3m1 0h1m2 0h2m3 0h2m1 0h1m5 0h1m1 0h2m1 0h1m2 0h1m1 0h2m1 0h1m-35 1h4m1 0h2m1 0h2m3 0h1m1 0h2m2 0h2m2 0h2m4 0h3m1 0h2m-35 1h2m1 0h2m2 0h1m6 0h1m3 0h2m1 0h2m1 0h1m2 0h1m4 0h4m-36 1h2m2 0h6m2 0h2m1 0h1m1 0h3m3 0h1m2 0h2m2 0h1m1 0h1m1 0h1m-35 1h1m1 0h2m4 0h2m2 0h1m1 0h4m1 0h3m1 0h1m3 0h3m1 0h2m1 0h2m-36 1h2m1 0h1m1 0h5m2 0h3m2 0h1m3 0h2m1 0h1m2 0h1m1 0h3m2 0h1m-34 1h3m5 0h2m2 0h4m1 0h1m2 0h3m1 0h4m2 0h2m-33 1h2m1 0h1m1 0h2m2 0h2m2 0h3m1 0h1m2 0h1m2 0h2m1 0h3m2 0h4m-34 1h1m6 0h1m2 0h1m1 0h6m3 0h1m1 0h1m6 0h2m1 0h1m1 0h1m-37 1h2m1 0h1m2 0h1m1 0h2m1 0h5m2 0h2m2 0h3m2 0h1m1 0h3m1 0h3m-36 1h1m6 0h1m2 0h1m5 0h1m2 0h2m3 0h5m2 0h2m-27 1h1m1 0h1m1 0h4m2 0h3m1 0h1m1 0h2m2 0h2m1 0h1m1 0h1m-30 1h4m1 0h1m2 0h1m1 0h1m4 0h2m2 0h4m1 0h3m2 0h2m1 0h2m-36 1h2m1 0h7m2 0h2m1 0h1m1 0h1m1 0h4m1 0h1m1 0h1m1 0h5m1 0h1m1 0h1m-29 1h2m1 0h1m1 0h1m1 0h3m5 0h1m1 0h2m1 0h1m3 0h1m2 0h1m-36 1h7m1 0h2m2 0h4m2 0h1m1 0h7m1 0h1m1 0h1m1 0h1m2 0h1m-36 1h1m5 0h1m2 0h3m2 0h3m2 0h3m4 0h3m3 0h3m1 0h1m-37 1h1m1 0h3m1 0h1m1 0h3m5 0h1m3 0h1m7 0h7m1 0h1m-37 1h1m1 0h3m1 0h1m2 0h1m1 0h1m2 0h1m3 0h2m2 0h2m3 0h1m1 0h3m1 0h2m1 0h1m-37 1h1m1 0h3m1 0h1m2 0h2m1 0h1m1 0h2m1 0h3m1 0h1m1 0h1m1 0h3m2 0h1m-31 1h1m5 0h1m4 0h3m1 0h3m1 0h3m1 0h1m3 0h1m2 0h1m1 0h1m1 0h2m-36 1h7m1 0h1m1 0h1m1 0h2m3 0h1m2 0h2m2 0h1m2 0h1m3 0h1m2 0h3"/></g></svg></span><b>Android</b><span class="hint">Google Play</span></a>
-        </div>
-        <p class="hint">Sign in with the same ChatGPT account you use on this computer.</p>
-      </section>
-      <section>
-        <h2>2. Turn it on here</h2>
-        <button class="step" id="ph-open-codex">Open ChatGPT</button>
-        <p style="margin:8px 0 0">Open <b>Settings</b>, then <b>Connections</b>, then <b>Control this Mac or PC</b>. Click <b>Set up</b> or <b>Add</b> and approve it. A QR code appears.</p>
-      </section>
-      <section>
-        <h2>3. Scan it with your phone</h2>
-        <p style="margin:0">In ChatGPT on your phone, open <b>Codex</b>, ChatGPT's work area (it may say <b>Remote</b>). Scan the code, confirm it is the same account, and finish any sign-in step. This computer then shows up there.</p>
-        <p class="hint" style="margin:10px 0 0">In a company workspace, an admin may need to turn on Remote Control first.</p>
-      </section>
-    </div>
-    <div data-phone="agy" hidden>
-      <section>
-        <h2>1. Turn it on here</h2>
-        <button class="step" id="ph-open-agy">Open Antigravity</button>
-        <p style="margin:8px 0 0">Open <b>Settings</b>, then <b>Application</b>, and turn on <b>Enable Remote Control</b>. You can give this computer a name there too.</p>
-      </section>
-      <section>
-        <h2>2. Open it on your phone</h2>
-        <p class="hint" style="margin:0 0 12px">No app to install. Point your phone's camera at this code.</p>
-        <div class="stores" style="grid-template-columns:minmax(0,220px);justify-content:center">
-          <a class="store" href="https://antigravity.google.com/" target="_blank" rel="noopener"><span class="qr"><svg viewBox="0 0 99 99" class="segno"><g transform="scale(3)"><path fill="#fff" d="M0 0h33v33h-33z"/><path class="qrline" stroke="#111" d="M2 2.5h7m1 0h3m2 0h4m1 0h2m2 0h7m-29 1h1m5 0h1m1 0h1m4 0h1m1 0h5m2 0h1m5 0h1m-29 1h1m1 0h3m1 0h1m1 0h2m1 0h1m1 0h1m1 0h1m2 0h2m2 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m1 0h2m1 0h1m4 0h1m1 0h1m1 0h1m1 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m1 0h6m4 0h2m2 0h1m1 0h3m1 0h1m-29 1h1m5 0h1m2 0h1m1 0h3m2 0h1m2 0h1m2 0h1m5 0h1m-29 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-21 1h2m2 0h1m4 0h2m1 0h1m-20 1h2m1 0h1m1 0h2m1 0h2m1 0h3m1 0h2m1 0h2m1 0h1m1 0h5m-27 1h1m4 0h2m7 0h1m4 0h2m5 0h1m-29 1h2m4 0h6m2 0h3m1 0h1m4 0h1m2 0h3m-27 1h1m2 0h1m3 0h2m3 0h2m1 0h6m1 0h1m2 0h1m-23 1h2m3 0h4m2 0h2m2 0h1m1 0h2m1 0h1m-26 1h1m1 0h3m2 0h3m1 0h6m3 0h4m4 0h1m-29 1h2m2 0h1m1 0h2m1 0h2m1 0h4m1 0h1m3 0h1m1 0h1m2 0h3m-27 1h2m4 0h2m5 0h5m2 0h2m-21 1h4m1 0h2m1 0h3m1 0h3m2 0h3m2 0h1m-22 1h1m2 0h4m2 0h3m1 0h1m2 0h3m2 0h4m-29 1h1m1 0h1m1 0h4m1 0h1m1 0h1m1 0h2m1 0h2m2 0h2m1 0h1m1 0h4m-28 1h2m2 0h1m3 0h1m2 0h1m1 0h2m1 0h4m1 0h1m2 0h1m2 0h1m-29 1h1m3 0h1m1 0h2m1 0h6m2 0h1m1 0h6m2 0h1m-20 1h5m3 0h1m1 0h3m3 0h1m2 0h2m-29 1h7m1 0h1m3 0h3m4 0h2m1 0h1m1 0h1m1 0h3m-29 1h1m5 0h1m8 0h1m1 0h2m1 0h1m3 0h1m2 0h2m-29 1h1m1 0h3m1 0h1m1 0h3m2 0h1m2 0h3m1 0h6m1 0h2m-29 1h1m1 0h3m1 0h1m2 0h2m3 0h2m1 0h1m2 0h2m2 0h1m1 0h1m-27 1h1m1 0h3m1 0h1m1 0h1m2 0h1m1 0h2m2 0h3m3 0h2m3 0h1m-29 1h1m5 0h1m1 0h2m3 0h1m2 0h2m1 0h2m2 0h1m3 0h1m-28 1h7m3 0h2m2 0h4m1 0h3m2 0h1m2 0h2"/></g></svg></span><b>antigravity.google.com</b><span class="hint">Opens in your phone's browser</span></a>
-        </div>
-        <p style="margin:0">Sign in with the same Google account, then pick this computer from the list of machines. Add the page to your home screen if you want notifications.</p>
-      </section>
-    </div>
-    <section>
-      <h2>Keep this computer ready</h2>
-      <p style="margin:0">It has to stay on, awake and online, with the app open. Plug it in and set it not to sleep while plugged in.</p>
-      <button type="button" class="copy" id="ph-done" style="margin:12px 0 0">I connected my phone</button>
-      <p class="hint" id="ph-note" role="status" style="margin:8px 0 0">Setup cannot see your phone, so this one is up to you.</p>
-    </section>
-    <div class="nav"><button class="go quiet back" id="ph-back">Back</button><button class="go next" data-go="7">Next</button></div>
+    <div class="nav"><button class="go quiet back" data-go="4.2">Back</button><button class="go next" data-go="7">Next</button></div>
   </div>
 
   <div class="page" data-page="7" hidden>
@@ -847,7 +756,7 @@
       <input type="text" id="drill" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="/start">
       <p class="hint" id="drill-hint">Start with the slash.</p>
     </section>
-    <div class="nav"><button class="go quiet back" data-go="6">Back</button><button class="go next" id="drill-next" data-go="8" disabled>Next</button></div>
+    <div class="nav"><button class="go quiet back" data-go="5">Back</button><button class="go next" id="drill-next" data-go="8" disabled>Next</button></div>
   </div>
 
   <div class="page" data-page="8" hidden>
@@ -989,7 +898,7 @@ const fill = (select, items) => {
 const slug = name => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'assistant'
 const chosenName = () => ($('name').value === '__custom' ? $('custom').value.trim() : $('name').value) || 'Jarvis'
 
-// One page at a time. Pages 0.5, 1, 2 and 3 are the choices, 4-7 come after setup has run.
+// One page at a time. Pages 0.5 to 3 are the choices (0.7 starts the installs), 4 on come after setup has run.
 let page = 1
 // The software this computer needs, installing while they go through the screens.
 const SAY = { waiting: 'Waiting its turn', working: 'Installing…', done: 'Installed', failed: 'Not installed' }
@@ -1058,6 +967,9 @@ function refreshTools() {
   const main = mainTool()
   // The primary one is not also offered as an "other".
   for (const row of document.querySelectorAll('#tool-list label')) row.hidden = row.querySelector('input').value === main
+  // Extra assistants are for the first chat, unless the company's install file suggests some.
+  const ticked = [...document.querySelectorAll('#tool-list input:checked')].some(box => box.value !== main)
+  $('team-section').hidden = !ticked && !(options.tools || []).some(tool => tool.on && tool.id !== main)
   // Remote control and color modes are Claude's: named as such when Claude is only a side app.
   const claudeOn = pickedTools().includes('claude')
   $('remote').closest('label').hidden = $('tint').closest('label').hidden = !claudeOn
@@ -1068,7 +980,6 @@ function refreshTools() {
 }
 const codexMain = () => Boolean(result && result.main === 'codex')
 const agyMain = () => Boolean(result && result.main === 'agy')
-const phoneOn = () => $('remote').checked
 
 // Codex as the main assistant: is it signed in, and open the ChatGPT app on the folder.
 function showCodex(a) {
@@ -1107,7 +1018,7 @@ function presetRow() {
   const words = on ? `Pick "${preset.name}" in the Claude app's new-chat menu and it starts in this folder. If it is not listed yet, quit Claude and reopen it.`
     : preset.state === 'running' ? 'Quit the Claude app fully (not just its window), then click Add it. Setup cannot add it while Claude is open.'
       : preset.state === 'no-account' ? 'Open the Claude app and sign in once, quit it, then click Add it.'
-        : `It could not be added${preset.error ? ` (${preset.error})` : ''}. Use the desktop shortcut instead.`
+        : `It could not be added${preset.error ? ` (${preset.error})` : ''}. Use your assistant's shortcut instead.`
   return [[on, 'New chats in this folder', words, async () => { preset = await post('/app/preset'); showFinale() }]]
 }
 
@@ -1161,16 +1072,6 @@ function extraRow(tool) {
   return [false, name, openNote[tool.id] || `Not signed in yet. Open it and sign in with ${tool.account}.`, tool]
 }
 
-// Computer Use: setup can see whether it is on in ChatGPT, but not the Mac's own permissions.
-function computerRow() {
-  if (done.computer !== true) return [false, 'Computer use', done.computer === false ? 'Not turned on yet.' : 'Setup has not confirmed this yet.', 5.5]
-  if (options.system !== 'mac') return [true, 'Computer use', 'Turned on in ChatGPT.', 5.5]
-  return [false, 'Computer use', done.macPerms ? 'Turned on. You said you gave it both Mac permissions, and your first chat tests it.'
-    : 'Turned on. It still needs two Mac permissions.', 5.5]
-}
-// Nothing on this computer can see a phone, so this row never ticks.
-const phoneRow = () => [false, 'Your phone', done.phone ? 'Marked done by you. Check that this computer shows up in the phone app.' : 'Not set up yet.', 6.5]
-
 function showFinale() {
   $('final-user').textContent = result && result.user ? `, ${result.user}` : ''
   $('final-app').textContent = codexMain() ? 'ChatGPT' : agyMain() ? 'Antigravity' : 'Claude'
@@ -1220,9 +1121,6 @@ function showFinale() {
     [done.publish >= 2, 'Publishing websites', done.publish >= 2 ? 'Vercel and Supabase are connected.' : 'Not finished: this is what lets it put pages online for you.', 9.5],
   ]
   for (const tool of ((result && result.tools) || []).filter(tool => !result || tool.id !== result.main)) rows.push(extraRow(tool))
-  const practice = rows.findIndex(row => row[1] === 'The four commands')
-  if (codexMain()) rows.splice(practice, 0, computerRow(), phoneRow())
-  else if (agyMain()) rows.splice(practice, 0, phoneRow())
   if (restored) {  // these were done on the first computer, and came with its notes
     for (const title of ['What matters to your company', 'The four commands', 'Private backup on GitHub']) {
       const at = rows.findIndex(row => row[1] === title)
@@ -1276,13 +1174,13 @@ function startIntro() {
 // previous, in the Antigravity flow, using the page they are on.
 function agyRoute(n, from) {
   if (n === 4) return 4.6
-  if (n === 5 || n === 6) return 6.5
+  if (n === 5) return from === 7 ? 4.2 : 7
   if (n === 8) return from === 9 ? 7 : 9
   return n
 }
-const flowPages = () => agyMain() ? [4.6, 4.2, 6.5, 7, 9, 9.5, 10, 11]
-  : codexMain() ? [4.5, 4.2, 5, 5.5, 6.5, 7, 9, 9.5, 10, 11]
-    : [4, 4.2, 5, ...(phoneOn() ? [6] : []), 7, 8, 9, 9.5, 10, 11]
+const flowPages = () => agyMain() ? [4.6, 4.2, 7, 9, 9.5, 10, 11]
+  : codexMain() ? [4.5, 4.2, 5, 7, 9, 9.5, 10, 11]
+    : [4, 4.2, 5, 7, 8, 9, 9.5, 10, 11]
 // A restored assistant steps over the pages that were done on the first computer.
 function restoredRoute(n) {
   if (n >= 0.5 && n <= 3) return 0.2
@@ -1298,7 +1196,7 @@ function show(n) {
   if (restored) n = restoredRoute(n)
   page = n
   if (n === 0.2) {
-    if (!restored) post('/installs/start', { claude: false, claudeApp: false, chatgptApp: false, antigravityApp: false }).then(showInstalls)
+    post('/installs/status').then(showInstalls)
     setTimeout(showWelcome, 0)
   } else stopTimers('wb')
   if (n !== 4.2) clearTimeout(researchTimer)
@@ -1307,7 +1205,6 @@ function show(n) {
     showFinale()
     post('/app/preset').then(r => { preset = r; showFinale() }).catch(() => {})
     post('/publish/status').then(showPublish).catch(() => {})
-    if (codexMain()) post('/chatgpt/apps').then(s => { if (s.state === 'known') done.computer = s.computerUse; showFinale() }).catch(() => {})
     watchAssistants()
   }
   if (n === 1) setTimeout(() => sayHello(true), 180)
@@ -1316,9 +1213,7 @@ function show(n) {
   if (n === 9) post('/github/status').then(showGithub)
   if (n === 9.5) post('/publish/status').then(showPublish)
   if (n === 5) { chromeCopy(); setTimeout(watchChrome, 0) }
-  if (n === 5.5) setTimeout(watchComputer, 0)
-  if (n !== 5.5) stopTimers('computer')
-  if (n === 6.5) phoneCopy()
+  if (n === 0.7) readyCopy()
   if (n === 4.2) startResearch()
   // Coming back to a sign-in page checks again: they may have signed in somewhere else meanwhile.
   if (n === 4 && result && !codexMain() && !agyMain()) {
@@ -1339,8 +1234,8 @@ function show(n) {
     $('meet-line').textContent = $('meet-said').textContent
   }
   for (const el of document.querySelectorAll('.page')) el.hidden = Number(el.dataset.page) !== n
-  $('progress').hidden = $('bar').hidden = n === 0 || n === 0.2
-  const choices = [0.5, 1, 2, 2.5, 3]
+  $('progress').hidden = $('bar').hidden = n === 0 || n === 0.2 || (n === 0.7 && readyNext === 0.2)
+  const choices = [0.5, 0.7, 1, 2, 2.5, 3]
   const after = flowPages().filter(p => !restored || !RESTORED_SKIP.includes(p))
   $('progress').textContent = n <= 3 ? `Step ${choices.indexOf(n) + 1} of ${choices.length}` : `Almost there: ${after.indexOf(n) + 1} of ${after.length}`
   const total = n <= 3 ? choices.length : after.length, at = (n <= 3 ? choices : after).indexOf(n) + 1
@@ -1354,17 +1249,47 @@ for (const button of document.querySelectorAll('button[data-go]')) {
   // With Codex as the main assistant, the Claude-only pages are skipped: GitHub's Back goes to the ChatGPT page.
   button.onclick = () => {
     const to = Number(button.dataset.go)
-    // Leaving the first question: the command-line tools start installing now. No desktop app does:
-    // they can still change their mind (Back), so the main one is started by /apply, once it is final.
-    if (page === 0.5 && to === 1) post('/installs/start', { claude: pickedTools().includes('claude'),
-      claudeApp: false, chatgptApp: false, antigravityApp: false }).then(showInstalls)
-    // With Codex as the primary agent the flow is 4.5, 4.2, 5, 5.5, 6.5, 7, 9, 9.5, 10, 11: the Claude-only pages are stepped over.
+    // The ready step comes once, unless Claude was added after it ran.
+    if (to === 0.7) {
+      readyNext = page === 0 ? 0.2 : 1
+      if (!readyNeeded()) { show(readyNext); return }
+    }
+    // With Codex as the primary agent the flow is 4.5, 4.2, 5, 7, 9, 9.5, 10, 11: the Claude-only pages are stepped over.
     if (codexMain() && to === 4) show(4.5)
     else if (codexMain() && to === 8) show(page === 7 ? 9 : 7)
-    // The phone page is Claude's Remote control: without it, Chrome and practice meet.
-    else if (codexMain() && to === 6) show(page === 5 ? 5.5 : 6.5)
-    else if (to === 6 && !phoneOn()) show(page === 5 ? 7 : 5)
     else show(to)
+  }
+}
+
+// Nothing installs before this click. The main assistant's desktop app still waits for /apply,
+// because the person can go Back and change their mind until then.
+let readyNext = 1
+const readyStarted = { any: false, claude: false }
+const wantsClaude = () => readyNext !== 0.2 && pickedTools().includes('claude')
+const readyNeeded = () => !readyStarted.any || (wantsClaude() && !readyStarted.claude)
+function readyCopy() {
+  const apple = options.system === 'mac' && Boolean(options.appleToolsNeeded)
+  $('ready-apple').hidden = !apple
+  $('ready-windows').hidden = options.system !== 'windows'
+  $('ready-none').hidden = apple || options.system === 'windows'
+  $('ready-plugins').hidden = !wantsClaude()
+  $('ready-error').hidden = true
+}
+$('ready-back').onclick = () => show(readyNext === 0.2 ? 0 : 0.5)
+$('ready-go').onclick = async () => {
+  const claude = wantsClaude()
+  $('ready-go').disabled = true
+  $('ready-error').hidden = true
+  try {
+    showInstalls(await post('/installs/start', { claude, claudeApp: false, chatgptApp: false, antigravityApp: false }))
+    readyStarted.any = true
+    readyStarted.claude = readyStarted.claude || claude
+    show(readyNext)
+  } catch (error) {
+    $('ready-error').textContent = `Setup could not start the installs. Click the button again, or send ${options.contact || 'your manager'} a screenshot.`
+    $('ready-error').hidden = false
+  } finally {
+    $('ready-go').disabled = false
   }
 }
 
@@ -1518,7 +1443,6 @@ let result
 function afterSetup() {
   $('done-name').textContent = result.assistant
   $('done-folder').textContent = result.folder
-  $('remote-step').hidden = !$('remote').checked  // only for those who kept Remote control on
   // Only what needs their attention: the rest of the log is for us, not for them.
   const problems = result.log.filter(line => /could not|did not|still to install|ask for help/i.test(line))
   for (const box of document.querySelectorAll('.setup-issues')) {
@@ -1556,7 +1480,8 @@ $('go').onclick = async () => {
         crm: (systemOf('crm').row || {}).id || '', crm_other: systemOf('crm').name, crm_name: $('crm-name').value,
         phone: (systemOf('phone').row || {}).id || '', phone_other: systemOf('phone').name,
         mode: $('mode').value, remote: $('remote').checked, colors: $('tint').checked,
-        tools: pickedTools(), main: mainTool(),  // extra assistants never stop to ask: the server's default
+        tools: pickedTools(), main: mainTool(),
+        toolsShown: $('team-section').hidden ? [] : [...document.querySelectorAll('#tool-list input')].map(box => box.value),  // extra assistants never stop to ask: the server's default
       }),
     })
     result = await response.json()
@@ -2325,7 +2250,7 @@ const openSite = page => post('/window/open', { page: sitePage(page),
   add: page === 'google' && Boolean(lastChrome && lastChrome.google && !lastChrome.work) }).catch(() => ({}))
 const closeSite = page => post('/window/close', { page: sitePage(page) }).then(r => Boolean(r.closed)).catch(() => false)
 const CHROME_WORDS = { claude: {}, codex: {
-  'cs-extension': 'Click <b>Add to Chrome</b> in the window that opens. If Chrome already asked you to turn on "ChatGPT", click <b>Enable</b> instead. This page ticks it and closes the window once Chrome has it.',
+  'cs-extension': 'Click <b>Add to Chrome</b> in the window that opens. If Chrome already asked you to turn on "ChatGPT", click <b>Enable</b> instead. This page ticks it once Chrome has it. If the window stays open, close it.',
   'cs-claude': 'Sign in to ChatGPT with your work account in the window that opens. Then, in the ChatGPT app, open <b>Settings</b> and then <b>Computer use</b>: under <b>Google Chrome</b>, click <b>Install</b> if it shows. It is ready when Google Chrome shows <b>Manage</b>.',
 } }
 for (const id of Object.keys(CHROME_WORDS.codex)) CHROME_WORDS.claude[id] = $(id).innerHTML
@@ -2418,12 +2343,12 @@ for (const button of document.querySelectorAll('button.step[data-page]')) {
 $('cs-claude-done').onclick = async () => {
   $('cs-claude-done').hidden = true
   markSaid('claude', 'Marked done by you. Setup cannot see inside the extension, so your first chat tests it.')
-  if (!(await closeSite('claude'))) $('cs-claude').textContent += ` Close the ${chromeApp()} window yourself: setup could not close it.`
+  if (!(await closeSite('claude'))) $('cs-claude').textContent += ` You can close the ${chromeApp()} window now.`
 }
 $('cs-google-done').onclick = async () => {
   $('cs-google-done').hidden = true
   markSaid('google', 'Marked done by you. Setup could not watch this sign-in, so it cannot confirm it.')
-  if (!(await closeSite('google'))) $('cs-google').textContent += ' Close that window yourself: setup could not close it.'
+  if (!(await closeSite('google'))) $('cs-google').textContent += ' You can close that window now.'
 }
 
 $('copy-folder').onclick = async () => {
@@ -2521,50 +2446,6 @@ async function openAntigravity() {
   return reply.opened
 }
 $('ag-open').onclick = openAntigravity
-
-async function watchComputer() {
-  stopTimers('computer')
-  if (page !== 5.5) return
-  let s = null
-  try { s = await post('/chatgpt/apps') } catch (error) {}
-  if (page !== 5.5) return
-  if (s && s.state === 'known') done.computer = s.computerUse
-  $('cu-status').textContent = !s ? 'Setup could not check this. You can still follow the steps below.'
-    : s.state === 'signed-out' ? 'Sign in to ChatGPT first (Back), then setup can check this.'
-      : s.state !== 'known' ? 'Checking whether Computer Use is on…'
-        : s.computerUse === true ? (options.system === 'mac' ? 'Computer Use is on in ChatGPT. It still needs the two Mac permissions below.'
-          : '\u2713 Computer Use is turned on in ChatGPT.')
-          : s.computerUse === false ? 'Computer Use is not on yet. Follow step 1 and this updates by itself.'
-            : 'Setup cannot see this setting. Follow step 1, and your first chat will test it.'
-  if (!(s && s.state === 'known' && s.computerUse === true)) later('computer', watchComputer, 4000)
-}
-$('cu-open').onclick = openChatGPT
-for (const [id, pane] of [['cu-screen', 'screen'], ['cu-access', 'accessibility']]) {
-  $(id).onclick = async () => {
-    const reply = await post('/mac/privacy', { pane }).catch(() => ({}))
-    if (!reply.ok) $('cu-mac-note').textContent = 'Open System Settings, then Privacy & Security, and find it there.'
-  }
-}
-$('cu-mac-done').onclick = () => {
-  done.macPerms = true
-  $('cu-mac-done').hidden = true
-  $('cu-mac-note').textContent = 'Marked done by you. Setup cannot see these settings, so your first chat tests them.'
-}
-
-// The phone page follows the main assistant.
-function phoneCopy() {
-  const app = agyMain() ? 'agy' : 'codex'
-  $('ph-title').textContent = `${app === 'agy' ? 'Antigravity' : 'ChatGPT'} on your phone`
-  for (const block of document.querySelectorAll('[data-phone]')) block.hidden = block.dataset.phone !== app
-}
-$('ph-open-codex').onclick = openChatGPT
-$('ph-open-agy').onclick = openAntigravity
-$('ph-back').onclick = () => show(agyMain() ? 4.2 : 5.5)
-$('ph-done').onclick = () => {
-  done.phone = true
-  $('ph-done').hidden = true
-  $('ph-note').textContent = 'Marked done by you. Check that this computer shows up in the phone app.'
-}
 
 $('final-open').onclick = async () => {
   $('final-open').dataset.clicked = '1'
