@@ -89,7 +89,22 @@ This is the most important step. Check the "Last updated" date in `state/current
 - Ensure open threads reflect reality (remove resolved, add new)
 - Ensure priorities are ordered by actual urgency
 
-### 6. Confirm
+### 6. Send It to Your Other Computers
+If `.claude/tools/computers.py` exists, run:
+```bash
+uv run --quiet --no-project --python 3.12 .claude/tools/computers.py push
+```
+It prints one line of JSON. Act on `state`:
+- `ok`: backed up, and ready on the other computer.
+- `no-backup`: saved on this computer only. Say so in one line.
+- `offline` or `signed-out`: saved on this computer, and it goes up next time. Say so in one line.
+- `conflict`: `files` changed on both computers. Nothing was overwritten. For each file, show the
+  person the difference in plain words (`git diff HEAD origin/<branch> -- <file>`) and ask which to
+  keep: this computer's, the other computer's, or both. Never choose for them. Then run
+  `uv run --quiet --no-project --python 3.12 .claude/tools/computers.py resolve "<file>=mine"` (or `=other`, or `=both`), naming every file.
+- Never use `git push --force`, `git reset --hard` or `git checkout --` on these notes.
+
+### 7. Confirm
 Show a brief summary:
 - What was logged
 - Key items for next session

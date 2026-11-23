@@ -78,6 +78,18 @@
   ol.next { padding-left: 22px; margin: 0; }
   ol.next li { margin-bottom: 8px; }
   a { color: var(--accent); }
+  dl.explain { display: grid; gap: 12px; margin: 0 0 16px; padding: 16px 18px; background: var(--card);
+    border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 12px; }
+  dl.explain div { display: grid; grid-template-columns: 136px minmax(0, 1fr); gap: 12px; }
+  dl.explain dt { font-weight: 700; font-size: 15px; }
+  dl.explain dd { margin: 0; color: var(--soft); font-size: 15px; }
+  @media (max-width: 560px) { dl.explain div { grid-template-columns: 1fr; gap: 1px; } }
+  ul.conn .app { min-width: 0; }
+  ul.conn .app b, ul.conn .app small { display: block; }
+  ul.conn .app small { color: var(--soft); font-size: 13px; font-weight: 400; }
+  .again { display: block; margin: 10px auto 0; padding: 8px 12px; background: none; border: 0; color: var(--soft);
+    font: inherit; font-size: 15px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .again:hover { color: var(--ink); }
   .go.quiet { background: transparent; color: var(--ink); border: 1px solid var(--line); }
   ol.steps li { margin-bottom: 14px; }
   button.step {
@@ -437,47 +449,71 @@
       <p class="lede">Claude, ChatGPT or Gemini, set up for your business, your systems and your job.</p>
       <div class="stage" id="stage">
         <div class="versus head">
-          <div class="plain">A regular LLM</div>
+          <div class="plain">A regular AI chat</div>
           <div class="yours">Your assistant</div>
         </div>
         <div class="versus">
-          <div class="plain"><span class="mark" aria-hidden="true">&#10005;</span><span><span class="who">A regular LLM </span>Starts every chat from zero.</span></div>
+          <div class="plain"><span class="mark" aria-hidden="true">&#10005;</span><span><span class="who">A regular AI chat </span>Starts every chat from zero.</span></div>
           <div class="yours"><span class="mark" aria-hidden="true">&#10003;</span><span><b><span class="who">Yours </span>Remembers.</b>It keeps notes on your work and picks up where you left off, even days later.</span></div>
         </div>
         <div class="versus">
-          <div class="plain"><span class="mark" aria-hidden="true">&#10005;</span><span><span class="who">A regular LLM </span>Knows nothing about your business.</span></div>
+          <div class="plain"><span class="mark" aria-hidden="true">&#10005;</span><span><span class="who">A regular AI chat </span>Knows nothing about your business.</span></div>
           <div class="yours"><span class="mark" aria-hidden="true">&#10003;</span><span><b><span class="who">Yours </span>Knows your trade.</b>Your services, your process, your tools, and who to ask.</span></div>
         </div>
         <div class="versus">
-          <div class="plain"><span class="mark" aria-hidden="true">&#10005;</span><span><span class="who">A regular LLM </span>Only knows what you paste in.</span></div>
-          <div class="yours"><span class="mark" aria-hidden="true">&#10003;</span><span><b><span class="who">Yours </span>Looks things up.</b>Jobs in your CRM, calls on your phone system, your email and your calendar.</span></div>
+          <div class="plain"><span class="mark" aria-hidden="true">&#10005;</span><span><span class="who">A regular AI chat </span>Only knows what you paste in.</span></div>
+          <div class="yours"><span class="mark" aria-hidden="true">&#10003;</span><span><b><span class="who">Yours </span>Looks things up.</b>Jobs in your customer system, calls on your phone system, your email and your calendar.</span></div>
         </div>
         <div class="versus">
-          <div class="plain"><span class="mark" aria-hidden="true">&#10005;</span><span><span class="who">A regular LLM </span>Tells you what to click.</span></div>
-          <div class="yours"><span class="mark" aria-hidden="true">&#10003;</span><span><b><span class="who">Yours </span>Does the clicking.</b>It works in your web tools for you, in your own sign-in, after you say yes.</span></div>
+          <div class="plain"><span class="mark" aria-hidden="true">&#10005;</span><span><span class="who">A regular AI chat </span>Tells you what to click.</span></div>
+          <div class="yours"><span class="mark" aria-hidden="true">&#10003;</span><span><b><span class="who">Yours </span>Does the clicking.</b>It works in your web tools for you, in your own sign-in. You choose how often it stops to ask.</span></div>
         </div>
         <div class="versus">
-          <div class="plain"><span class="mark" aria-hidden="true">&#10005;</span><span><span class="who">A regular LLM </span>Stays on the screen you opened it on.</span></div>
+          <div class="plain"><span class="mark" aria-hidden="true">&#10005;</span><span><span class="who">A regular AI chat </span>Stays on the screen you opened it on.</span></div>
           <div class="yours"><span class="mark" aria-hidden="true">&#10003;</span><span><b><span class="who">Yours </span>Goes with you.</b>Start something at your desk and check on it from your phone.</span></div>
         </div>
       </div>
       <button class="go" id="begin" data-go="0.5" disabled>Get started</button>
       <p class="hint" id="begin-note" style="text-align:center;margin-top:12px">&nbsp;</p>
+      <button type="button" class="again" id="welcome-back" data-go="0.2">I already set this up on another computer</button>
     </div>
+  </div>
+
+  <div class="page" data-page="0.2" hidden>
+    <h1>Welcome back</h1>
+    <p class="lede">Your assistant is saved in your private GitHub account. GitHub is a free website that stores files. Sign in to that same account and your assistant comes to this computer, with its name, voice, notes and company info. You do not need a new account.</p>
+    <section>
+      <p id="wb-missing" class="hint" hidden>Setup could not get the GitHub tool onto this computer. Send <span class="the-contact">your manager</span> a screenshot of this page.</p>
+      <ol class="next steps" id="wb-steps">
+        <li><button class="step" id="wb-connect">Connect my GitHub</button>
+          <span id="wb-note">A GitHub page opens. Sign in with the account you used before, then type the code shown here.</span>
+          <div id="wb-code" hidden>Your code: <code id="wb-code-value" style="font-size:22px;letter-spacing:.08em"></code>
+            <button type="button" class="copy" id="wb-code-copy">Copy</button></div></li>
+        <li><b>Find your assistant</b>
+          <div id="wb-found"><span class="hint">Connect GitHub first.</span></div></li>
+        <li id="wb-keys" hidden><b>Bring your saved keys (optional)</b>
+          <span>Keys are private passwords that let your assistant use your business software. They are not kept in your GitHub copy, so they move separately. If you have any, open your assistant on your other computer and type <code>/add-computer</code> in Claude or Antigravity, or <code>$add-computer</code> in ChatGPT. A page shows a one-time code. Type it here.</span>
+          <label for="wb-key-code" style="margin-top:8px">Code from your other computer</label>
+          <input type="text" id="wb-key-code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX-XXXX" style="max-width:320px"></li>
+      </ol>
+    </section>
+    <p class="error" id="wb-error" role="alert" hidden></p>
+    <div class="nav"><button class="go quiet back" data-go="0">Back</button><button class="go next" id="wb-go" disabled>Bring my assistant here</button></div>
   </div>
 
   <div class="page" data-page="0.5" hidden>
     <h1>Which assistant will you use most?</h1>
-    <p class="lede">Setup is built around it: its app, signing in, and a shortcut on your desktop.</p>
+    <p class="lede">This is the AI you will talk to every day. Setup installs its app, helps you sign in, and puts a shortcut on your desktop.</p>
     <section>
       <div id="main-list"></div>
+      <p class="hint" style="margin-top:12px">Not sure? Pick the one you already pay for. These are AI assistants from three different companies. Gemini's app is called Antigravity.</p>
     </section>
     <section>
       <h2>Already pay for another AI? Add it to your team</h2>
-      <p class="hint" style="margin:0 0 6px">Tick any you pay for. Setup installs its command-line tool, and your main assistant can hand it work behind the scenes while you keep talking in one place.</p>
+      <p class="hint" style="margin:0 0 6px">Tick any you already pay for. Setup adds a small behind-the-scenes version of it, so your main assistant can ask it for help while you keep talking in one place.</p>
       <ul class="done" style="margin:8px 0">
         <li><b>A second opinion.</b> A different company's AI checks the work and catches mistakes the first one missed.</li>
-        <li><b>The right tool for the job.</b> Quick models handle simple lookups, and the strongest ones take the hard thinking.</li>
+        <li><b>The right tool for the job.</b> A quick AI handles simple lookups, and the strongest one takes the hard thinking.</li>
         <li><b>More done at once.</b> Several can research or draft side by side, so big jobs finish sooner.</li>
         <li><b>No dead ends.</b> If one hits its usage limit, another picks up the work.</li>
       </ul>
@@ -507,7 +543,7 @@
         <section class="pick">
           <h2 id="color-label"><b>2</b>Pick its color</h2>
           <div class="swatches" id="colors" role="group" aria-labelledby="color-label"></div>
-          <p class="hint" id="color-hint">Chats about the assistant itself use this color. Work chats are orange, personal chats green.</p>
+          <p class="hint" id="color-hint">Chats about your assistant use this color. Work chats are orange and personal chats are green, so you can tell them apart at a glance.</p>
         </section>
         <section class="pick">
           <h2 id="style-label"><b>3</b>Give it a voice</h2>
@@ -534,7 +570,7 @@
 
   <div class="page" data-page="2.5" hidden>
     <h1>Your business</h1>
-    <p class="lede">Pick the systems you already run on, and <span class="the-name">Jarvis</span> works inside them.</p>
+    <p class="lede">Tell <span class="the-name">Jarvis</span> what you already use, so it can look things up there for you.</p>
     <section>
       <h2>The company</h2>
       <label for="company">Company name</label>
@@ -547,51 +583,52 @@
       <input type="hidden" id="industry">
     </section>
     <section>
-      <h2>Your systems</h2>
+      <h2>The software you use</h2>
       <label for="crm">What do you use to track customers and jobs?</label>
       <input type="text" id="crm" maxlength="40" autocomplete="off" placeholder="For example: Jobber, ServiceTitan, spreadsheets">
+      <p class="hint">Where you keep customers, jobs and appointments. This is often called a CRM.</p>
       <div class="sys" id="crm-card" hidden></div>
       <div id="crm-name-row" hidden>
-        <label for="crm-name">Your name as it appears in <span class="crm-label">the CRM</span> <span class="hint" style="display:inline">(optional)</span></label>
+        <label for="crm-name">Your name as it appears in <span class="crm-label">that system</span> <span class="hint" style="display:inline">(optional)</span></label>
         <input type="text" id="crm-name" maxlength="60" placeholder="First and last name">
         <p class="hint">With this, "show me my jobs" works from day one.</p>
       </div>
 
-      <label for="phone">What do you use for phones and call tracking?</label>
+      <label for="phone">What do you use for business phone calls?</label>
       <input type="text" id="phone" maxlength="40" autocomplete="off" placeholder="For example: RingCentral, CallRail, our cell phones">
-      <p class="hint">Not sure? Leave these blank.</p>
+      <p class="hint">Not sure? Leave these blank. <span class="the-name">Jarvis</span> can help you connect them later.</p>
       <div class="sys" id="phone-card" hidden></div>
     </section>
     <div class="nav"><button class="go quiet back" data-go="2">Back</button><button class="go next" data-go="3">Next</button></div>
   </div>
 
   <div class="page" data-page="3" hidden>
-    <h1>How it works</h1>
-    <p class="lede">These are the settings we recommend. Leave them unless you have a reason.</p>
+    <h1>How <span class="the-name">Jarvis</span> should work</h1>
+    <p class="lede">These are the settings we recommend. Leave them as they are unless you have a reason.</p>
     <section>
-      <label for="mode">Permissions</label>
+      <label for="mode">How often it stops to ask you</label>
       <select id="mode"></select>
-      <p class="hint">Bypass means it never stops mid-task to ask "is this OK?". It still checks with you before sending messages or deleting things.</p>
+      <p class="hint">"Keep working" means the app does not pause for your OK on each step, so big jobs finish while you do something else. <span class="the-name">Jarvis</span> is told to check with you before sending messages or deleting things, but the app does not enforce that. For important work, ask it to show you its plan first.</p>
 
       <label class="check"><input type="checkbox" id="remote" checked>
-        <span><b>Remote control</b>Pick up any chat from the Claude app on your phone.</span></label>
+        <span><b>Use it from your phone</b>Start a job here, then check on it from the Claude app on your phone.</span></label>
       <label class="check"><input type="checkbox" id="tint" checked>
-        <span><b>Color modes</b>Each chat gets a background color and a colored shape on its title, by topic.</span></label>
+        <span><b>Color-coded chats</b>Each chat gets a color by topic, so work and personal are easy to tell apart.</span></label>
     </section>
-    <p class="path">Folder: <span id="folder"></span></p>
+    <p class="path">Its notes live in this folder on your computer: <span id="folder"></span></p>
     <div class="nav"><button class="go quiet back" data-go="2.5">Back</button><button class="go" id="go">Set up Jarvis</button></div>
     <p class="error" id="error" role="alert" hidden></p>
   </div>
 
   <div class="page" data-page="4" hidden>
     <h1><span id="done-name">Jarvis</span> is ready</h1>
-    <p class="lede">Open Claude and sign in. Your first chat comes at the end of setup.</p>
+    <p class="lede">Claude is the app where you will talk to <span class="the-name">Jarvis</span>. Open it and sign in. Your first chat comes at the end of setup.</p>
     <p class="note setup-issues" hidden></p>
     <section id="account">
       <h2>Your Claude account</h2>
       <p id="acct-text" style="margin:0">Checking whether you are already signed in…</p>
       <button class="step" id="acct-login" style="margin-top:12px" hidden>Sign in to Claude</button>
-      <p class="hint mac-only" hidden>Sign-ins open in a small window that setup closes when you are done. The first time, your Mac asks whether Terminal may control Google Chrome: click <b>OK</b> (or <b>Allow</b>). Setup uses it only to close the windows it opened.</p>
+      <p class="hint mac-only" hidden>Sign-ins open in a small window that setup closes when you are done. The first time, your Mac asks whether Terminal may control Google Chrome. Terminal is the small program running this setup. Click <b>OK</b> (or <b>Allow</b>). Setup uses it only to close the windows it opened.</p>
     </section>
     <button class="go" id="open" disabled>Checking for the Claude app…</button>
     <p class="hint" id="open-note" style="text-align:center;margin:12px 0 20px"></p>
@@ -599,7 +636,7 @@
       <h2>Once Claude is open</h2>
       <ol class="next">
         <li>Sign in with your work email.</li>
-        <li id="remote-step">Open <b>Settings</b>, then <b>Claude Code</b>, and turn on <b>Connect new sessions to Remote Control</b>. That is what lets your phone see your chats.</li>
+        <li id="remote-step">To use it from your phone, open <b>Settings</b>, then <b>Claude Code</b> (the part of the app your assistant runs in), and turn on <b>Connect new sessions to Remote Control</b>.</li>
       </ol>
     </section>
     <div class="nav"><span></span><button class="go next" data-go="4.2">Next: about your company</button></div>
@@ -607,7 +644,7 @@
 
   <div class="page" data-page="4.5" hidden>
     <h1><span class="the-name">Jarvis</span> is ready</h1>
-    <p class="lede">Sign in and connect your tools. Your first chat comes at the end of setup.</p>
+    <p class="lede">ChatGPT is the app where you will talk to <span class="the-name">Jarvis</span>. Sign in, then connect the apps you want it to use. Your first chat comes at the end of setup.</p>
     <p class="note setup-issues" hidden></p>
     <section>
       <h2>Your ChatGPT account</h2>
@@ -618,14 +655,15 @@
     <p class="hint" id="cx-note" style="text-align:center;margin:12px 0 20px" role="status">Setup installs the ChatGPT app for you if it is not on this computer yet. Open it once and sign in if it asks.</p>
     <section>
       <h2>Connect your apps</h2>
+      <p class="hint" style="margin:0 0 4px">Connecting lets <span class="the-name">Jarvis</span> use an app for you. It only sees what your account can see.</p>
       <ul class="conn" id="cx-apps">
-        <li data-app="gmail"><span class="mark"></span><b>Gmail</b><button type="button" class="copy" style="margin-left:auto" hidden>Connect</button></li>
-        <li data-app="google-calendar"><span class="mark"></span><b>Google Calendar</b><button type="button" class="copy" style="margin-left:auto" hidden>Connect</button></li>
-        <li data-app="google-drive"><span class="mark"></span><b>Google Drive</b><button type="button" class="copy" style="margin-left:auto" hidden>Connect</button></li>
-        <li data-app="google-docs"><span class="mark"></span><b>Google Docs</b><small class="hint" style="margin:0 0 0 auto">comes with Google Drive</small></li>
-        <li data-app="google-sheets"><span class="mark"></span><b>Google Sheets</b><small class="hint" style="margin:0 0 0 auto">comes with Google Drive</small></li>
-        <li data-app="vercel"><span class="mark"></span><b>Vercel</b><button type="button" class="copy" style="margin-left:auto" hidden>Connect</button></li>
-        <li data-app="supabase"><span class="mark"></span><b>Supabase</b><button type="button" class="copy" style="margin-left:auto" hidden>Connect</button></li>
+        <li data-app="gmail"><span class="mark"></span><span class="app"><b>Gmail</b><small>Finds, sums up and drafts your email</small></span><button type="button" class="copy" style="margin-left:auto" hidden>Connect</button></li>
+        <li data-app="google-calendar"><span class="mark"></span><span class="app"><b>Google Calendar</b><small>Checks your schedule and plans around it</small></span><button type="button" class="copy" style="margin-left:auto" hidden>Connect</button></li>
+        <li data-app="google-drive"><span class="mark"></span><span class="app"><b>Google Drive</b><small>Finds and reads your saved files</small></span><button type="button" class="copy" style="margin-left:auto" hidden>Connect</button></li>
+        <li data-app="google-docs"><span class="mark"></span><span class="app"><b>Google Docs</b><small>Reads and writes documents. Comes with Google Drive.</small></span></li>
+        <li data-app="google-sheets"><span class="mark"></span><span class="app"><b>Google Sheets</b><small>Reads and updates spreadsheets. Comes with Google Drive.</small></span></li>
+        <li data-app="vercel"><span class="mark"></span><span class="app"><b>Vercel</b><small>Puts the websites it builds online</small></span><button type="button" class="copy" style="margin-left:auto" hidden>Connect</button></li>
+        <li data-app="supabase"><span class="mark"></span><span class="app"><b>Supabase</b><small>Saves what your websites collect, like form answers</small></span><button type="button" class="copy" style="margin-left:auto" hidden>Connect</button></li>
       </ul>
       <p class="hint" id="cx-apps-note" role="status" style="margin-top:10px">Sign in to ChatGPT first. Then each one can be connected here.</p>
     </section>
@@ -634,20 +672,20 @@
 
   <div class="page" data-page="4.6" hidden>
     <h1><span class="the-name">Jarvis</span> is ready</h1>
-    <p class="lede">Open Antigravity and sign in. Your first chat comes at the end of setup.</p>
+    <p class="lede">Antigravity is Google's app for Gemini, and it is where you will talk to <span class="the-name">Jarvis</span>. Open it and sign in. Your first chat comes at the end of setup.</p>
     <p class="note setup-issues" hidden></p>
     <section>
       <h2>Your Google account</h2>
-      <p style="margin:0">Sign in to Antigravity with a personal Google account, a Gmail address. Company Google Workspace accounts do not include Antigravity plans. A business can still use it through Google Cloud: ask <span class="the-contact">your manager</span>.</p>
+      <p style="margin:0">Sign in with a personal Google account, like a Gmail address. Company email accounts run through Google (called Google Workspace) do not include Antigravity plans. A business can still use it through Google Cloud: ask <span class="the-contact">your manager</span>.</p>
     </section>
     <button class="go" id="ag-open">Open Antigravity</button>
     <p class="hint" id="ag-note" style="text-align:center;margin:12px 0 20px" role="status">Setup installs the Antigravity app for you if it is not on this computer yet. Open it once and sign in if it asks.</p>
     <section>
       <h2>Check these in Antigravity</h2>
       <ol class="next" style="margin-bottom:0">
-        <li><b>Its web browser.</b> Open <b>Settings</b>, then <b>Browser</b>, then <b>Browser Actuation Rules</b>. If it says it runs in the built-in browser, you are set. If it says it requires Google Chrome, your first chat walks you through that.</li>
-        <li><b>How often it asks.</b> Under <b>Settings</b>, <b>General</b>, <b>Global Permissions</b>, the <b>Permission Preset</b> sets how often it stops to check with you. <b>Default</b> is a good place to start.</li>
-        <li><b>Your other apps.</b> Open <b>Customizations</b>, then <b>Marketplace</b>, to add tools such as your calendar or files.</li>
+        <li><b>Where it opens websites.</b> Open <b>Settings</b>, then <b>Browser</b>, then <b>Browser Actuation Rules</b>. If it says it runs in the built-in browser, you are set. If it says it requires Google Chrome, your first chat walks you through that.</li>
+        <li><b>How often it asks.</b> Under <b>Settings</b>, <b>General</b>, <b>Global Permissions</b>, the <b>Permission Preset</b> is how often it stops to check with you. <b>Default</b> is a good place to start.</li>
+        <li><b>Your other apps.</b> To let it use things like your calendar or files, open <b>Customizations</b>, then <b>Marketplace</b>.</li>
       </ol>
     </section>
     <div class="nav"><span></span><button class="go next" data-go="4.2">Next: about your company</button></div>
@@ -675,8 +713,9 @@
 
   <div class="page" data-page="5" hidden>
     <h1>Connect Chrome</h1>
-    <p class="lede">This lets <span class="the-name">Jarvis</span> work in web pages for you. <span id="cs-lede-count">Three clicks</span>, in order. Each one opens a small window of its own.</p>
-    <p class="hint mac-only" hidden>If your Mac asks whether Terminal may control Google Chrome, click <b>OK</b> (or <b>Allow</b>): that is how setup closes each window when its step is done.</p>
+    <dl class="explain"><div><dt>What it is</dt><dd>A small add-on for Google Chrome, called an extension.</dd></div><div><dt>Why you want it</dt><dd><span class="the-name">Jarvis</span> can do the clicking in the websites you already use.</dd></div><div><dt>How it helps</dt><dd>Ask it to look up a customer, fill in a web form, or pull numbers from a report. It works in your own sign-ins.</dd></div></dl>
+    <p class="lede"><span id="cs-lede-count">Three clicks</span>, in order. Each one opens a small window of its own.</p>
+    <p class="hint mac-only" hidden>If your Mac asks whether Terminal (the small program running this setup) may control Google Chrome, click <b>OK</b> (or <b>Allow</b>). That is how setup closes each window when its step is done.</p>
     <p class="note" id="cs-summary" hidden></p>
     <p class="note" id="cs-error" role="alert" hidden></p>
     <section>
@@ -696,7 +735,7 @@
 
   <div class="page" data-page="6" hidden>
     <h1>Claude on your phone</h1>
-    <p class="lede">Start something at your desk, then check on it from anywhere.</p>
+    <p class="lede">Start something at your desk, then check on it from anywhere. Your computer does the work, and your phone is the remote.</p>
     <section>
       <h2>1. Get the app</h2>
       <p class="hint" style="margin:0 0 12px">Point your phone's camera at the code for your phone.</p>
@@ -727,14 +766,14 @@
 
   <div class="page" data-page="5.5" hidden>
     <h1>Let ChatGPT use your computer</h1>
-    <p class="lede">With Computer Use, <span class="the-name">Jarvis</span> can click, type and work in your other apps. It asks before it uses each one.</p>
+    <dl class="explain"><div><dt>What it is</dt><dd>A ChatGPT feature that uses your computer's apps the way you would, with the mouse and keyboard.</dd></div><div><dt>Why you want it</dt><dd>It can work in programs that have no other way to connect, like desktop accounting or scheduling software.</dd></div><div><dt>How it helps</dt><dd>Ask <span class="the-name">Jarvis</span> to pull a report from one program and put it in another. ChatGPT asks before it uses each app.</dd></div></dl>
     <p class="note" id="cu-status" role="status">Checking whether Computer Use is on…</p>
     <section>
       <ol class="next steps">
         <li><button class="step" id="cu-open">Open ChatGPT</button>
           <span>Open <b>Settings</b>, then <b>Computer use</b>. Under <b>Control</b>, find <b>Any App</b>. If it says <b>Install</b>, click it. If its switch is off, turn it on.</span></li>
         <li class="mac-only" hidden><b>Give it two Mac permissions</b><br>
-          <span>Turn on <b>Codex Computer Use</b> on both of these pages. Your Mac may ask for your password.</span>
+          <span>Turn on <b>Codex Computer Use</b> on both pages (Codex is ChatGPT's work tool). <b>Screen Recording</b> lets it see what is on the screen. <b>Accessibility</b> lets it click and type. Your Mac may ask for your password.</span>
           <div class="chips" style="margin:10px 0 6px">
             <button type="button" class="chip" id="cu-screen">Open Screen Recording</button>
             <button type="button" class="chip" id="cu-access">Open Accessibility</button>
@@ -747,13 +786,13 @@
           <span>The first time it needs an app, ChatGPT asks. Click <b>Allow</b>, or <b>Always allow</b> for apps you trust. Sign in to those apps yourself first.</span></li>
       </ol>
     </section>
-    <p class="hint" style="margin:0 0 14px">It will not work in terminal apps or ChatGPT itself, and it cannot approve security prompts for you. In a company workspace, an admin may need to allow it.</p>
+    <p class="hint" style="margin:0 0 14px">It will not work in command-line windows (like Terminal or Command Prompt) or in ChatGPT itself, and it cannot approve security prompts for you. In a company workspace, an admin may need to allow it.</p>
     <div class="nav"><button class="go quiet back" data-go="5">Back</button><button class="go next" data-go="6.5">Next</button></div>
   </div>
 
   <div class="page" data-page="6.5" hidden>
     <h1 id="ph-title">ChatGPT on your phone</h1>
-    <p class="lede">Start something at your desk, then check on it or give it new work from anywhere.</p>
+    <p class="lede">Start something at your desk, then check on it or give it new work from anywhere. Your computer does the work, and your phone is the remote.</p>
     <div data-phone="codex">
       <section>
         <h2>1. Get the ChatGPT app</h2>
@@ -771,7 +810,7 @@
       </section>
       <section>
         <h2>3. Scan it with your phone</h2>
-        <p style="margin:0">In ChatGPT on your phone, open <b>Codex</b> (it may say <b>Remote</b>). Scan the code, confirm it is the same account, and finish any sign-in step. This computer then shows up there.</p>
+        <p style="margin:0">In ChatGPT on your phone, open <b>Codex</b>, ChatGPT's work area (it may say <b>Remote</b>). Scan the code, confirm it is the same account, and finish any sign-in step. This computer then shows up there.</p>
         <p class="hint" style="margin:10px 0 0">In a company workspace, an admin may need to turn on Remote Control first.</p>
       </section>
     </div>
@@ -801,7 +840,7 @@
 
   <div class="page" data-page="7" hidden>
     <h1>Four commands to know</h1>
-    <p class="lede">Type each one below, the way you will in <span id="drill-where">Claude</span>. It takes twenty seconds.</p>
+    <p class="lede">Commands are short words that tell <span class="the-name">Jarvis</span> what to do. Type each one below, the way you will in <span id="drill-where">Claude</span>. It takes twenty seconds.</p>
     <section>
       <div class="chat" id="drill-log" aria-live="polite"></div>
       <label for="drill" id="drill-ask">Type <code>/start</code> and press Enter</label>
@@ -813,20 +852,20 @@
 
   <div class="page" data-page="8" hidden>
     <h1>Connect your apps</h1>
-    <p class="lede">So <span class="the-name">Jarvis</span> can read your inbox, check your calendar, work in your files, docs and sheets, and publish for you. It only sees what you can see.</p>
+    <p class="lede">Connecting lets <span class="the-name">Jarvis</span> use these apps for you. It only sees what your account can see. Claude calls these connections "connectors".</p>
     <section>
       <ol class="next steps">
         <li><button class="step" id="conn-open">Open Claude's connectors page</button>
           It opens in Chrome. Sign in with your work email if it asks.</li>
         <li>On that page, click <b>Connect</b> next to each of these, with your work Google account for the Google ones:
           <ul class="conn" id="conn-list">
-            <li data-conn="Gmail"><span class="mark"></span><b>Gmail</b></li>
-            <li data-conn="Google Calendar"><span class="mark"></span><b>Google Calendar</b></li>
-            <li data-conn="Google Drive"><span class="mark"></span><b>Google Drive</b></li>
-            <li data-conn="Google Docs"><span class="mark"></span><b>Google Docs</b></li>
-            <li data-conn="Google Sheets"><span class="mark"></span><b>Google Sheets</b></li>
-            <li data-conn="Vercel"><span class="mark"></span><b>Vercel</b></li>
-            <li data-conn="Supabase"><span class="mark"></span><b>Supabase</b></li>
+            <li data-conn="Gmail"><span class="mark"></span><span class="app"><b>Gmail</b><small>Finds, sums up and drafts your email</small></span></li>
+            <li data-conn="Google Calendar"><span class="mark"></span><span class="app"><b>Google Calendar</b><small>Checks your schedule and plans around it</small></span></li>
+            <li data-conn="Google Drive"><span class="mark"></span><span class="app"><b>Google Drive</b><small>Finds and reads your saved files</small></span></li>
+            <li data-conn="Google Docs"><span class="mark"></span><span class="app"><b>Google Docs</b><small>Reads and writes documents</small></span></li>
+            <li data-conn="Google Sheets"><span class="mark"></span><span class="app"><b>Google Sheets</b><small>Reads and updates spreadsheets</small></span></li>
+            <li data-conn="Vercel"><span class="mark"></span><span class="app"><b>Vercel</b><small>Puts the websites it builds online</small></span></li>
+            <li data-conn="Supabase"><span class="mark"></span><span class="app"><b>Supabase</b><small>Saves what your websites collect, like form answers</small></span></li>
           </ul></li>
       </ol>
       <p class="hint" id="conn-note">Each one gets a tick here once it is connected.</p>
@@ -837,8 +876,8 @@
   </div>
 
   <div class="page" data-page="9" hidden>
-    <h1>Company GitHub</h1>
-    <p class="lede">GitHub keeps a private copy of <span class="the-name">Jarvis</span>'s notes, and links everyone at <span class="the-company">your company</span>, so each new person starts with the same systems.</p>
+    <h1>Keep <span class="the-name">Jarvis</span> safe and use it on any computer</h1>
+    <dl class="explain"><div><dt>What it is</dt><dd>GitHub is a free website that stores private files, like a safe-deposit box for <span class="the-name">Jarvis</span>'s notes.</dd></div><div><dt>Why you want it</dt><dd>If this computer breaks, <span class="the-name">Jarvis</span>'s memory is safe. On a second computer, sign in and <span class="the-name">Jarvis</span> is there.</dd></div><div><dt>How it is used</dt><dd>It saves your notes when you type <code class="cmd-save">/save</code> and picks them up when you type <code class="cmd-start">/start</code>.</dd></div><div><dt>Who can see it</dt><dd>Only you, people you give access to, and GitHub itself, which stores it. In a company GitHub, the company's owners can too. Your passwords and private keys (the logins for your business software) are left out.</dd></div></dl>
     <section id="github">
       <p id="gh-missing" class="hint" hidden>Setup could not get the GitHub tool onto this computer, so this step has to wait. Tell <span class="the-contact">your manager</span>, then click Next.</p>
       <ol class="next steps" id="gh-steps">
@@ -849,28 +888,29 @@
           </div>
           <span class="hint" id="gh-signup-note" hidden>GitHub's sign-up page opened in Chrome. Use your work email, pick any username, then come back here.</span></li>
         <li><button class="step" id="gh-connect">Connect my GitHub</button>
-          <span id="gh-note">A GitHub page opens. Sign in, then type the code shown here.</span>
+          <span id="gh-note">A GitHub page opens. Sign in, then type the code shown here. That links this computer to your account.</span>
           <div id="gh-code" hidden>Your code: <code id="gh-code-value" style="font-size:22px;letter-spacing:.08em"></code>
             <button type="button" class="copy" id="gh-code-copy">Copy</button></div></li>
-        <li id="org-step"><b>Your company's GitHub</b>
+        <li id="org-step"><b>A shared space for your company (optional)</b>
+          <span class="hint" style="display:block">So everyone you add starts with the same company info. Just you? Skip it.</span>
           <div id="org-box"><span class="hint">Connect your own GitHub first.</span></div></li>
         <li><button class="step" id="gh-backup" disabled>Back up my assistant</button>
-          <span id="gh-backup-note">Makes a private copy. Your keys and tokens are never included.</span></li>
+          <span id="gh-backup-note">Saves a private copy of <span class="the-name">Jarvis</span>'s notes. Your passwords and keys are never included.</span></li>
       </ol>
     </section>
-    <p class="hint" id="gh-skip" style="margin:0 0 14px">You can skip this and do it later: <span class="the-name">Jarvis</span> works without it, it just has no backup.</p>
+    <p class="hint" id="gh-skip" style="margin:0 0 14px">You can skip this and do it later. <span class="the-name">Jarvis</span> still works, but it will have no backup and cannot move to another computer.</p>
     <div class="nav"><button class="go quiet back" data-go="8">Back</button><button class="go next" id="gh-next" data-go="9.5">Next</button></div>
   </div>
 
   <div class="page" data-page="9.5" hidden>
     <h1>Publish websites and apps</h1>
-    <p class="lede"><span class="the-name">Jarvis</span> can build a web page or a small app and put it online for you, with a database when it needs to save things. Two free accounts make that work.</p>
+    <p class="lede"><span class="the-name">Jarvis</span> can build things like a booking form, a price calculator or a simple website, and put them online with a link you can share. Two accounts make that work, and both are free to start.</p>
     <section>
       <ol class="next steps">
         <li><button class="step" id="vc-connect">Connect Vercel</button>
-          <span id="vc-note">Vercel puts your pages online. A Vercel window opens: sign up or sign in (Continue with Google or GitHub is quickest), then click <b>Allow</b>. This page ticks it when it is done.</span></li>
+          <span id="vc-note"><b>Vercel</b> is the service that puts your pages on the internet. A Vercel window opens: sign up or sign in (Continue with Google or GitHub is quickest), then click <b>Allow</b>. This page ticks it when it is done.</span></li>
         <li><button class="step" id="sb-connect">Connect Supabase</button>
-          <span id="sb-note">Supabase keeps the data your apps save. A Supabase window opens: sign up or sign in, click <b>Generate new token</b>, give it any name, and copy it. Paste it here.</span>
+          <span id="sb-note"><b>Supabase</b> is a secure online place to save what your pages collect, like form answers or bookings. A Supabase window opens: sign up or sign in, click <b>Generate new token</b> (a private password for this setup), give it any name, and copy it. Paste it here.</span>
           <div id="sb-token-box" hidden style="margin-top:8px">
             <label for="sb-token">Your Supabase token</label>
             <input type="password" id="sb-token" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sbp_…" style="max-width:320px">
@@ -922,7 +962,7 @@
     <details class="what">
       <summary>Where to find things later</summary>
       <ul class="done" style="margin-top:12px">
-        <li><b>START-HERE.md</b> in your folder lists every command and things to try.</li>
+        <li>A guide called <b>START-HERE.md</b> in <span class="the-name">Jarvis</span>'s folder lists every command and things to try.</li>
         <li>Run the install file again any time to get updates. Your notes are kept.</li>
         <li>Stuck? Type "I'm stuck" in a chat, or send <span class="the-contact">your manager</span> a screenshot.</li>
       </ul>
@@ -1006,6 +1046,9 @@ $('dock-head').onclick = () => {
 // What each later step ended up as, for the last screen.
 const done = { chrome: 0, drill: false, connectors: 0, connectorsKnown: false, github: false }
 const doneState = done
+// Set up from a copy saved on another computer: its questions are already answered.
+let restored = false, movedKeys = 0, wbFound = null, wbRepo = '', wbRestoredRepo = ''
+const RESTORED_SKIP = [4.2, 7, 9]
 
 // The primary agent, and the others ticked beside it.
 const mainTool = () => (document.querySelector('#main-list input:checked') || {}).value || options.main || 'claude'
@@ -1020,8 +1063,8 @@ function refreshTools() {
   $('remote').closest('label').hidden = $('tint').closest('label').hidden = !claudeOn
   $('color-hint').hidden = !claudeOn
   const side = claudeOn && main !== 'claude' ? ' (Claude app)' : ''
-  $('remote').nextElementSibling.firstChild.textContent = 'Remote control' + side
-  $('tint').nextElementSibling.firstChild.textContent = 'Color modes' + side
+  $('remote').nextElementSibling.firstChild.textContent = 'Use it from your phone' + side
+  $('tint').nextElementSibling.firstChild.textContent = 'Color-coded chats' + side
 }
 const codexMain = () => Boolean(result && result.main === 'codex')
 const agyMain = () => Boolean(result && result.main === 'agy')
@@ -1141,14 +1184,15 @@ function showFinale() {
   if (!$('final-open').dataset.clicked && !$('final-open').disabled) $('final-open').textContent = finalLabel()
   const sys = ((result && result.systems) || [])
   const sysWords = sys.length ? ' ' + sys.map(s => `${s.label} ${s.state === 'live' ? 'connected' : 'to connect in your first chat'}`).join(', ') + '.' : ''
-  const setUp = `Its folder, notes and company profile.${sysWords}`
+  const setUp = restored ? `Its name, voice, notes and company info came from your other computer.${sysWords}`
+    : `Its folder, notes and company profile.${sysWords}`
   const rows = agyMain() ? [
     [true, `${result.assistant} is set up`, setUp, 0],
     accountRow('agy', 'Antigravity account', 4.6),
     appRow('agy', 'The Antigravity app', 4.6),
     [Boolean(done.profile), 'What matters to your company', done.profile ? 'Saved in its notes.' : 'Not filled in yet.', 4.2],
     [done.drill, 'The four commands', done.drill ? 'You typed all four.' : 'Not practised yet.', 7],
-    [done.github, 'Company GitHub', done.github ? (done.org ? `Joined ${done.org}.` : 'Connected.') : 'Not connected yet.', 9],
+    [Boolean(done.backup), 'Private backup on GitHub', done.backup ? 'Saved to your private GitHub.' : done.github ? 'GitHub is connected. Open its page and click Back up my assistant.' : 'Not connected yet.', 9],
     [done.publish >= 2, 'Publishing websites', done.publish >= 2 ? 'Vercel and Supabase are connected.' : 'Not finished: this is what lets it put pages online for you.', 9.5],
   ] : codexMain() ? [
     [true, `${result.assistant} is set up`, setUp, 0],
@@ -1159,7 +1203,7 @@ function showFinale() {
     [done.apps >= APP_TOTAL, 'Your apps', done.apps >= APP_TOTAL ? 'All of them are connected.' : `${done.apps || 0} of ${APP_TOTAL} connected.`, 4.5],
     chromeRow('ChatGPT'),
     [done.drill, 'The four commands', done.drill ? 'You typed all four.' : 'Not practised yet.', 7],
-    [done.github, 'Company GitHub', done.github ? (done.org ? `Joined ${done.org}.` : 'Connected.') : 'Not connected yet.', 9],
+    [Boolean(done.backup), 'Private backup on GitHub', done.backup ? 'Saved to your private GitHub.' : done.github ? 'GitHub is connected. Open its page and click Back up my assistant.' : 'Not connected yet.', 9],
     [done.publish >= 2, 'Publishing websites', done.publish >= 2 ? 'Vercel and Supabase are connected.' : 'Not finished: this is what lets it put pages online for you.', 9.5],
   ] : [
     [true, `${result ? result.assistant : 'Your assistant'} is set up`, setUp, 0],
@@ -1172,13 +1216,21 @@ function showFinale() {
     [done.connectors >= $('conn-list').children.length, 'Your apps',
       done.connectors >= $('conn-list').children.length ? 'All of them are connected.'
         : done.connectorsKnown ? `${done.connectors} of ${$('conn-list').children.length} connected.` : 'Could not be checked from here.', 8],
-    [done.github, 'Company GitHub', done.github ? (done.org ? `Joined ${done.org}.` : 'Connected.') : 'Not connected yet.', 9],
+    [Boolean(done.backup), 'Private backup on GitHub', done.backup ? 'Saved to your private GitHub.' : done.github ? 'GitHub is connected. Open its page and click Back up my assistant.' : 'Not connected yet.', 9],
     [done.publish >= 2, 'Publishing websites', done.publish >= 2 ? 'Vercel and Supabase are connected.' : 'Not finished: this is what lets it put pages online for you.', 9.5],
   ]
   for (const tool of ((result && result.tools) || []).filter(tool => !result || tool.id !== result.main)) rows.push(extraRow(tool))
   const practice = rows.findIndex(row => row[1] === 'The four commands')
   if (codexMain()) rows.splice(practice, 0, computerRow(), phoneRow())
   else if (agyMain()) rows.splice(practice, 0, phoneRow())
+  if (restored) {  // these were done on the first computer, and came with its notes
+    for (const title of ['What matters to your company', 'The four commands', 'Private backup on GitHub']) {
+      const at = rows.findIndex(row => row[1] === title)
+      if (at >= 0) rows.splice(at, 1)
+    }
+    rows.splice(1, 0, [movedKeys > 0, 'Your saved keys', movedKeys > 0 ? `${movedKeys} moved from your other computer.`
+      : 'None moved. If your assistant uses keys, get a code from your other computer.', 0.2])
+  }
   $('ready').replaceChildren(...rows.map(([on, title, detail, go]) => {
     const li = document.createElement('li')
     if (on) li.className = 'on'
@@ -1228,9 +1280,27 @@ function agyRoute(n, from) {
   if (n === 8) return from === 9 ? 7 : 9
   return n
 }
+const flowPages = () => agyMain() ? [4.6, 4.2, 6.5, 7, 9, 9.5, 10, 11]
+  : codexMain() ? [4.5, 4.2, 5, 5.5, 6.5, 7, 9, 9.5, 10, 11]
+    : [4, 4.2, 5, ...(phoneOn() ? [6] : []), 7, 8, 9, 9.5, 10, 11]
+// A restored assistant steps over the pages that were done on the first computer.
+function restoredRoute(n) {
+  if (n >= 0.5 && n <= 3) return 0.2
+  const all = flowPages(), to = all.indexOf(n)
+  if (to < 0 || !RESTORED_SKIP.includes(n)) return n
+  const step = to >= all.indexOf(page) ? 1 : -1
+  let i = to
+  while (RESTORED_SKIP.includes(all[i])) i += step
+  return all[i] === undefined ? 0.2 : all[i]
+}
 function show(n) {
   if (agyMain()) n = agyRoute(n, page)
+  if (restored) n = restoredRoute(n)
   page = n
+  if (n === 0.2) {
+    if (!restored) post('/installs/start', { claude: false, claudeApp: false, chatgptApp: false, antigravityApp: false }).then(showInstalls)
+    setTimeout(showWelcome, 0)
+  } else stopTimers('wb')
   if (n !== 4.2) clearTimeout(researchTimer)
   if (n === 11) showFinale()
   if (n === 10) {
@@ -1269,9 +1339,9 @@ function show(n) {
     $('meet-line').textContent = $('meet-said').textContent
   }
   for (const el of document.querySelectorAll('.page')) el.hidden = Number(el.dataset.page) !== n
-  $('progress').hidden = $('bar').hidden = n === 0
+  $('progress').hidden = $('bar').hidden = n === 0 || n === 0.2
   const choices = [0.5, 1, 2, 2.5, 3]
-  const after = agyMain() ? [4.6, 4.2, 6.5, 7, 9, 9.5, 10, 11] : codexMain() ? [4.5, 4.2, 5, 5.5, 6.5, 7, 9, 9.5, 10, 11] : [4, 4.2, 5, ...(phoneOn() ? [6] : []), 7, 8, 9, 9.5, 10, 11]
+  const after = flowPages().filter(p => !restored || !RESTORED_SKIP.includes(p))
   $('progress').textContent = n <= 3 ? `Step ${choices.indexOf(n) + 1} of ${choices.length}` : `Almost there: ${after.indexOf(n) + 1} of ${after.length}`
   const total = n <= 3 ? choices.length : after.length, at = (n <= 3 ? choices : after).indexOf(n) + 1
   $('bar').replaceChildren(...Array.from({ length: total }, (_, i) =>
@@ -1444,6 +1514,35 @@ async function load() {
 }
 
 let result
+// The folder is built (fresh, or from a saved copy): show it, and start on this computer's steps.
+function afterSetup() {
+  $('done-name').textContent = result.assistant
+  $('done-folder').textContent = result.folder
+  $('remote-step').hidden = !$('remote').checked  // only for those who kept Remote control on
+  // Only what needs their attention: the rest of the log is for us, not for them.
+  const problems = result.log.filter(line => /could not|did not|still to install|ask for help/i.test(line))
+  for (const box of document.querySelectorAll('.setup-issues')) {
+    box.hidden = !problems.length
+    box.textContent = problems.join(' ')
+  }
+  for (const el of document.querySelectorAll('.the-folder')) el.textContent = result.folder
+  for (const el of document.querySelectorAll('.the-name')) el.textContent = result.assistant
+  for (const word of ['start', 'save']) for (const el of document.querySelectorAll(`.cmd-${word}`)) el.textContent = (codexMain() ? '$' : '/') + word
+  drillAt = 0
+  $('drill-log').replaceChildren()
+  askDrill()  // the practice follows the primary agent
+  show(codexMain() ? 4.5 : agyMain() ? 4.6 : 4)
+  installsLooks = 0
+  post('/installs/status').then(showInstalls)
+  post('/github/status').then(showGithub)
+  post('/publish/status').then(showPublish)
+  if (codexMain()) {
+    post('/codex/status').then(showCodex)
+  } else if (!agyMain()) {
+    post('/app/status').then(showApp)
+    post('/account/status').then(showAccount)
+  }
+}
 $('go').onclick = async () => {
   $('error').hidden = true
   $('go').disabled = true
@@ -1462,31 +1561,7 @@ $('go').onclick = async () => {
     })
     result = await response.json()
     if (!result.ok) throw new Error(result.error || 'Setup did not finish.')
-    $('done-name').textContent = result.assistant
-    $('done-folder').textContent = result.folder
-    $('remote-step').hidden = !$('remote').checked  // only for those who kept Remote control on
-    // Only what needs their attention: the rest of the log is for us, not for them.
-    const problems = result.log.filter(line => /could not|did not|still to install|ask for help/i.test(line))
-    for (const box of document.querySelectorAll('.setup-issues')) {
-      box.hidden = !problems.length
-      box.textContent = problems.join(' ')
-    }
-    for (const el of document.querySelectorAll('.the-folder')) el.textContent = result.folder
-    for (const el of document.querySelectorAll('.the-name')) el.textContent = result.assistant
-    drillAt = 0
-    $('drill-log').replaceChildren()
-    askDrill()  // the practice follows the primary agent
-    show(codexMain() ? 4.5 : agyMain() ? 4.6 : 4)
-    installsLooks = 0
-    post('/installs/status').then(showInstalls)
-    post('/github/status').then(showGithub)
-    post('/publish/status').then(showPublish)
-    if (codexMain()) {
-      post('/codex/status').then(showCodex)
-    } else if (!agyMain()) {
-      post('/app/status').then(showApp)
-      post('/account/status').then(showAccount)
-    }
+    afterSetup()
   } catch (error) {
     $('error').textContent = `${error.message} Nothing is broken: fix it and click again, or send ${options.contact || 'your manager'} a screenshot.`
     $('error').hidden = false
@@ -1632,7 +1707,7 @@ function refreshSystems() {
     }
     if (kind === 'crm') {
       $('crm-name-row').hidden = state !== 'live'
-      for (const n of document.querySelectorAll('.crm-label')) n.textContent = label || 'the CRM'
+      for (const n of document.querySelectorAll('.crm-label')) n.textContent = label || 'that system'
     }
   }
 }
@@ -1697,7 +1772,7 @@ function tradeOf(text) {
 
 // --- About the company: looked up on the person's own account, problems they tick ------
 let researchTimer = null, researchShown = false
-const kickResearch = () => post('/company/research').catch(() => {})  // early, so it is ready by then
+const kickResearch = () => (restored ? null : post('/company/research').catch(() => {}))  // early, so it is ready by then
 async function startResearch() {
   clearTimeout(researchTimer)
   showResearch(await post('/company/research'))
@@ -1766,7 +1841,7 @@ function showOrg(s) {
   if (s.ok === false) { box.append(say(s.error || 'That did not work. Try again.')); return }
   if (s.state === 'signed-out') { box.replaceChildren(say('Connect your own GitHub first.')); return }
   if (s.state === 'unknown' || s.state === 'missing') {
-    const kids = [say(s.state === 'missing' ? `No GitHub organization called ${s.org} was found.` : `Does ${company} already have a company GitHub?`)]
+    const kids = [say(s.state === 'missing' ? `No company space called ${s.org} was found on GitHub.` : `Does ${company} already have a shared space on GitHub? (GitHub calls this an organization.)`)]
     const guesses = (s.guesses || []).concat((s.mine || []).map(m => m.org)).filter((v, i, a) => a.indexOf(v) === i)
     const chips = el('div', { className: 'chips', style: 'margin:8px 0' })
     for (const g of guesses) chips.append(el('button', { type: 'button', className: 'chip', textContent: `Yes: ${g}`, onclick: () => loadOrg(g) }))
@@ -1775,6 +1850,9 @@ function showOrg(s) {
         orgButton('Find it', () => loadOrg($('org-name').value.trim())))
     } }))
     chips.append(el('button', { type: 'button', className: 'chip', textContent: 'No, create one', onclick: () => createOrg(company) }))
+    chips.append(el('button', { type: 'button', className: 'chip', textContent: 'Skip, it is just me', onclick: () => {
+      box.replaceChildren(say('No problem. Your backup stays in your own GitHub account.'), orgButton('Change my mind', () => loadOrg(), true))
+    } }))
     box.replaceChildren(...kids, chips)
     return
   }
@@ -1819,7 +1897,7 @@ function showOrg(s) {
   } else {
     kids.push(say('No company settings are saved here yet. An owner saves them when they run setup.'))
   }
-  $('gh-backup-note').textContent = `Makes a private copy in ${s.org}, where its owners can see it. Your keys and tokens are never included.`
+  $('gh-backup-note').textContent = `Saves a private copy in ${s.org}, where its owners can see it. Your passwords and keys are never included.`
   box.replaceChildren(...kids)
 }
 
@@ -1954,6 +2032,12 @@ function showGithub(s) {
     $('gh-backup').disabled = false
     $('gh-skip').hidden = true
     done.github = true
+    if (s.backup) {  // GitHub already holds a copy from this folder
+      done.backup = true
+      $('gh-backup').classList.add('done')
+      $('gh-backup').textContent = '\u2713 Backed up'
+      $('gh-backup').disabled = true
+    }
     $('gh-have').setAttribute('aria-pressed', 'true')
     if (!orgAsked) { orgAsked = true; loadOrg() }
   } else if (s.state === 'waiting') {
@@ -1983,6 +2067,115 @@ $('gh-signup').onclick = () => {
   $('gh-signup').setAttribute('aria-pressed', 'true'); $('gh-have').setAttribute('aria-pressed', 'false')
   $('gh-signup-note').hidden = false
   openSite('github-signup')
+}
+
+// Welcome back: same GitHub account, and the assistant saved there comes to this computer.
+async function showWelcome() {
+  stopTimers('wb')
+  const s = await post('/github/status')
+  if (page !== 0.2) return
+  $('wb-missing').hidden = s.installed
+  $('wb-steps').hidden = !s.installed
+  if (s.state === 'connected') {
+    showGithub(s)
+    $('wb-connect').classList.add('done')
+    $('wb-connect').textContent = `✓ Connected as ${s.user}`
+    $('wb-connect').disabled = true
+    $('wb-code').hidden = true
+    $('wb-note').hidden = !waited.github
+    if (waited.github) $('wb-note').textContent = 'Connected. If the GitHub window is still open, you can close it.'
+    if (wbFound) return showFound(wbFound)
+    $('wb-found').replaceChildren(Object.assign(document.createElement('span'), { className: 'hint', textContent: 'Looking for your assistant…' }))
+    const found = await post('/restore/find')
+    if (page !== 0.2) return
+    if (found.ok) wbFound = found
+    showFound(found)
+  } else if (s.state === 'waiting') {
+    waited.github = true
+    $('wb-code').hidden = !s.code
+    $('wb-code-value').textContent = s.code
+    $('wb-connect').textContent = 'Waiting for GitHub…'
+    $('wb-connect').disabled = true
+    later('wb', showWelcome, 2500)
+  } else {
+    $('wb-connect').textContent = 'Connect my GitHub'
+    $('wb-connect').disabled = false
+    $('wb-code').hidden = true
+    if (s.error) $('wb-note').textContent = s.error
+  }
+}
+function showFound(r) {
+  const box = $('wb-found')
+  const line = text => Object.assign(document.createElement('span'), { className: 'hint', textContent: text })
+  const action = (text, go) => { const b = Object.assign(document.createElement('button'), { type: 'button', className: 'chip', textContent: text }); b.onclick = go; return b }
+  $('wb-go').disabled = true
+  if (!r.ok) { box.replaceChildren(line(r.error || 'GitHub could not be checked.'), action('Check again', showWelcome)); return }
+  if (!r.found.length) {
+    box.replaceChildren(line(`No saved assistant on ${r.user}. If you used a different GitHub account, sign in to that one instead, or set this computer up as new.`),
+      action('Check again', () => { wbFound = null; showWelcome() }), action('Set up as new', () => show(0.5)))
+    $('wb-keys').hidden = true
+    return
+  }
+  if (!r.found.some(row => row.repo === wbRepo)) wbRepo = r.found[0].repo
+  const chips = Object.assign(document.createElement('div'), { className: 'chips' })
+  for (const row of r.found) {
+    const chip = action(row.name, () => { wbRepo = row.repo; showFound(r) })
+    chip.setAttribute('aria-pressed', String(row.repo === wbRepo))
+    chips.append(chip)
+  }
+  const picked = r.found.find(row => row.repo === wbRepo)
+  box.replaceChildren(line(`Found ${picked.name}${picked.updated ? `, last saved ${picked.updated}` : ''}.`), ...(r.found.length > 1 ? [chips] : []))
+  $('wb-keys').hidden = false
+  $('wb-go').disabled = false
+  const here = restored && wbRepo === wbRestoredRepo
+  $('wb-go').textContent = here && !$('wb-key-code').value.trim() ? 'Continue' : here ? 'Unlock my keys' : `Bring ${picked.name} here`
+}
+$('wb-key-code').oninput = () => { if (wbFound) showFound(wbFound) }
+$('wb-connect').onclick = async () => { await post('/github/connect'); showWelcome() }
+$('wb-code-copy').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText($('wb-code-value').textContent)
+    $('wb-code-copy').textContent = 'Copied'
+    setTimeout(() => { $('wb-code-copy').textContent = 'Copy' }, 2500)
+  } catch (error) {
+    $('wb-code-copy').textContent = 'Select it and copy'
+  }
+}
+$('wb-go').onclick = async () => {
+  const code = $('wb-key-code').value.trim()
+  if (restored && !code && wbRepo === wbRestoredRepo) return show(codexMain() ? 4.5 : agyMain() ? 4.6 : 4)
+  $('wb-error').hidden = true
+  $('wb-go').disabled = true
+  $('wb-go').textContent = 'Bringing it here…'
+  let r
+  try {
+    r = await post('/restore/apply', { repo: wbRepo, code })
+  } catch (error) {
+    r = { ok: false, error: 'Setup stopped answering. Reload this page and try again.' }
+  }
+  if (!r.ok) {
+    $('wb-error').textContent = r.error || 'That did not finish. Try again.'
+    $('wb-error').hidden = false
+    showFound(wbFound)
+    if (r.keys) $('wb-key-code').focus()
+    return
+  }
+  $('wb-key-code').value = ''
+  if (wbRepo !== wbRestoredRepo) movedKeys = 0  // a different assistant: its keys are counted afresh
+  wbRestoredRepo = wbRepo
+  movedKeys += r.keysMoved || 0
+  restored = true
+  result = r
+  const was = r.setup || {}
+  $('name').value = '__custom'
+  $('custom').value = r.assistant
+  if (typeof was.remote === 'boolean') $('remote').checked = was.remote
+  if (typeof was.colors === 'boolean') $('tint').checked = was.colors
+  if (was.color && options.colors[was.color]) color = was.color
+  for (const id of ['user', 'role', 'company']) if (was[id]) $(id).value = was[id]
+  if (was.company) for (const el of document.querySelectorAll('.the-company')) el.textContent = was.company
+  refresh()
+  afterSetup()
 }
 
 // The four commands, typed once each.
@@ -2082,6 +2275,7 @@ $('gh-backup').onclick = async () => {
   if (done.ok) {
     $('gh-backup').classList.add('done')
     $('gh-backup').textContent = '✓ Backed up'
+    doneState.backup = true  // the push worked: being connected alone is not a backup
     $('gh-backup-note').textContent = `Private copy: ${done.url}`
   } else {
     $('gh-backup').disabled = false

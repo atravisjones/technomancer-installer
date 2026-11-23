@@ -123,9 +123,9 @@ COLORS = {
 }
 
 MODES = {
-    "bypassPermissions": "Bypass all permissions (never stops to ask)",
-    "acceptEdits": "Accept edits (asks before running commands)",
-    "default": "Ask every time",
+    "bypassPermissions": "Keep working (recommended): no pause on each step",
+    "acceptEdits": "Ask before it runs anything on this computer",
+    "default": "Ask me before every step",
 }
 
 # --- The business: its trade and the systems it runs on -----------------------------
@@ -1288,6 +1288,8 @@ def configure(a):
     ignore_secrets(workspace)
     (workspace / ".assistant-name").write_text(name + "\n", encoding="utf-8")
     (workspace / ".marvin-source").write_text(str(TEMPLATE) + "\n", encoding="utf-8")
+    (workspace / ".assistant-setup.json").write_text(json.dumps(saved_answers(a), indent=2) + "\n", encoding="utf-8")
+    write_sync_files(workspace)
 
     load_pack(workspace, log)
 
@@ -1871,7 +1873,7 @@ def gh(*args, cwd=None, timeout=60, data_only=False):
         return False, "GitHub tool not installed"
     try:
         done = subprocess.run([exe, *args], cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout,
-                              stdin=subprocess.DEVNULL, env=dict(os.environ, GH_NO_UPDATE_NOTIFIER="1"))
+                              stdin=subprocess.DEVNULL, env=dict(os.environ, GH_NO_UPDATE_NOTIFIER="1", GIT_TERMINAL_PROMPT="0", GCM_INTERACTIVE="never", GIT_ASKPASS="", SSH_ASKPASS=""))
         return done.returncode == 0, (done.stdout if data_only else done.stdout + done.stderr).strip()
     except (OSError, subprocess.TimeoutExpired) as error:
         return False, str(error)
@@ -2254,7 +2256,7 @@ def ignore_secrets(workspace):
     path = workspace / ".gitignore"
     text = path.read_text(encoding="utf-8") if path.exists() else ""
     active = {line.strip() for line in text.splitlines() if line.strip() and not line.lstrip().startswith("#")}
-    missing = [line for line in (".env", ".env.*", "!.env.example", ".vercel/", "graphify-out/") if line not in active]
+    missing = [line for line in (".env", ".env.*", "!.env.example", ".vercel/", "graphify-out/", ".marvin-source", "Open *.cmd", "Open *.command") if line not in active]
     if missing:
         path.write_text(text.rstrip("\n") + "\n" + "\n".join(missing) + "\n", encoding="utf-8")
 
@@ -2273,8 +2275,12 @@ def github_backup(folder, org=""):
         return {"ok": False, "error": "Git is still installing. Try again when it shows as done."}
     ignore_secrets(workspace)
 
-    def run(*args):
-        return subprocess.run([git, *args], cwd=str(workspace), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    def run(*args):  # never waits on a sign-in window: a problem comes back to the page as words
+        try:
+            return subprocess.run([git, *args], cwd=str(workspace), capture_output=True, text=True, encoding="utf-8", errors="replace",
+                                  stdin=subprocess.DEVNULL, timeout=300, env=dict(os.environ, GIT_TERMINAL_PROMPT="0", GCM_INTERACTIVE="never", GIT_ASKPASS="", SSH_ASKPASS=""))
+        except subprocess.TimeoutExpired:
+            return subprocess.CompletedProcess(args, 1, "", "GitHub did not answer. Try again.")
 
     if not (workspace / ".git").exists():
         run("init", "-q")
@@ -2282,6 +2288,7 @@ def github_backup(folder, org=""):
     if run("ls-files", ".env").stdout.strip():  # never send the token file
         run("rm", "--cached", "-q", ".env")
     run("commit", "-q", "-m", "First backup")
+    joined_existing = False
     owner = org if org and org_membership(org)["state"] == "active" else GITHUB["user"]
     repo = (f"{GITHUB['user']}-{workspace.name}-assistant" if owner != GITHUB["user"] else workspace.name + "-assistant").lower()
     if not run("remote", "get-url", "origin").stdout.strip():
@@ -2291,11 +2298,178 @@ def github_backup(folder, org=""):
             return {"ok": False, "error": out.splitlines()[-1] if out else "GitHub would not create the backup."}
         if not worked:
             run("remote", "add", "origin", f"https://github.com/{owner}/{repo}.git")
+            joined_existing = True
     branch = run("rev-parse", "--abbrev-ref", "HEAD").stdout.strip() or "main"
     pushed = run("push", "-u", "origin", branch)
+    if pushed.returncode != 0 and joined_existing:  # never overwrite the copy another computer saved
+        run("remote", "remove", "origin")
+        return {"ok": False, "error": "This assistant is already saved on your GitHub. Run setup again and choose "
+                                      "\"I already set this up on another computer\"."}
     if pushed.returncode != 0:
         return {"ok": False, "error": (pushed.stderr.strip().splitlines() or ["The backup could not be sent."])[-1]}
     return {"ok": True, "url": f"https://github.com/{owner}/{repo}", "company": owner != GITHUB["user"]}
+
+
+# --- The same assistant on another computer -------------------------------------------
+#
+# Setup finds the person's private copy through their GitHub sign-in, brings it here, and then
+# sets up only what belongs to this computer. Keys move separately, locked with a one-time code.
+
+SETUP_FIELDS = ("assistant", "color", "style", "user", "role", "company", "industry", "business", "crm", "crm_other",
+                "crm_name", "phone", "phone_other", "mode", "remote", "colors", "tools", "main")  # never a key
+COMPUTERS_TOOL = TEMPLATE / ".claude" / "tools" / "computers.py"
+CRYPTOGRAPHY = "50.0.2"
+SYNC_RULES = ("* text=auto", "sessions/*.md merge=union", "state/decisions.md merge=union", "content/log.md merge=union")
+RESTORE = {"found": []}
+KEY_WORDS = {
+    "wrong-code": "That code did not work. Check it and try again.",
+    "none": "No keys are waiting for that code. Make a new code on your other computer, or clear this box to carry on.",
+    "expired": "That code has ended. Make a new one on your other computer, or clear this box to carry on.",
+}
+
+
+def backup_saved():
+    """This folder's branch has been pushed: git keeps a record of it only after a push worked."""
+    workspace, git = LAST.get("workspace"), shutil.which("git")
+    if not workspace or not git or not (Path(workspace) / ".git").exists():
+        return False
+
+    def run(*args):
+        return subprocess.run([git, *args], cwd=workspace, capture_output=True, text=True, encoding="utf-8",
+                              errors="replace", stdin=subprocess.DEVNULL, timeout=20)
+
+    try:
+        branch = run("symbolic-ref", "--short", "-q", "HEAD").stdout.strip()
+        return bool(branch) and run("rev-parse", "-q", "--verify", f"refs/remotes/origin/{branch}").returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
+def saved_answers(a):
+    return {key: a[key] for key in SETUP_FIELDS if key in a}
+
+
+def write_sync_files(workspace):
+    """What lets two computers share this folder: merge rules, and the tool that syncs it."""
+    path = workspace / ".gitattributes"
+    text = path.read_text(encoding="utf-8") if path.exists() else ""
+    missing = [line for line in SYNC_RULES if line not in text.splitlines()]
+    if missing:
+        path.write_text(text.rstrip("\n") + ("\n" if text.strip() else "") + "\n".join(missing) + "\n", encoding="utf-8")
+    if COMPUTERS_TOOL.exists():
+        target = workspace / ".claude" / "tools" / "computers.py"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(COMPUTERS_TOOL, target)  # always the newest: it is ours, not the person's
+
+
+def assistant_folder(name):
+    folder = slug(name)
+    return folder + "-assistant" if re.fullmatch(r"con|prn|aux|nul|com\d|lpt\d", folder) else folder
+
+
+def find_assistants():
+    """The person's own private assistant copies, newest first, through their GitHub sign-in."""
+    github_refresh()
+    if GITHUB["state"] != "connected":
+        return {"ok": False, "error": "Connect GitHub first."}
+    user = GITHUB["user"]
+    worked, out = gh("api", "user/orgs", "--paginate", "--jq", ".[].login", data_only=True)
+    candidates = []
+    for owner in [user] + (out.split() if worked else [])[:20]:
+        worked, listed = gh("repo", "list", owner, "--limit", "200", "--json", "nameWithOwner,isPrivate,updatedAt", data_only=True)
+        try:
+            rows = json.loads(listed) if worked else []
+        except ValueError:
+            rows = []
+        for row in rows:
+            repo = row["nameWithOwner"].split("/", 1)[1].lower()
+            # In a company's GitHub, only the copies setup made for this person.
+            if row.get("isPrivate") is True and repo.endswith("-assistant") and (owner == user or repo.startswith(user.lower() + "-")):
+                candidates.append(row)
+    candidates.sort(key=lambda row: row.get("updatedAt") or "", reverse=True)
+    found = []
+    for row in candidates[:10]:
+        worked, blob = gh("api", f"repos/{row['nameWithOwner']}/contents/.assistant-name", "--jq", ".content", data_only=True)
+        if not worked:
+            continue
+        try:
+            name = re.sub(r"[^A-Za-z0-9 _-]", "", base64.b64decode(blob).decode("utf-8")).strip()[:30]
+        except ValueError:
+            continue
+        owner, repo = row["nameWithOwner"].split("/", 1)
+        # A login can be the start of a coworker's (alex, alex-smith), so match the whole name.
+        if name and (owner.lower() == user.lower() or repo.lower() == f"{user}-{assistant_folder(name)}-assistant".lower()):
+            found.append({"repo": row["nameWithOwner"], "name": name, "updated": (row.get("updatedAt") or "")[:10]})
+    RESTORE["found"] = found
+    return {"ok": True, "user": user, "found": found}
+
+
+def receive_keys(workspace, code):
+    """Unlock the keys here. The code goes in by stdin, so no other program can read it from the process list."""
+    uv = _uv_path()
+    if uv is None or not COMPUTERS_TOOL.exists():
+        return {"state": "error"}
+    try:
+        done = subprocess.run([uv, "run", "--quiet", "--no-project", "--python", "3.12", "--with", f"cryptography=={CRYPTOGRAPHY}",
+                               str(COMPUTERS_TOOL), "keys-receive"], cwd=str(workspace), input=code + "\n", capture_output=True,
+                              text=True, encoding="utf-8", errors="replace", timeout=300, env=_cli_env())
+        return json.loads(done.stdout.strip().splitlines()[-1])
+    except (OSError, subprocess.TimeoutExpired, ValueError, IndexError):
+        return {"state": "error"}
+
+
+def restored_answers(workspace, name):
+    """What the person chose on their first computer. An older copy has only its company file."""
+    answers = {}
+    for file in (".company.json", ".assistant-setup.json"):
+        try:
+            loaded = json.loads((workspace / file).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if isinstance(loaded, dict):
+            answers.update({key: value for key, value in loaded.items() if key in SETUP_FIELDS})
+    answers["assistant"] = name
+    answers.setdefault("main", default_main())
+    return answers
+
+
+def restore_assistant(repo, code=""):
+    """Bring the saved assistant to this computer, then set up what belongs to this computer."""
+    row = next((r for r in RESTORE["found"] if r["repo"] == repo), None)
+    if row is None:
+        return {"ok": False, "error": "Pick your assistant from the list first."}
+    github_refresh()
+    git = shutil.which("git")
+    if GITHUB["state"] != "connected":
+        return {"ok": False, "error": "Connect GitHub first."}
+    if git is None or not _has_git():
+        return {"ok": False, "error": "Git is still installing. Try again when it shows as done."}
+    workspace = Path.home() / assistant_folder(row["name"])
+    if workspace.exists() and any(workspace.iterdir()):
+        origin = subprocess.run([git, "remote", "get-url", "origin"], cwd=str(workspace), capture_output=True, text=True,
+                                encoding="utf-8", errors="replace").stdout.strip().lower()
+        if not (workspace / ".assistant-name").exists() or not re.search(r"[/:]" + re.escape(repo.lower()) + r"(\.git)?$", origin):
+            return {"ok": False, "error": f"This computer already has a different folder called {workspace.name}. "
+                                          "Rename that folder, then try again."}
+    else:
+        worked, out = gh("repo", "clone", repo, str(workspace), timeout=600)
+        if not worked:
+            return {"ok": False, "error": "Your saved assistant could not be brought here. Check your internet and try again."}
+    if not (workspace / ".assistant-name").exists():
+        return {"ok": False, "error": "That GitHub copy is not a saved assistant."}
+    write_sync_files(workspace)
+    moved = 0
+    if code.strip():
+        keys = receive_keys(workspace, code)
+        if keys.get("state") != "ok":
+            return {"ok": False, "keys": keys.get("state"),
+                    "error": KEY_WORDS.get(keys.get("state"), "Your keys could not be moved. Clear the code box to carry on without them.")}
+        moved = int(keys.get("added") or 0)
+    answers = restored_answers(workspace, row["name"])
+    result = configure(answers)
+    if result.get("ok"):
+        result.update(restored=True, keysMoved=moved, setup=saved_answers(answers))
+    return result
 
 
 # --- The company's GitHub organization ------------------------------------------------
@@ -3885,18 +4059,18 @@ def install_plan():
         ("chatgpt-app", "The ChatGPT app", chatgpt_app_installed, _get_chatgpt_app, "where you will talk to it"),
         ("agy-app", "The Antigravity app", lambda: antigravity_app() is not None, _get_antigravity_app,
          "where you will talk to it"),
-        ("chrome", "Google Chrome", _has_chrome, _get_chrome, "for your web tools"),
-        ("gh", "GitHub tool", lambda: gh_path() is not None, _get_gh, "for backing up your notes"),
+        ("chrome", "Google Chrome", _has_chrome, _get_chrome, "lets it work in websites for you"),
+        ("gh", "GitHub tool", lambda: gh_path() is not None, _get_gh, "saves your notes to GitHub"),
     ]
     if IS_WINDOWS:
-        plan.insert(0, ("git", "Git", _has_git, _get_git, "Claude needs it to run commands"))
+        plan.insert(0, ("git", "Git", _has_git, _get_git, "tracks changes to your notes, and Claude needs it"))
     elif IS_MAC:
-        plan.append(("git", "Apple developer tools (Git)", _has_git, _get_git, "for backups; the slow one"))
+        plan.append(("git", "Apple developer tools (Git)", _has_git, _get_git, "tracks changes to your notes; the slow one"))
     plan += [
-        ("node", "Node.js", lambda: node_path() is not None, _get_node, "for add-on skills and publishing"),
+        ("node", "Node.js", lambda: node_path() is not None, _get_node, "a helper that add-ons and publishing need"),
         ("vercel", "Vercel tool", lambda: vercel_path() is not None, _get_vercel, "puts your websites online"),
-        ("supabase", "Supabase tool", lambda: supabase_path() is not None, _get_supabase, "databases for your apps"),
-        ("graphify", "Graphify code map", graphify_ready, _get_graphify, "helps it find its way around code"),
+        ("supabase", "Supabase tool", lambda: supabase_path() is not None, _get_supabase, "saves what your websites collect"),
+        ("graphify", "Graphify code map", graphify_ready, _get_graphify, "helps it find its way around websites it builds"),
         ("claude-plugins", "Vercel and Supabase add-ons for Claude", claude_plugins_in, _get_claude_plugins,
          "so Claude knows how to publish"),
     ]
@@ -4724,7 +4898,7 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/github/status":
             ensure_gh()
             github_refresh()
-            self.send(dict(GITHUB, ok=True, installed=gh_path() is not None))
+            self.send(dict(GITHUB, ok=True, installed=gh_path() is not None, backup=backup_saved()))
         elif self.path == "/github/backup":
             self.send(github_backup(str(body.get("folder") or ""), known_org()))
         elif self.path == "/github/org/status":
@@ -4735,6 +4909,15 @@ class Handler(BaseHTTPRequestHandler):
             self.send(org_claim(str(body.get("org") or "").strip()))
         elif self.path == "/github/org/apply":
             self.send(org_apply())
+        elif self.path == "/restore/find":
+            self.send(find_assistants())
+        elif self.path == "/restore/apply":
+            try:
+                self.send(restore_assistant(str(body.get("repo") or ""), str(body.get("code") or "")))
+            except ValueError as error:
+                self.send({"ok": False, "error": str(error)})
+            except Exception as error:
+                self.send({"ok": False, "error": f"{type(error).__name__}: {error}"})
         elif self.path == "/publish/status":
             self.send(publish_status())
         elif self.path == "/vercel/connect":
