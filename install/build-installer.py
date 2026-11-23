@@ -64,6 +64,31 @@ if errorlevel 1 (
 exit /b
 """
 
+# A file that carries a ticket fetches its script from the access server, which checks the ticket first.
+ACCESS = "https://thetechnomancer.ai"
+WINDOWS_PAID = """set "ASSISTANT_INSTALL_FILE=%~f0"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "[Net.ServicePointManager]::SecurityProtocol='Tls12'; $s = Invoke-RestMethod -UseBasicParsing -Uri ($env:TM_ACCESS_URL + '/api/access/script?os=windows') -Headers @{{'x-tm-ticket'=$env:TM_TICKET}}; Invoke-Expression $s"
+if errorlevel 1 (
+  echo.
+  echo Setup stopped. Take a screenshot of this window and send it to {contact}.
+  pause
+)
+exit /b
+"""
+MAC_PAID = """export ASSISTANT_INSTALL_FILE="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+script="$(mktemp "${{TMPDIR:-/tmp}}/tm.XXXXXX")"
+printf 'x-tm-ticket: %s\\n' "$TM_TICKET" | curl -fsSL -H @- "$TM_ACCESS_URL/api/access/script?os=mac" -o "$script"
+status=$?
+if [ "$status" -eq 0 ]; then bash "$script" </dev/null; status=$?; fi
+rm -f "$script"
+if [ "$status" -ne 0 ]; then
+  echo
+  echo "Setup stopped. Take a screenshot of this window and send it to {contact}."
+  read -r -p "Press Enter to close." _
+fi
+exit 0
+"""
+
 MAC_HEAD = "#!/bin/bash\n"
 MAC_TAIL = """export ASSISTANT_INSTALL_FILE="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 curl -fsSL {raw}/install.sh | bash
@@ -106,6 +131,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--client", required=True, help="the client's JSON file")
     parser.add_argument("--out", help="folder to write to (default: dist/<slug> in this repository)")
+    parser.add_argument("--ticket-file", help="a file holding a ticket from content/technomancer/access/grant.mjs")
     args = parser.parse_args()
 
     source = Path(args.client)
@@ -137,6 +163,12 @@ def main():
             sys.exit('A bridge token needs a "bridge_url" too.')
         settings["TM_BRIDGE_TOKEN"] = token
 
+    if args.ticket_file:
+        ticket = Path(args.ticket_file).read_text(encoding="utf-8").strip()
+        if not re.fullmatch(r"[A-Za-z0-9_\-]{32,100}", ticket):
+            sys.exit("That ticket file does not hold a ticket.")
+        settings.update(TM_TICKET=ticket, TM_ACCESS_URL=ACCESS)
+
     contact = settings.get("ASSISTANT_HELP_CONTACT", "The Technomancer")
     pack = (source.parent / client["pack"]) if client.get("pack") else None
     win_pack, count = pack_lines(pack, "::PACK:") if pack and pack.is_dir() else ("", 0)
@@ -146,7 +178,7 @@ def main():
     dist.mkdir(parents=True, exist_ok=True)
 
     windows = dist / "Technomancer Setup.cmd"
-    body = WINDOWS_HEAD + "".join(f'set "{k}={v}"\n' for k, v in settings.items()) + WINDOWS_TAIL.format(raw=RAW, contact=contact)
+    body = WINDOWS_HEAD + "".join(f'set "{k}={v}"\n' for k, v in settings.items()) + (WINDOWS_PAID.format(contact=contact) if args.ticket_file else WINDOWS_TAIL.format(raw=RAW, contact=contact))
     windows.write_bytes((body + win_pack).replace("\n", "\r\n").encode("ascii"))
 
     # A zip keeps the Mac file's "can be run" flag, which a bare download loses.
@@ -154,11 +186,11 @@ def main():
     info = zipfile.ZipInfo("Technomancer Setup.command")
     info.external_attr = 0o100755 << 16
     info.create_system = 3
-    mac = MAC_HEAD + "".join(f"export {k}='{v}'\n" for k, v in settings.items()) + MAC_TAIL.format(raw=RAW, contact=contact)
+    mac = MAC_HEAD + "".join(f"export {k}='{v}'\n" for k, v in settings.items()) + (MAC_PAID.format(contact=contact) if args.ticket_file else MAC_TAIL.format(raw=RAW, contact=contact))
     with zipfile.ZipFile(mac_zip, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr(info, mac + mac_pack)
 
-    shown = {k: ("(set)" if k == "TM_BRIDGE_TOKEN" else v) for k, v in settings.items()}
+    shown = {k: ("(set)" if k in ("TM_BRIDGE_TOKEN", "TM_TICKET") else v) for k, v in settings.items()}
     print(f"Built for {slug}:\n  {windows}\n  {mac_zip}\n")
     for k, v in shown.items():
         print(f"  {k} = {v}")

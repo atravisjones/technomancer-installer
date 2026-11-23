@@ -18,10 +18,7 @@ About five minutes, Windows or Mac. You need a Claude (or ChatGPT) plan first.
 
 Running the setup file again is safe. It updates the tools and keeps your notes.
 
-No setup file? Paste one line instead:
-
-- Windows (PowerShell): `irm https://raw.githubusercontent.com/atravisjones/technomancer-installer/main/install/install.ps1 | iex`
-- Mac (Terminal): `curl -fsSL https://raw.githubusercontent.com/atravisjones/technomancer-installer/main/install/install.sh | bash`
+No setup file? Sign in at [thetechnomancer.ai/get-started](https://thetechnomancer.ai/get-started) to download yours. Each file works for 24 hours on one computer.
 
 ## The business screen
 

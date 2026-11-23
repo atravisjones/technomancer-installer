@@ -37,6 +37,7 @@ BRAND_SITE = "https://thetechnomancer.ai"
 
 # Taken out of the environment so the apps this setup opens do not inherit it.
 INSTALLER_TOKEN = os.environ.pop("TM_BRIDGE_TOKEN", "")
+os.environ.pop("TM_TICKET", None)
 
 
 def install_file():
@@ -1289,6 +1290,7 @@ def configure(a):
     (workspace / ".marvin-source").write_text(str(TEMPLATE) + "\n", encoding="utf-8")
     (workspace / ".assistant-setup.json").write_text(json.dumps(saved_answers(a), indent=2) + "\n", encoding="utf-8")
     write_sync_files(workspace)
+    write_license_ref(workspace)
 
     load_pack(workspace, log)
 
@@ -2342,6 +2344,16 @@ def backup_saved():
         return bool(branch) and run("rev-parse", "-q", "--verify", f"refs/remotes/origin/{branch}").returncode == 0
     except (OSError, subprocess.TimeoutExpired):
         return False
+
+
+def write_license_ref(workspace):
+    """The customer ID on this copy, so a copy passed around can be traced. The plan terms say so."""
+    try:
+        ref = json.loads((Path.home() / ".technomancer" / "license.json").read_text(encoding="utf-8-sig")).get("ref", "")
+    except (OSError, ValueError, AttributeError):
+        return
+    if re.fullmatch(r"tm_[a-f0-9]{12}", str(ref)):
+        (workspace / ".assistant-license").write_text(ref + "\n", encoding="utf-8")
 
 
 def saved_answers(a):

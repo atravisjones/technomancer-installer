@@ -25,7 +25,7 @@ jobs:
       TM_BRIDGE_URL: https://bridge.example.com/api
       ASSISTANT_ANSWERS_FILE: ${{ github.workspace }}/install/test-answers.json
       ASSISTANT_PACK_DIR: ${{ github.workspace }}/install/test-pack
-      ASSISTANT_STARTER_REF: ${{ github.sha }}
+      ASSISTANT_STARTER_DIR: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v4
 

@@ -8,6 +8,22 @@ Pull new features and commands from the setup template into your workspace.
 
 ## Instructions
 
+### 0. Check the Plan and Get the Newest Files
+
+Run this first:
+
+```bash
+uv run --quiet --no-project --python 3.12 .claude/tools/get-updates.py
+```
+
+If `uv` is not found, run the same file with `python3`, or `python` on Windows.
+
+It prints one line of JSON.
+
+- `"ok": true`: the newest files are ready. Go to step 1.
+- `"error": "offline"`: tell the user the `message`, then continue with the copy already on this computer.
+- Any other error: tell the user the `message`, say that everything they already have keeps working, and stop.
+
 ### 1. Find the Template
 
 Read `.marvin-source` to get the path to the template directory:
