@@ -708,6 +708,7 @@ it can do in Chrome, and checks that its tools work. Give it about fifteen minut
 - **Open it from your desktop.** The shortcut named {name} opens ChatGPT. If it does not
   land on your folder, choose the folder as the project.
 - **Stuck?** Type "I'm stuck" and say what you were trying to do, or send {contact} a screenshot.
+- **Need someone to look at your screen?** Type `{help}`. Only you can start it, with a one-time code.
 """
 
 
@@ -757,6 +758,7 @@ it can do, and checks that its tools work. Give it about fifteen minutes.
   accounts do not include Antigravity plans. A business can use Google Cloud instead.
 - **Open it from your desktop.** The shortcut named {name} opens Antigravity on your folder.
 - **Stuck?** Type "I'm stuck" and say what you were trying to do, or send {contact} a screenshot.
+- **Need someone to look at your screen?** Type `{help}`. Only you can start it, with a one-time code.
 """
 
 
@@ -785,6 +787,10 @@ In Claude, use Claude in Chrome. In ChatGPT, use the Chrome extension (`@Chrome`
 message box). If it is not set up, say so in one line, finish this chat without it, and
 tell them how: in Claude, add the Claude extension to Chrome and sign in to it; in ChatGPT,
 the app's Settings, then Computer use, then Google Chrome.
+
+If the Claude app offers to import cookies from their browser, explain that it copies website
+sign-ins into the app's built-in browser, and that Claude in Chrome does not need it. If they
+want it, they do it themselves and tick only the site they are working on. Never do it for them.
 
 Then explain tab groups, in plain words:
 
@@ -961,9 +967,9 @@ could build and publish for them. Ask which one to start.
 def start_here(name, a, main="claude"):
     examples = "\n".join(f'- "{line}"' for line in tries(a))
     if main == "codex":
-        return START_HERE_CODEX.format(name=name, examples=examples, contact=CONTACT)
+        return START_HERE_CODEX.format(name=name, examples=examples, contact=CONTACT, help="$get-help")
     if main == "agy":
-        return START_HERE_AGY.format(name=name, examples=examples, contact=CONTACT)
+        return START_HERE_AGY.format(name=name, examples=examples, contact=CONTACT, help="/get-help")
     colors = bool(a.get("colors", True))
     tint_row = "| `/tint company` | Colors this chat. Try `company`, `personal`, or `off` |\n" if colors else ""
     colors_line = ("- **Colors mean topics.** Orange is work, green is personal. The shape on\n"
@@ -1011,6 +1017,7 @@ fifteen minutes.
 - **It asks before it sends.** {name} will check with you before sending a message,
   deleting anything, or changing a company system.
 {colors_line}{phone_line}- **Stuck?** Type "I'm stuck" and say what you were trying to do, or send {CONTACT} a screenshot.
+- **Need someone to look at your screen?** Type `/get-help`. Only you can start it, with a one-time code.
 """
 
 
@@ -1491,6 +1498,7 @@ CHROME_PAGES = {
     "github-new-org": "https://github.com/account/organizations/new?plan=free",
     "claude-download": "https://claude.ai/download",
     "connectors": "https://claude.ai/settings/connectors",
+    "remote-help": "https://remotedesktop.google.com/support",
 }
 
 

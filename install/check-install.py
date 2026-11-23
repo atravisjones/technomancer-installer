@@ -169,6 +169,8 @@ check("/publish command present, with the Supabase rules",
 check("optional extras moved to the first chat", all(words in first for words in (
     "Optional extras", "Let ChatGPT use this computer", "add-assistant.md")))
 check("/add-assistant command present", "--add-assistant" in read(work / ".claude" / "commands" / "add-assistant.md"))
+check("/get-help opens one-time remote support", "remotedesktop.google.com/support" in read(work / ".claude" / "commands" / "get-help.md"))
+check("START-HERE explains remote help", "/get-help" in read(work / "START-HERE.md"))
 check("/start runs the first chat once", "state/first-chat.md" in read(work / ".claude" / "commands" / "start.md"))
 check("swarm layer left out", not (work / ".claude" / "agents" / "the-boys.md").exists())
 check("bridge token in .env", "TM_BRIDGE_TOKEN=test_token_not_real_0000000000" in read(work / ".env"))

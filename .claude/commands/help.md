@@ -28,6 +28,7 @@ Display this reference:
 | /help     | Show this help guide                |
 | /sync     | Get the latest setup updates        |
 | /add-assistant | Add another AI you already pay for |
+| /get-help | Let your support person see your screen, with a one-time code |
 | /skills   | Search & install agent skills       |
 | /new-project | Scaffold a new software project  |
 | /harden   | Systematic project hardening audit  |

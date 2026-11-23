@@ -525,7 +525,7 @@
 
   <div class="page" data-page="0.7" hidden>
     <h1>Get your computer ready</h1>
-    <p class="lede">Setup installs what your assistant needs while you answer a few questions. This is the one step where your computer may ask you to approve something.</p>
+    <p class="lede">Setup installs what your assistant needs while you answer a few questions. This is the main step where your computer may ask you to approve something.</p>
     <section>
       <h2>What to expect</h2>
       <ul class="done" style="margin:8px 0">
@@ -744,7 +744,34 @@
           <span id="cs-claude">Adding it is not enough: Claude in Chrome only works once you sign in to it. Sign in with the same work email in the window that opens, and close it. Then click the puzzle piece at the top right of Chrome, pin <b>Claude</b>, and click it: if it asks you to sign in, do that too. It is ready when it shows a box to type in.</span></li>
       </ol>
     </section>
-    <div class="nav"><button class="go quiet back" data-go="4.2">Back</button><button class="go next" data-go="7">Next</button></div>
+    <p class="hint" id="cs-cookies" style="margin:0 0 14px"><b>If Claude offers to import cookies from your browser:</b> that copies your website sign-ins into the browser built into the Claude app. You can skip it, because Claude in Chrome already uses your Chrome sign-ins. If you do want it, tick only the site you are working on and untick the rest.</p>
+    <div class="nav"><button class="go quiet back" data-go="4.2">Back</button><button class="go next" data-go="5.5">Next</button></div>
+  </div>
+
+  <div class="page" data-page="5.5" hidden>
+    <h1>Get tech support ready</h1>
+    <p class="lede">If you get stuck, <span class="the-contact">your manager</span> can see your screen and help, but only when you give them a code.</p>
+    <section>
+      <ol class="next steps">
+        <li><button class="step" id="rh-open">Open Google's remote help page</button>
+          <span>It opens Chrome Remote Desktop, Google's free screen-sharing tool.</span></li>
+        <li><b>Install it</b><br>
+          <span>Under <b>Get Support</b>, click <b>Download</b> and follow Google's steps. Your computer may ask for its password or to approve a security setting.</span>
+          <button type="button" class="copy" id="rh-done" style="margin:10px 0 0" hidden>I installed it</button>
+          <span class="hint" id="rh-note" role="status" style="display:block;margin-top:8px"></span></li>
+      </ol>
+    </section>
+    <section>
+      <h2>When you need help later</h2>
+      <ol class="next" style="margin-bottom:8px">
+        <li>Type <code class="cmd-get-help">/get-help</code> in a chat, or go to remotedesktop.google.com/support.</li>
+        <li>Click <b>Generate Code</b> and read it to your support person. It works one time.</li>
+        <li>When a box shows their email address, click <b>Share</b>. Click <b>Stop Sharing</b> when you are done.</li>
+      </ol>
+      <p class="hint" style="margin:0">Nobody can connect without your code and your click. While connected, they can see and use everything on this computer, so never give a code to someone who called or messaged you first.</p>
+    </section>
+    <p class="hint" style="margin:0 0 14px">You can skip this and do it the first time you need help.</p>
+    <div class="nav"><button class="go quiet back" data-go="5">Back</button><button class="go next" data-go="7">Next</button></div>
   </div>
 
   <div class="page" data-page="7" hidden>
@@ -756,7 +783,7 @@
       <input type="text" id="drill" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="/start">
       <p class="hint" id="drill-hint">Start with the slash.</p>
     </section>
-    <div class="nav"><button class="go quiet back" data-go="5">Back</button><button class="go next" id="drill-next" data-go="8" disabled>Next</button></div>
+    <div class="nav"><button class="go quiet back" data-go="5.5">Back</button><button class="go next" id="drill-next" data-go="8" disabled>Next</button></div>
   </div>
 
   <div class="page" data-page="8" hidden>
@@ -1072,6 +1099,10 @@ function extraRow(tool) {
   return [false, name, openNote[tool.id] || `Not signed in yet. Open it and sign in with ${tool.account}.`, tool]
 }
 
+// Setup cannot confirm Google's install, so this row never ticks: "done" is the person's own word.
+const remoteRow = () => [false, 'Tech support', done.remote ? 'Marked done by you. Setup cannot confirm this install.'
+  : 'Not set up yet. You can also do it the first time you need help.', done.remote ? 0 : 5.5]
+
 function showFinale() {
   $('final-user').textContent = result && result.user ? `, ${result.user}` : ''
   $('final-app').textContent = codexMain() ? 'ChatGPT' : agyMain() ? 'Antigravity' : 'Claude'
@@ -1121,6 +1152,7 @@ function showFinale() {
     [done.publish >= 2, 'Publishing websites', done.publish >= 2 ? 'Vercel and Supabase are connected.' : 'Not finished: this is what lets it put pages online for you.', 9.5],
   ]
   for (const tool of ((result && result.tools) || []).filter(tool => !result || tool.id !== result.main)) rows.push(extraRow(tool))
+  rows.splice(rows.findIndex(row => row[1] === 'The four commands'), 0, remoteRow())
   if (restored) {  // these were done on the first computer, and came with its notes
     for (const title of ['What matters to your company', 'The four commands', 'Private backup on GitHub']) {
       const at = rows.findIndex(row => row[1] === title)
@@ -1169,18 +1201,18 @@ function startIntro() {
   else slideTimer = setTimeout(ready, rows.length * 950 + 600)
 }
 
-// Antigravity as the main assistant: [4.6, 4.2, 7, 9, 9.5, 10, 11]. Every caller (buttons, rs-next,
+// Antigravity as the main assistant: [4.6, 4.2, 5.5, 7, 9, 9.5, 10, 11]. Every caller (buttons, rs-next,
 // the ready list) asks for the Claude-flow page; this turns it into the page that is next, or
 // previous, in the Antigravity flow, using the page they are on.
 function agyRoute(n, from) {
   if (n === 4) return 4.6
-  if (n === 5) return from === 7 ? 4.2 : 7
+  if (n === 5) return from === 5.5 ? 4.2 : 5.5
   if (n === 8) return from === 9 ? 7 : 9
   return n
 }
-const flowPages = () => agyMain() ? [4.6, 4.2, 7, 9, 9.5, 10, 11]
-  : codexMain() ? [4.5, 4.2, 5, 7, 9, 9.5, 10, 11]
-    : [4, 4.2, 5, 7, 8, 9, 9.5, 10, 11]
+const flowPages = () => agyMain() ? [4.6, 4.2, 5.5, 7, 9, 9.5, 10, 11]
+  : codexMain() ? [4.5, 4.2, 5, 5.5, 7, 9, 9.5, 10, 11]
+    : [4, 4.2, 5, 5.5, 7, 8, 9, 9.5, 10, 11]
 // A restored assistant steps over the pages that were done on the first computer.
 function restoredRoute(n) {
   if (n >= 0.5 && n <= 3) return 0.2
@@ -1254,7 +1286,7 @@ for (const button of document.querySelectorAll('button[data-go]')) {
       readyNext = page === 0 ? 0.2 : 1
       if (!readyNeeded()) { show(readyNext); return }
     }
-    // With Codex as the primary agent the flow is 4.5, 4.2, 5, 7, 9, 9.5, 10, 11: the Claude-only pages are stepped over.
+    // With Codex as the primary agent the flow is 4.5, 4.2, 5, 5.5, 7, 9, 9.5, 10, 11: the Claude-only pages are stepped over.
     if (codexMain() && to === 4) show(4.5)
     else if (codexMain() && to === 8) show(page === 7 ? 9 : 7)
     else show(to)
@@ -1451,7 +1483,7 @@ function afterSetup() {
   }
   for (const el of document.querySelectorAll('.the-folder')) el.textContent = result.folder
   for (const el of document.querySelectorAll('.the-name')) el.textContent = result.assistant
-  for (const word of ['start', 'save']) for (const el of document.querySelectorAll(`.cmd-${word}`)) el.textContent = (codexMain() ? '$' : '/') + word
+  for (const word of ['start', 'save', 'get-help']) for (const el of document.querySelectorAll(`.cmd-${word}`)) el.textContent = (codexMain() ? '$' : '/') + word
   drillAt = 0
   $('drill-log').replaceChildren()
   askDrill()  // the practice follows the primary agent
@@ -2258,6 +2290,7 @@ let chromeFor = 'claude'
 function chromeCopy() {
   // The page's words follow the assistant picked on the first page, which can change until here.
   const app = codexMain() ? 'codex' : 'claude'
+  $('cs-cookies').hidden = app !== 'claude'  // the offer is the Claude app's own
   if (app === chromeFor) return
   chromeFor = app
   for (const step of Object.keys(chromeSteps)) chromeSteps[step] = false
@@ -2349,6 +2382,19 @@ $('cs-google-done').onclick = async () => {
   $('cs-google-done').hidden = true
   markSaid('google', 'Marked done by you. Setup could not watch this sign-in, so it cannot confirm it.')
   if (!(await closeSite('google'))) $('cs-google').textContent += ' You can close that window now.'
+}
+
+$('rh-open').onclick = async () => {
+  const reply = await post('/chrome', { page: 'remote-help', window: true }).catch(() => ({}))
+  $('rh-note').textContent = !reply.ok ? 'That page did not open. In Chrome, go to remotedesktop.google.com/support.'
+    : reply.chrome ? "It opened in Chrome. Under Get Support, click Download and follow Google's steps, then close that window."
+      : 'It opened in your browser, but this needs Google Chrome. Copy the address into Chrome.'
+  $('rh-done').hidden = Boolean(done.remote)
+}
+$('rh-done').onclick = () => {
+  done.remote = true
+  $('rh-done').hidden = true
+  $('rh-note').textContent = 'Marked done by you. Setup cannot confirm this install. The first time you need help, Google shows Generate Code if it worked.'
 }
 
 $('copy-folder').onclick = async () => {
