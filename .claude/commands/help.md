@@ -2,9 +2,9 @@
 description: Show available commands and integrations
 ---
 
-# /help - MARVIN Help
+# /help - Help
 
-Show the user what MARVIN can do and what integrations are available.
+Show the user what you can do and what integrations are available.
 
 ## Instructions
 
@@ -22,11 +22,11 @@ Display this reference:
 | /update   | Quick checkpoint (save progress)    |
 | /report   | Generate a weekly summary of work   |
 | /commit   | Review and commit git changes       |
-| /code     | Open MARVIN in your IDE             |
+| /code     | Open this folder in your IDE        |
 | /status   | Check integration & workspace health|
 | /publish  | Put a web page or app online        |
 | /help     | Show this help guide                |
-| /sync     | Get updates from MARVIN template    |
+| /sync     | Get the latest setup updates        |
 | /skills   | Search & install agent skills       |
 | /new-project | Scaffold a new software project  |
 | /harden   | Systematic project hardening audit  |
@@ -44,7 +44,7 @@ Then display something like:
 ```
 ## Your Integrations
 
-These are the tools MARVIN can currently access:
+These are the tools you can currently access:
 
 | Integration      | What It Does                                      |
 |------------------|---------------------------------------------------|
@@ -79,7 +79,7 @@ Just ask me to set one up! For example: "Help me connect to Jira"
 | Notion           | Pages, databases, wikis                   |
 | Linear           | Issues, projects, tracking                |
 
-Want something else? Check `.marvin/integrations/REQUESTS.md` to see what's planned or request a new one!
+Want something else? Tell me what you need and I will help you connect it.
 ```
 
 ### 4. Offer Next Steps

@@ -987,7 +987,7 @@ const fill = (select, items) => {
   for (const [value, text] of items) select.add(new Option(text, value))
 }
 const slug = name => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'assistant'
-const chosenName = () => ($('name').value === '__custom' ? $('custom').value.trim() : $('name').value) || 'Marvin'
+const chosenName = () => ($('name').value === '__custom' ? $('custom').value.trim() : $('name').value) || 'Jarvis'
 
 // One page at a time. Pages 0.5, 1, 2 and 3 are the choices, 4-7 come after setup has run.
 let page = 1

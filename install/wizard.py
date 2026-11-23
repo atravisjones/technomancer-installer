@@ -564,8 +564,7 @@ and start a new chat.
 This document is the primary context for {upper}. Claude reads it directly; ChatGPT
 (Codex) and any other assistant on this folder read it through `AGENTS.md`.
 
-Your name is **{name}**. Some files in this workspace came from a shared template
-and still say MARVIN. Those instructions are addressed to you: read MARVIN as {name}.
+Your name is **{name}**. Always use it.
 
 ---
 
@@ -1257,7 +1256,7 @@ def configure(a):
     log = []
     main, with_claude = chosen_main(a), uses_claude(a)
     # The name ends up in a file name and a shortcut script, so keep it to plain characters.
-    name = re.sub(r"[^A-Za-z0-9 _-]", "", str(a.get("assistant") or "")).strip()[:30] or "Marvin"
+    name = re.sub(r"[^A-Za-z0-9 _-]", "", str(a.get("assistant") or "")).strip()[:30] or "Jarvis"
     a["assistant"] = name
     a["user"] = re.sub(r"[\r\n`<>]", "", str(a.get("user") or "")).strip()[:40] or "the owner of this computer"
     a["role"] = re.sub(r"[\r\n`<>]", "", str(a.get("role") or "")).strip()[:60] or "Team member"

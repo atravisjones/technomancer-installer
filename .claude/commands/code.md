@@ -4,7 +4,7 @@ description: Open this folder in a code editor (Cursor, VS Code, etc.)
 
 # /code - Open in IDE
 
-Open the MARVIN directory in your preferred IDE.
+Open this assistant's folder in your preferred IDE.
 
 ## Instructions
 

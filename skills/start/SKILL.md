@@ -1,7 +1,7 @@
 ---
 name: start
 description: |
-  Start MARVIN session with briefing. Use when user types /start or starts a new session. Loads context, reviews state, gives daily briefing.
+  Start the assistant's session with a briefing. Use when user types /start or starts a new session. Loads context, reviews state, gives daily briefing.
 license: MIT
 compatibility: marvin
 metadata:
@@ -14,12 +14,12 @@ metadata:
 
 # Session Start Skill
 
-Start MARVIN session with full context loading and daily briefing.
+Start the session with full context loading and daily briefing.
 
 ## When to Use
 
 - When user types `/start`
-- At the start of any Claude Code session in the MARVIN directory
+- At the start of any Claude Code session in this assistant's folder
 - When resuming work after a break
 
 ## Process

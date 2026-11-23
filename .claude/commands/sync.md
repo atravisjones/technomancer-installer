@@ -4,7 +4,7 @@ description: Get the latest updates to this assistant
 
 # /sync - Get Updates
 
-Pull new features and commands from the MARVIN template into your workspace.
+Pull new features and commands from the setup template into your workspace.
 
 ## Instructions
 
@@ -16,7 +16,7 @@ cat .marvin-source
 ```
 
 If this file doesn't exist, tell the user:
-> "I can't find your template source. This usually means you set up MARVIN manually. Would you like to tell me where your template folder is?"
+> "I can't find your template source. This usually means this assistant was set up by hand. Would you like to tell me where your template folder is?"
 
 ### 2. Check Version
 

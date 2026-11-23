@@ -1,13 +1,13 @@
 ---
 name: the-boys
-description: "Protocol reference for MARVIN's multi-agent swarm. NOT a standalone agent — MARVIN executes this protocol directly. Gemini (agy-call.sh / Antigravity OAuth) + Codex workers (free), optional Sonnet worker (window-costly), Gemini reviewer, Claude PM."
+description: "Protocol reference for the assistant's multi-agent swarm. NOT a standalone agent — the main assistant executes this protocol directly. Gemini (agy-call.sh / Antigravity OAuth) + Codex workers (free), optional Sonnet worker (window-costly), Gemini reviewer, Claude PM."
 model: inherit
 color: blue
 ---
 
 # The Boys — Multi-AI Swarm Protocol
 
-This is a **protocol that MARVIN executes directly** — not a standalone agent. When the user says "the boys" or a task is non-trivial, MARVIN follows this protocol in the main session.
+This is a **protocol that you execute directly** — not a standalone agent. When the user says "the boys" or a task is non-trivial, follow this protocol in the main session.
 
 **The core idea:** your Claude usage window is the scarce, expensive resource. Gemini (via Antigravity OAuth) and Codex (via a ChatGPT account) are free at the margin. So Claude acts as the PM — orchestrating, deciding, applying — while free CLI workers do the exploration, research, and drafting.
 
@@ -37,7 +37,7 @@ This is a **protocol that MARVIN executes directly** — not a standalone agent.
 
 | Role | Model | Dispatch | Window Cost | Strengths |
 |------|-------|----------|-------------|-----------|
-| **PM** | Claude (MARVIN — your main session) | Direct — you | Consumes window — stay lean | Hardest-problem coder, long-horizon orchestration, best "taste" for synthesis, devil's advocate |
+| **PM** | Claude (your main session) | Direct — you | Consumes window — stay lean | Hardest-problem coder, long-horizon orchestration, best "taste" for synthesis, devil's advocate |
 | **Gemini worker** (3-5) | `agy-call.sh` (Antigravity OAuth; model via `AGY_MODEL`) | `Bash` bg | FREE | Long-context, alternative framings, fast turnaround, large-codebase digestion |
 | **Codex worker** (2-5) | `codex exec` (config default) | `Bash` bg | FREE (ChatGPT plan) | Tool-using investigator, strong coding, browse/MCP/evidence gathering, polished copy |
 | **Sonnet worker** (0-1, optional) | Sonnet | `Agent` tool `model: "sonnet"` bg | Consumes window | Anthropic-style judgment — nuanced PR review, writing polish, subtle security analysis. Add ONLY when free models can't match. |
@@ -193,7 +193,7 @@ PROMPT
 - Fresh instance — never reviews its own worker output
 - Returns the only thing the PM reads
 
-### The PM (your main Claude session — MARVIN)
+### The PM (your main Claude session)
 - **Allowed:** orchestrate, read the Gemini reviewer's synthesis, make final decisions, apply code (Edit/Write)
 - **NOT allowed:** explore, research, implement in advance, read raw agent output directly
 - **Window discipline:** every context dump and tool call the PM makes is a tax on the same window a Sonnet worker shares. Stay lean.
@@ -233,7 +233,7 @@ PROMPT
 
 **Action:**
 1. DON'T retry the same path — it'll fail identically
-2. Restart codex from a clean path (your MARVIN repo root is always safe)
+2. Restart codex from a clean path (this assistant's folder is always safe)
 3. Pass the messy-path target as a quoted absolute path inside the prompt body
 
 ### Codex stdin hang
@@ -285,7 +285,7 @@ When reviewing the Gemini reviewer's synthesis before presenting to the user:
 
 **User:** "Should we migrate the dashboard to realtime subscriptions or keep polling?"
 
-**MARVIN thinks:** Architecture decision → convergent. Different framings on the same question.
+**The lead thinks:** Architecture decision → convergent. Different framings on the same question.
 
 **Step 1:** Track the work units.
 
@@ -311,7 +311,7 @@ When reviewing the Gemini reviewer's synthesis before presenting to the user:
 
 **User:** "Rename `job_close_date` to `close_date` everywhere."
 
-**MARVIN thinks:** Mechanical, known approach → divergent. Split by directory.
+**The lead thinks:** Mechanical, known approach → divergent. Split by directory.
 
 - Gemini-1: `services/sync/` files
 - Gemini-2: `services/search/` files
