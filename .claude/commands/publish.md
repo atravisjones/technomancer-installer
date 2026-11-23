@@ -14,8 +14,8 @@ Supabase database. Plain words throughout: they do not need to know how it works
   local copy in Chrome, or describe it), say the address it will get, and wait for a yes.
   Later updates to the same site only need a one-line heads-up.
 - **Secrets never go in the code or in git.** Keys live in `.env` here and in Vercel's
-  environment settings (`vercel env add`). Before any commit, check that `.env*` files and
-  `.vercel/` are ignored (`git check-ignore`). Only Supabase's public "anon" (publishable) key
+  environment settings (`vercel env add`). Before any commit, check that `.env*` files,
+  `.vercel/` and `graphify-out/` are ignored (`git check-ignore`). Only Supabase's public "anon" (publishable) key
   may ever reach a browser. The service role (secret) key stays on the server side.
 - **Every Supabase table gets Row Level Security turned on when it is created,** with a
   policy that lets people see and change only what they should. A table without RLS is
@@ -52,9 +52,14 @@ supabase projects list
   person needs logins, many pages or server code.
 - Make it look professional and work on a phone. Use the company's name, colours and logo
   if `CLAUDE.md` or the company website gives them.
+- Before every publish, make sure the site's `.vercelignore` exists and contains at least `.env*`
+  and `graphify-out/`, adding whichever is missing, so private working files are never put online.
+- After building or changing a site, refresh its code map with `graphify update sites/<name>`
+  (see the `graphify` skill). If that fails, carry on.
 - If this folder is backed up to GitHub, commit the site with the rest. If the company has
   its own GitHub (`.company-github`), a site that will grow can get its own private
-  repository there; ask first.
+  repository there; ask first. Its own `.gitignore` must list `.env*`, `.vercel/` and
+  `graphify-out/` before its first commit.
 
 ## 3. A database, if it needs one
 

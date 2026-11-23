@@ -643,12 +643,12 @@
     <button class="go" id="ag-open">Open Antigravity</button>
     <p class="hint" id="ag-note" style="text-align:center;margin:12px 0 20px" role="status">Setup installs the Antigravity app for you if it is not on this computer yet. Open it once and sign in if it asks.</p>
     <section>
-      <h2>Good to know</h2>
-      <ul class="done" style="margin-top:0">
-        <li>Antigravity has its own web browser built into the app, so it can look at web pages for you.</li>
-        <li>To reach it from your phone, open Antigravity and turn on <b>Settings</b>, then <b>Application</b>, then <b>Enable Remote Control</b>. Then open antigravity.google on your phone and sign in with the same Google account.</li>
-        <li>Gmail, Calendar and Drive are not connected in Antigravity yet.</li>
-      </ul>
+      <h2>Check these in Antigravity</h2>
+      <ol class="next" style="margin-bottom:0">
+        <li><b>Its web browser.</b> Open <b>Settings</b>, then <b>Browser</b>, then <b>Browser Actuation Rules</b>. If it says it runs in the built-in browser, you are set. If it says it requires Google Chrome, your first chat walks you through that.</li>
+        <li><b>How often it asks.</b> Under <b>Settings</b>, <b>General</b>, <b>Global Permissions</b>, the <b>Permission Preset</b> sets how often it stops to check with you. <b>Default</b> is a good place to start.</li>
+        <li><b>Your other apps.</b> Open <b>Customizations</b>, then <b>Marketplace</b>, to add tools such as your calendar or files.</li>
+      </ol>
     </section>
     <div class="nav"><span></span><button class="go next" data-go="4.2">Next: about your company</button></div>
   </div>
@@ -723,6 +723,80 @@
       <p class="hint">A chat shows on your phone while this computer is on with Claude open. These are real screens from an Android phone with example chat names; an iPhone looks nearly the same.</p>
     </section>
     <div class="nav"><button class="go quiet back" data-go="5">Back</button><button class="go next" data-go="7">Next</button></div>
+  </div>
+
+  <div class="page" data-page="5.5" hidden>
+    <h1>Let ChatGPT use your computer</h1>
+    <p class="lede">With Computer Use, <span class="the-name">Jarvis</span> can click, type and work in your other apps. It asks before it uses each one.</p>
+    <p class="note" id="cu-status" role="status">Checking whether Computer Use is on…</p>
+    <section>
+      <ol class="next steps">
+        <li><button class="step" id="cu-open">Open ChatGPT</button>
+          <span>Open <b>Settings</b>, then <b>Computer use</b>. Under <b>Control</b>, find <b>Any App</b>. If it says <b>Install</b>, click it. If its switch is off, turn it on.</span></li>
+        <li class="mac-only" hidden><b>Give it two Mac permissions</b><br>
+          <span>Turn on <b>Codex Computer Use</b> on both of these pages. Your Mac may ask for your password.</span>
+          <div class="chips" style="margin:10px 0 6px">
+            <button type="button" class="chip" id="cu-screen">Open Screen Recording</button>
+            <button type="button" class="chip" id="cu-access">Open Accessibility</button>
+          </div>
+          <button type="button" class="copy" id="cu-mac-done">I turned on both</button>
+          <span class="hint" id="cu-mac-note"></span></li>
+        <li class="win-only" hidden><b>Nothing else to turn on for Windows</b><br>
+          <span>While it works it uses your mouse and keyboard, so keep the computer unlocked and the app on screen.</span></li>
+        <li><b>Say yes when it asks</b><br>
+          <span>The first time it needs an app, ChatGPT asks. Click <b>Allow</b>, or <b>Always allow</b> for apps you trust. Sign in to those apps yourself first.</span></li>
+      </ol>
+    </section>
+    <p class="hint" style="margin:0 0 14px">It will not work in terminal apps or ChatGPT itself, and it cannot approve security prompts for you. In a company workspace, an admin may need to allow it.</p>
+    <div class="nav"><button class="go quiet back" data-go="5">Back</button><button class="go next" data-go="6.5">Next</button></div>
+  </div>
+
+  <div class="page" data-page="6.5" hidden>
+    <h1 id="ph-title">ChatGPT on your phone</h1>
+    <p class="lede">Start something at your desk, then check on it or give it new work from anywhere.</p>
+    <div data-phone="codex">
+      <section>
+        <h2>1. Get the ChatGPT app</h2>
+        <p class="hint" style="margin:0 0 12px">Point your phone's camera at the code for your phone.</p>
+        <div class="stores">
+          <a class="store" href="https://apps.apple.com/us/app/chatgpt/id6448311069" target="_blank" rel="noopener"><span class="qr"><svg viewBox="0 0 111 111" class="segno"><g transform="scale(3)"><path fill="#fff" d="M0 0h37v37h-37z"/><path class="qrline" stroke="#111" d="M2 2.5h7m2 0h3m6 0h4m1 0h1m2 0h7m-33 1h1m5 0h1m8 0h1m2 0h1m1 0h1m3 0h1m1 0h1m5 0h1m-33 1h1m1 0h3m1 0h1m1 0h1m5 0h2m3 0h5m2 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m1 0h5m2 0h1m2 0h2m3 0h1m2 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m1 0h1m1 0h8m2 0h5m1 0h1m1 0h3m1 0h1m-33 1h1m5 0h1m1 0h2m1 0h4m4 0h1m1 0h1m2 0h1m1 0h1m5 0h1m-33 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-25 1h1m1 0h2m2 0h1m1 0h1m2 0h4m1 0h1m-25 1h1m1 0h5m6 0h2m1 0h4m2 0h3m1 0h5m-30 1h1m2 0h2m1 0h1m1 0h5m2 0h9m1 0h2m1 0h4m-32 1h1m4 0h2m3 0h1m1 0h3m1 0h1m2 0h2m4 0h1m1 0h1m1 0h2m-32 1h1m1 0h1m1 0h2m1 0h1m3 0h1m1 0h1m1 0h1m1 0h3m1 0h5m2 0h4m-32 1h2m2 0h1m1 0h1m1 0h1m1 0h3m1 0h3m8 0h1m1 0h3m-27 1h2m2 0h1m3 0h2m2 0h1m1 0h2m2 0h4m1 0h1m2 0h4m-33 1h1m2 0h1m1 0h3m3 0h1m1 0h1m1 0h3m3 0h1m2 0h3m1 0h1m1 0h2m-32 1h1m1 0h4m2 0h1m1 0h2m3 0h1m5 0h1m3 0h2m1 0h3m-30 1h1m1 0h1m2 0h1m1 0h1m1 0h1m1 0h1m2 0h3m4 0h1m2 0h1m1 0h2m3 0h1m-33 1h1m3 0h1m2 0h1m1 0h1m4 0h1m1 0h1m2 0h5m2 0h2m1 0h2m1 0h1m-32 1h1m2 0h1m1 0h3m3 0h5m1 0h1m2 0h1m2 0h2m1 0h2m1 0h2m-32 1h1m3 0h1m3 0h1m3 0h1m2 0h1m3 0h4m1 0h1m2 0h4m-30 1h6m1 0h4m2 0h2m2 0h2m7 0h3m2 0h1m-33 1h1m2 0h1m3 0h1m2 0h1m4 0h2m4 0h7m1 0h2m1 0h1m-33 1h1m3 0h1m1 0h1m2 0h6m5 0h2m2 0h1m2 0h1m1 0h1m1 0h1m-32 1h1m3 0h1m2 0h4m1 0h2m2 0h1m4 0h1m3 0h1m3 0h2m1 0h1m-33 1h1m2 0h1m1 0h2m3 0h1m1 0h2m3 0h1m1 0h1m2 0h1m1 0h6m-22 1h1m3 0h3m1 0h2m1 0h1m1 0h1m1 0h2m3 0h1m1 0h1m1 0h1m-33 1h7m2 0h1m5 0h3m2 0h2m1 0h2m1 0h1m1 0h1m1 0h2m-32 1h1m5 0h1m1 0h1m1 0h1m5 0h3m1 0h2m1 0h2m3 0h5m-33 1h1m1 0h3m1 0h1m1 0h2m3 0h1m2 0h1m3 0h1m3 0h6m-30 1h1m1 0h3m1 0h1m1 0h2m2 0h4m2 0h2m2 0h1m1 0h2m2 0h1m1 0h3m-33 1h1m1 0h3m1 0h1m1 0h1m3 0h1m2 0h4m2 0h2m1 0h4m2 0h1m-31 1h1m5 0h1m4 0h1m1 0h1m1 0h1m3 0h3m1 0h1m1 0h1m2 0h3m-31 1h7m1 0h1m5 0h2m1 0h2m3 0h1m1 0h1m1 0h2m1 0h1m1 0h1"/></g></svg></span><b>iPhone</b><span class="hint">App Store</span></a>
+          <a class="store" href="https://play.google.com/store/apps/details?id=com.openai.chatgpt" target="_blank" rel="noopener"><span class="qr"><svg viewBox="0 0 123 123" class="segno"><g transform="scale(3)"><path fill="#fff" d="M0 0h41v41h-41z"/><path class="qrline" stroke="#111" d="M2 2.5h7m1 0h2m1 0h2m2 0h1m2 0h2m2 0h1m1 0h1m1 0h3m1 0h7m-37 1h1m5 0h1m2 0h3m1 0h1m3 0h2m1 0h2m6 0h1m1 0h1m5 0h1m-37 1h1m1 0h3m1 0h1m6 0h2m1 0h6m1 0h1m2 0h1m1 0h1m1 0h1m1 0h3m1 0h1m-37 1h1m1 0h3m1 0h1m1 0h1m2 0h1m2 0h3m2 0h2m2 0h6m1 0h1m1 0h3m1 0h1m-37 1h1m1 0h3m1 0h1m1 0h1m3 0h2m2 0h1m1 0h1m2 0h3m2 0h3m1 0h1m1 0h3m1 0h1m-37 1h1m5 0h1m1 0h1m1 0h2m1 0h3m2 0h5m2 0h2m1 0h1m1 0h1m5 0h1m-37 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-29 1h1m2 0h5m1 0h2m3 0h1m1 0h1m-25 1h1m3 0h1m1 0h6m6 0h2m2 0h3m2 0h1m1 0h5m2 0h1m-37 1h1m2 0h3m1 0h3m4 0h1m1 0h2m1 0h2m4 0h5m2 0h2m1 0h1m-36 1h4m2 0h1m3 0h1m1 0h3m1 0h1m1 0h1m1 0h2m3 0h5m1 0h4m-35 1h1m1 0h2m3 0h2m2 0h2m4 0h2m2 0h2m1 0h1m1 0h1m2 0h1m1 0h5m-30 1h1m1 0h2m1 0h1m1 0h1m1 0h3m1 0h1m1 0h4m2 0h1m1 0h2m2 0h4m-32 1h1m1 0h2m1 0h2m1 0h6m4 0h6m3 0h2m-32 1h1m1 0h1m1 0h1m1 0h1m1 0h1m3 0h3m1 0h1m2 0h4m2 0h1m1 0h1m1 0h4m-35 1h3m1 0h1m2 0h2m3 0h2m1 0h1m5 0h1m1 0h2m1 0h1m2 0h1m1 0h2m1 0h1m-35 1h4m1 0h2m1 0h2m3 0h1m1 0h2m2 0h2m2 0h2m4 0h3m1 0h2m-35 1h2m1 0h2m2 0h1m6 0h1m3 0h2m1 0h2m1 0h1m2 0h1m4 0h4m-36 1h2m2 0h6m2 0h2m1 0h1m1 0h3m3 0h1m2 0h2m2 0h1m1 0h1m1 0h1m-35 1h1m1 0h2m4 0h2m2 0h1m1 0h4m1 0h3m1 0h1m3 0h3m1 0h2m1 0h2m-36 1h2m1 0h1m1 0h5m2 0h3m2 0h1m3 0h2m1 0h1m2 0h1m1 0h3m2 0h1m-34 1h3m5 0h2m2 0h4m1 0h1m2 0h3m1 0h4m2 0h2m-33 1h2m1 0h1m1 0h2m2 0h2m2 0h3m1 0h1m2 0h1m2 0h2m1 0h3m2 0h4m-34 1h1m6 0h1m2 0h1m1 0h6m3 0h1m1 0h1m6 0h2m1 0h1m1 0h1m-37 1h2m1 0h1m2 0h1m1 0h2m1 0h5m2 0h2m2 0h3m2 0h1m1 0h3m1 0h3m-36 1h1m6 0h1m2 0h1m5 0h1m2 0h2m3 0h5m2 0h2m-27 1h1m1 0h1m1 0h4m2 0h3m1 0h1m1 0h2m2 0h2m1 0h1m1 0h1m-30 1h4m1 0h1m2 0h1m1 0h1m4 0h2m2 0h4m1 0h3m2 0h2m1 0h2m-36 1h2m1 0h7m2 0h2m1 0h1m1 0h1m1 0h4m1 0h1m1 0h1m1 0h5m1 0h1m1 0h1m-29 1h2m1 0h1m1 0h1m1 0h3m5 0h1m1 0h2m1 0h1m3 0h1m2 0h1m-36 1h7m1 0h2m2 0h4m2 0h1m1 0h7m1 0h1m1 0h1m1 0h1m2 0h1m-36 1h1m5 0h1m2 0h3m2 0h3m2 0h3m4 0h3m3 0h3m1 0h1m-37 1h1m1 0h3m1 0h1m1 0h3m5 0h1m3 0h1m7 0h7m1 0h1m-37 1h1m1 0h3m1 0h1m2 0h1m1 0h1m2 0h1m3 0h2m2 0h2m3 0h1m1 0h3m1 0h2m1 0h1m-37 1h1m1 0h3m1 0h1m2 0h2m1 0h1m1 0h2m1 0h3m1 0h1m1 0h1m1 0h3m2 0h1m-31 1h1m5 0h1m4 0h3m1 0h3m1 0h3m1 0h1m3 0h1m2 0h1m1 0h1m1 0h2m-36 1h7m1 0h1m1 0h1m1 0h2m3 0h1m2 0h2m2 0h1m2 0h1m3 0h1m2 0h3"/></g></svg></span><b>Android</b><span class="hint">Google Play</span></a>
+        </div>
+        <p class="hint">Sign in with the same ChatGPT account you use on this computer.</p>
+      </section>
+      <section>
+        <h2>2. Turn it on here</h2>
+        <button class="step" id="ph-open-codex">Open ChatGPT</button>
+        <p style="margin:8px 0 0">Open <b>Settings</b>, then <b>Connections</b>, then <b>Control this Mac or PC</b>. Click <b>Set up</b> or <b>Add</b> and approve it. A QR code appears.</p>
+      </section>
+      <section>
+        <h2>3. Scan it with your phone</h2>
+        <p style="margin:0">In ChatGPT on your phone, open <b>Codex</b> (it may say <b>Remote</b>). Scan the code, confirm it is the same account, and finish any sign-in step. This computer then shows up there.</p>
+        <p class="hint" style="margin:10px 0 0">In a company workspace, an admin may need to turn on Remote Control first.</p>
+      </section>
+    </div>
+    <div data-phone="agy" hidden>
+      <section>
+        <h2>1. Turn it on here</h2>
+        <button class="step" id="ph-open-agy">Open Antigravity</button>
+        <p style="margin:8px 0 0">Open <b>Settings</b>, then <b>Application</b>, and turn on <b>Enable Remote Control</b>. You can give this computer a name there too.</p>
+      </section>
+      <section>
+        <h2>2. Open it on your phone</h2>
+        <p class="hint" style="margin:0 0 12px">No app to install. Point your phone's camera at this code.</p>
+        <div class="stores" style="grid-template-columns:minmax(0,220px);justify-content:center">
+          <a class="store" href="https://antigravity.google.com/" target="_blank" rel="noopener"><span class="qr"><svg viewBox="0 0 99 99" class="segno"><g transform="scale(3)"><path fill="#fff" d="M0 0h33v33h-33z"/><path class="qrline" stroke="#111" d="M2 2.5h7m1 0h3m2 0h4m1 0h2m2 0h7m-29 1h1m5 0h1m1 0h1m4 0h1m1 0h5m2 0h1m5 0h1m-29 1h1m1 0h3m1 0h1m1 0h2m1 0h1m1 0h1m1 0h1m2 0h2m2 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m1 0h2m1 0h1m4 0h1m1 0h1m1 0h1m1 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m1 0h6m4 0h2m2 0h1m1 0h3m1 0h1m-29 1h1m5 0h1m2 0h1m1 0h3m2 0h1m2 0h1m2 0h1m5 0h1m-29 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-21 1h2m2 0h1m4 0h2m1 0h1m-20 1h2m1 0h1m1 0h2m1 0h2m1 0h3m1 0h2m1 0h2m1 0h1m1 0h5m-27 1h1m4 0h2m7 0h1m4 0h2m5 0h1m-29 1h2m4 0h6m2 0h3m1 0h1m4 0h1m2 0h3m-27 1h1m2 0h1m3 0h2m3 0h2m1 0h6m1 0h1m2 0h1m-23 1h2m3 0h4m2 0h2m2 0h1m1 0h2m1 0h1m-26 1h1m1 0h3m2 0h3m1 0h6m3 0h4m4 0h1m-29 1h2m2 0h1m1 0h2m1 0h2m1 0h4m1 0h1m3 0h1m1 0h1m2 0h3m-27 1h2m4 0h2m5 0h5m2 0h2m-21 1h4m1 0h2m1 0h3m1 0h3m2 0h3m2 0h1m-22 1h1m2 0h4m2 0h3m1 0h1m2 0h3m2 0h4m-29 1h1m1 0h1m1 0h4m1 0h1m1 0h1m1 0h2m1 0h2m2 0h2m1 0h1m1 0h4m-28 1h2m2 0h1m3 0h1m2 0h1m1 0h2m1 0h4m1 0h1m2 0h1m2 0h1m-29 1h1m3 0h1m1 0h2m1 0h6m2 0h1m1 0h6m2 0h1m-20 1h5m3 0h1m1 0h3m3 0h1m2 0h2m-29 1h7m1 0h1m3 0h3m4 0h2m1 0h1m1 0h1m1 0h3m-29 1h1m5 0h1m8 0h1m1 0h2m1 0h1m3 0h1m2 0h2m-29 1h1m1 0h3m1 0h1m1 0h3m2 0h1m2 0h3m1 0h6m1 0h2m-29 1h1m1 0h3m1 0h1m2 0h2m3 0h2m1 0h1m2 0h2m2 0h1m1 0h1m-27 1h1m1 0h3m1 0h1m1 0h1m2 0h1m1 0h2m2 0h3m3 0h2m3 0h1m-29 1h1m5 0h1m1 0h2m3 0h1m2 0h2m1 0h2m2 0h1m3 0h1m-28 1h7m3 0h2m2 0h4m1 0h3m2 0h1m2 0h2"/></g></svg></span><b>antigravity.google.com</b><span class="hint">Opens in your phone's browser</span></a>
+        </div>
+        <p style="margin:0">Sign in with the same Google account, then pick this computer from the list of machines. Add the page to your home screen if you want notifications.</p>
+      </section>
+    </div>
+    <section>
+      <h2>Keep this computer ready</h2>
+      <p style="margin:0">It has to stay on, awake and online, with the app open. Plug it in and set it not to sleep while plugged in.</p>
+      <button type="button" class="copy" id="ph-done" style="margin:12px 0 0">I connected my phone</button>
+      <p class="hint" id="ph-note" role="status" style="margin:8px 0 0">Setup cannot see your phone, so this one is up to you.</p>
+    </section>
+    <div class="nav"><button class="go quiet back" id="ph-back">Back</button><button class="go next" data-go="7">Next</button></div>
   </div>
 
   <div class="page" data-page="7" hidden>
@@ -1044,6 +1118,16 @@ function extraRow(tool) {
   return [false, name, openNote[tool.id] || `Not signed in yet. Open it and sign in with ${tool.account}.`, tool]
 }
 
+// Computer Use: setup can see whether it is on in ChatGPT, but not the Mac's own permissions.
+function computerRow() {
+  if (done.computer !== true) return [false, 'Computer use', done.computer === false ? 'Not turned on yet.' : 'Setup has not confirmed this yet.', 5.5]
+  if (options.system !== 'mac') return [true, 'Computer use', 'Turned on in ChatGPT.', 5.5]
+  return [false, 'Computer use', done.macPerms ? 'Turned on. You said you gave it both Mac permissions, and your first chat tests it.'
+    : 'Turned on. It still needs two Mac permissions.', 5.5]
+}
+// Nothing on this computer can see a phone, so this row never ticks.
+const phoneRow = () => [false, 'Your phone', done.phone ? 'Marked done by you. Check that this computer shows up in the phone app.' : 'Not set up yet.', 6.5]
+
 function showFinale() {
   $('final-user').textContent = result && result.user ? `, ${result.user}` : ''
   $('final-app').textContent = codexMain() ? 'ChatGPT' : agyMain() ? 'Antigravity' : 'Claude'
@@ -1092,6 +1176,9 @@ function showFinale() {
     [done.publish >= 2, 'Publishing websites', done.publish >= 2 ? 'Vercel and Supabase are connected.' : 'Not finished: this is what lets it put pages online for you.', 9.5],
   ]
   for (const tool of ((result && result.tools) || []).filter(tool => !result || tool.id !== result.main)) rows.push(extraRow(tool))
+  const practice = rows.findIndex(row => row[1] === 'The four commands')
+  if (codexMain()) rows.splice(practice, 0, computerRow(), phoneRow())
+  else if (agyMain()) rows.splice(practice, 0, phoneRow())
   $('ready').replaceChildren(...rows.map(([on, title, detail, go]) => {
     const li = document.createElement('li')
     if (on) li.className = 'on'
@@ -1137,8 +1224,7 @@ function startIntro() {
 // previous, in the Antigravity flow, using the page they are on.
 function agyRoute(n, from) {
   if (n === 4) return 4.6
-  if (n === 5) return from === 7 ? 4.2 : 7
-  if (n === 6) return 4.2
+  if (n === 5 || n === 6) return 6.5
   if (n === 8) return from === 9 ? 7 : 9
   return n
 }
@@ -1151,6 +1237,7 @@ function show(n) {
     showFinale()
     post('/app/preset').then(r => { preset = r; showFinale() }).catch(() => {})
     post('/publish/status').then(showPublish).catch(() => {})
+    if (codexMain()) post('/chatgpt/apps').then(s => { if (s.state === 'known') done.computer = s.computerUse; showFinale() }).catch(() => {})
     watchAssistants()
   }
   if (n === 1) setTimeout(() => sayHello(true), 180)
@@ -1159,6 +1246,9 @@ function show(n) {
   if (n === 9) post('/github/status').then(showGithub)
   if (n === 9.5) post('/publish/status').then(showPublish)
   if (n === 5) { chromeCopy(); setTimeout(watchChrome, 0) }
+  if (n === 5.5) setTimeout(watchComputer, 0)
+  if (n !== 5.5) stopTimers('computer')
+  if (n === 6.5) phoneCopy()
   if (n === 4.2) startResearch()
   // Coming back to a sign-in page checks again: they may have signed in somewhere else meanwhile.
   if (n === 4 && result && !codexMain() && !agyMain()) {
@@ -1181,7 +1271,7 @@ function show(n) {
   for (const el of document.querySelectorAll('.page')) el.hidden = Number(el.dataset.page) !== n
   $('progress').hidden = $('bar').hidden = n === 0
   const choices = [0.5, 1, 2, 2.5, 3]
-  const after = agyMain() ? [4.6, 4.2, 7, 9, 9.5, 10, 11] : codexMain() ? [4.5, 4.2, 5, 7, 9, 9.5, 10, 11] : [4, 4.2, 5, ...(phoneOn() ? [6] : []), 7, 8, 9, 9.5, 10, 11]
+  const after = agyMain() ? [4.6, 4.2, 6.5, 7, 9, 9.5, 10, 11] : codexMain() ? [4.5, 4.2, 5, 5.5, 6.5, 7, 9, 9.5, 10, 11] : [4, 4.2, 5, ...(phoneOn() ? [6] : []), 7, 8, 9, 9.5, 10, 11]
   $('progress').textContent = n <= 3 ? `Step ${choices.indexOf(n) + 1} of ${choices.length}` : `Almost there: ${after.indexOf(n) + 1} of ${after.length}`
   const total = n <= 3 ? choices.length : after.length, at = (n <= 3 ? choices : after).indexOf(n) + 1
   $('bar').replaceChildren(...Array.from({ length: total }, (_, i) =>
@@ -1198,11 +1288,12 @@ for (const button of document.querySelectorAll('button[data-go]')) {
     // they can still change their mind (Back), so the main one is started by /apply, once it is final.
     if (page === 0.5 && to === 1) post('/installs/start', { claude: pickedTools().includes('claude'),
       claudeApp: false, chatgptApp: false, antigravityApp: false }).then(showInstalls)
-    // With Codex as the primary agent the flow is 4.5, 4.2, 5, 7, 9, 9.5, 10, 11: the Claude-only pages are stepped over.
+    // With Codex as the primary agent the flow is 4.5, 4.2, 5, 5.5, 6.5, 7, 9, 9.5, 10, 11: the Claude-only pages are stepped over.
     if (codexMain() && to === 4) show(4.5)
     else if (codexMain() && to === 8) show(page === 7 ? 9 : 7)
     // The phone page is Claude's Remote control: without it, Chrome and practice meet.
-    else if (to === 6 && (codexMain() || !phoneOn())) show(page === 5 ? 7 : 5)
+    else if (codexMain() && to === 6) show(page === 5 ? 5.5 : 6.5)
+    else if (to === 6 && !phoneOn()) show(page === 5 ? 7 : 5)
     else show(to)
   }
 }
@@ -1299,6 +1390,7 @@ const logoFor = id => {
 async function load() {
   options = await (await fetch('/options')).json()
   for (const n of document.querySelectorAll('.mac-only')) n.hidden = options.system !== 'mac'
+  for (const n of document.querySelectorAll('.win-only')) n.hidden = options.system !== 'windows'
   fill($('name'), [...options.names.map(n => [n, n]), ['__custom', 'Something else…']])
   fill($('style'), options.styles.map(s => [s, s]))
   fill($('mode'), Object.entries(options.modes))
@@ -2040,7 +2132,7 @@ const openSite = page => post('/window/open', { page: sitePage(page),
 const closeSite = page => post('/window/close', { page: sitePage(page) }).then(r => Boolean(r.closed)).catch(() => false)
 const CHROME_WORDS = { claude: {}, codex: {
   'cs-extension': 'Click <b>Add to Chrome</b> in the window that opens. If Chrome already asked you to turn on "ChatGPT", click <b>Enable</b> instead. This page ticks it and closes the window once Chrome has it.',
-  'cs-claude': 'Sign in to ChatGPT with your work account in the window that opens. Then, in the ChatGPT app, open <b>Settings</b> and then <b>Computer use</b>: under <b>Google Chrome</b>, click <b>Install</b> if it shows. It is ready when Google Chrome says <b>Installed</b>.',
+  'cs-claude': 'Sign in to ChatGPT with your work account in the window that opens. Then, in the ChatGPT app, open <b>Settings</b> and then <b>Computer use</b>: under <b>Google Chrome</b>, click <b>Install</b> if it shows. It is ready when Google Chrome shows <b>Manage</b>.',
 } }
 for (const id of Object.keys(CHROME_WORDS.codex)) CHROME_WORDS.claude[id] = $(id).innerHTML
 let chromeFor = 'claude'
@@ -2235,6 +2327,50 @@ async function openAntigravity() {
   return reply.opened
 }
 $('ag-open').onclick = openAntigravity
+
+async function watchComputer() {
+  stopTimers('computer')
+  if (page !== 5.5) return
+  let s = null
+  try { s = await post('/chatgpt/apps') } catch (error) {}
+  if (page !== 5.5) return
+  if (s && s.state === 'known') done.computer = s.computerUse
+  $('cu-status').textContent = !s ? 'Setup could not check this. You can still follow the steps below.'
+    : s.state === 'signed-out' ? 'Sign in to ChatGPT first (Back), then setup can check this.'
+      : s.state !== 'known' ? 'Checking whether Computer Use is on…'
+        : s.computerUse === true ? (options.system === 'mac' ? 'Computer Use is on in ChatGPT. It still needs the two Mac permissions below.'
+          : '\u2713 Computer Use is turned on in ChatGPT.')
+          : s.computerUse === false ? 'Computer Use is not on yet. Follow step 1 and this updates by itself.'
+            : 'Setup cannot see this setting. Follow step 1, and your first chat will test it.'
+  if (!(s && s.state === 'known' && s.computerUse === true)) later('computer', watchComputer, 4000)
+}
+$('cu-open').onclick = openChatGPT
+for (const [id, pane] of [['cu-screen', 'screen'], ['cu-access', 'accessibility']]) {
+  $(id).onclick = async () => {
+    const reply = await post('/mac/privacy', { pane }).catch(() => ({}))
+    if (!reply.ok) $('cu-mac-note').textContent = 'Open System Settings, then Privacy & Security, and find it there.'
+  }
+}
+$('cu-mac-done').onclick = () => {
+  done.macPerms = true
+  $('cu-mac-done').hidden = true
+  $('cu-mac-note').textContent = 'Marked done by you. Setup cannot see these settings, so your first chat tests them.'
+}
+
+// The phone page follows the main assistant.
+function phoneCopy() {
+  const app = agyMain() ? 'agy' : 'codex'
+  $('ph-title').textContent = `${app === 'agy' ? 'Antigravity' : 'ChatGPT'} on your phone`
+  for (const block of document.querySelectorAll('[data-phone]')) block.hidden = block.dataset.phone !== app
+}
+$('ph-open-codex').onclick = openChatGPT
+$('ph-open-agy').onclick = openAntigravity
+$('ph-back').onclick = () => show(agyMain() ? 4.2 : 5.5)
+$('ph-done').onclick = () => {
+  done.phone = true
+  $('ph-done').hidden = true
+  $('ph-note').textContent = 'Marked done by you. Check that this computer shows up in the phone app.'
+}
 
 $('final-open').onclick = async () => {
   $('final-open').dataset.clicked = '1'

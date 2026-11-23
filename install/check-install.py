@@ -130,6 +130,9 @@ if sys.argv[1:] == ["agy"]:
           "name: team" in team and "grok -p" in team and "agy -p" not in team
           and "codex exec" not in team and "claude -p" not in team)
     check("team skill reaches Antigravity's copy", "grok -p" in read(nova / ".agents" / "skills" / "team" / "SKILL.md"))
+    check("reviews go through the review room", "review_room.py --tool grok" in team and "never ask for a second opinion" in team)
+    check("the review room ships with both copies of the skill",
+          all("--self-test" in read(nova / where / "skills" / "team" / "review_room.py") for where in (".claude", ".agents")))
     check("CLAUDE.md mentions the team skill", "skills/team/SKILL.md" in read(nova / "CLAUDE.md"))
     check("Claude's color modes left out", not (nova / ".mods").exists())
     note("Antigravity installed", shutil.which("agy") is not None)
@@ -144,6 +147,9 @@ check("/save command present, /end gone",
       (work / ".claude" / "commands" / "save.md").exists() and not (work / ".claude" / "commands" / "end.md").exists())
 check("Roofr and CTM skills present", all((work / ".claude" / "skills" / s / "SKILL.md").exists() for s in ("crm-roofr", "phone-ctm")))
 check("github-team skill present", (work / ".claude" / "skills" / "github-team" / "SKILL.md").exists())
+check("graphify skill present", (work / ".claude" / "skills" / "graphify" / "SKILL.md").exists())
+check("code maps stay out of git", "graphify-out/" in read(work / ".gitignore").split())
+check("/publish keeps code maps offline", "graphify-out/" in read(work / ".claude" / "commands" / "publish.md"))
 first = read(work / "state" / "first-chat.md")
 check("first chat gets to know them, shows Chrome and the phone, checks the tools",
       all(words in first for words in ("Get to know them", "outside work", "tab group", "/remote-control",
@@ -235,6 +241,9 @@ if claude:
 check("git on this machine", shutil.which("git") is not None)
 note("GitHub tool on this machine", shutil.which("gh") is not None or (home / ".local" / "bin" / ("gh.exe" if os.name == "nt" else "gh")).exists())
 note("node on this machine", shutil.which("node") is not None)
+(check if os.environ.get("CI") and not os.environ.get("ASSISTANT_SKIP_INSTALLS") else note)(
+    "graphify on this machine", shutil.which("graphify") is not None or any(
+        (home / ".local" / "bin" / name).exists() for name in ("graphify", "graphify.exe")))
 if sys.platform == "darwin":
     note("Claude desktop app installed", Path("/Applications/Claude.app").exists())
     note("Chrome installed", Path("/Applications/Google Chrome.app").exists())

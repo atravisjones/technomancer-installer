@@ -4,6 +4,7 @@
 .env.*
 !.env.example
 .vercel/
+graphify-out/
 
 # Credentials (if using integrations)
 credentials_*.json

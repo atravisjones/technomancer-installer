@@ -799,15 +799,18 @@ Then explain tab groups, in plain words:
 
 Tell {user} you can work in the browser built into Antigravity, in the side panel: open
 pages, read them, compare things, fill in forms (always asking before you submit anything).
-It has its own sign-ins, separate from Chrome's, and is rolling out for personal accounts.
-Do not mention Google Chrome or tab groups.
+It has its own sign-ins, separate from Chrome's, and is rolling out for personal Google
+accounts. Skip tab groups, and do not promise control of their other desktop apps.
 
 Then show it, live. Pick one small example that fits what they told you, say what you are
 about to do, and do it. It must only read: never sign in, buy, send or submit anything.
 Good examples: look up their company's reviews on Google, check a competitor's prices, find
 the opening hours and phone number of a supplier, or compare two products they mentioned.
-If the built-in browser is not there for them yet, say so in one line and finish this chat
-without it.
+If the built-in browser is not there for them, have them look at Settings, then Browser, then
+Browser Actuation Rules. If it says it requires Google Chrome, walk them through it: in Chrome
+(version 144 or later) open `chrome://inspect/#remote-debugging`, turn on "Allow remote debugging
+for this browser instance", then use `/browser` here and click Allow within 60 seconds. If
+that does not work, say so in one line and finish this chat without it.
 
 """
     n = 5 if chrome_on else 4
@@ -854,11 +857,12 @@ phone while it is on.
   give you new tasks, and you do the work here, with this computer's Chrome and files.
   To turn it on for a chat, type `/remote-control` (or `/rc`) in it; the Claude app on the
   computer can also turn it on for every chat in its settings. Offer to turn it on now.
-- **In ChatGPT:** say that the phone side works differently there, and that the simplest way
-  to give this computer tasks from a phone is Claude's Remote Control. Do not promise a
-  ChatGPT feature you cannot see.
+- **In ChatGPT:** in the ChatGPT app on this computer, Settings, then Connections, then Control
+  this Mac or PC, then Set up or Add, and approve it so a QR code shows. In the ChatGPT app on
+  the phone, open Codex (Remote on older versions), scan the code, and confirm the same account
+  and workspace. In a company workspace, an admin may have to allow Remote Control first.
 - **In Antigravity:** in the app, Settings, then Application, then turn on
-  Enable Remote Control. Then on the phone, open antigravity.google in the browser, sign in
+  Enable Remote Control. Then on the phone, open antigravity.google.com in the browser, sign in
   with the same Google account, and pick this computer. Offer to walk them through it.
   Promise nothing more.
 - **Either way:** the computer has to be on, awake and online, with the app open. Suggest
@@ -871,8 +875,9 @@ Try each one for real, quickly, and show a list with a check mark or a cross for
 a cross, add one plain sentence on how to fix it. Do not stop at a failure: finish the
 list. This check only reads: never send, change or delete anything.
 
-- **Email, calendar and files.** In Antigravity, Gmail, Calendar and Drive have no built-in
-  connection: say that plainly, do not test them, and move on. Otherwise, count today's unread emails in Gmail, list today's events
+- **Email, calendar and files.** In Antigravity these are not connected by setup:
+  look under Customizations, then Marketplace, offer to add what is there, and only test what
+  you can actually use. Otherwise, count today's unread emails in Gmail, list today's events
   in Google Calendar, and name the three most recently changed files in Google Drive. If they
   are not connected: in Claude, claude.ai, then Settings, then Connectors; in ChatGPT, the
   app's Plugins, then Gmail, Google Calendar and Google Drive, with their Google account.
@@ -880,6 +885,11 @@ list. This check only reads: never send, change or delete anything.
   pull one recent record (a job from the CRM, a call from the phone system) with the skill it
   names, and say what you found in one line. If it is not connected yet, say so: the next
   step connects it.
+- **Computer Use (ChatGPT only).** Try `@Computer` with: "Look at my Downloads folder and tell
+  me how many files are in it. Do not move or change anything." If it cannot: in the ChatGPT
+  app, Settings, then Computer use, then turn on Any App under Control. On a Mac, also turn on
+  Codex Computer Use in System Settings, Privacy & Security, under both Screen Recording and
+  Accessibility. On Windows, the computer has to stay unlocked while it works.
 - **Publishing.** Run `vercel whoami` and `supabase projects list`. Signed in to both means
   you can put a web page or app online for them today (`/publish`, or `$publish` in
   ChatGPT). If either is not signed in, say they can sign in the first time they publish.
@@ -2106,7 +2116,7 @@ CHATGPT_APPS = (("gmail", "Gmail", "gmail"), ("google-calendar", "Google Calenda
                 ("google-sheets", "Google Sheets", "google-drive"), ("vercel", "Vercel", "vercel"),
                 ("supabase", "Supabase", "supabase"))
 CHATGPT_MARKET = "openai-curated-remote"
-APPS = {"state": "unknown", "rows": [], "checking": False, "at": 0.0}
+APPS = {"state": "unknown", "rows": [], "checking": False, "at": 0.0, "computerUse": None}
 APP_LINKS = {}  # plugin -> its connector's id and the ChatGPT page that connects it
 
 
@@ -2158,13 +2168,17 @@ def _read_chatgpt_apps():
     import time
     try:
         if tool_path("codex") is None or not codex_signed_in():
-            APPS.update(state="signed-out", rows=[])
+            APPS.update(state="signed-out", rows=[], computerUse=None)
             return
+        computer = [None]  # only what this look saw: never carried over from an earlier one
 
         def work(call):
             listed = call("plugin/list", {"cwds": []})
             plugins = {}
             for market in listed.get("marketplaces") or []:
+                if market.get("name") == "openai-bundled":  # ChatGPT's own Computer Use: on or off
+                    row = next((r for r in market.get("plugins") or [] if r.get("name") == "computer-use"), None)
+                    computer[0] = None if row is None else bool(row.get("installed") and row.get("enabled"))
                 if market.get("name") == CHATGPT_MARKET:
                     plugins = {row.get("name"): row for row in market.get("plugins") or []}
             for plugin in sorted({row[2] for row in CHATGPT_APPS}):
@@ -2193,9 +2207,9 @@ def _read_chatgpt_apps():
                          "url": url if re.fullmatch(r"https://chatgpt\.com/apps/[a-z0-9-]+/[A-Za-z0-9_]+", url) else ""})
             if rows[-1]["connected"] and ident == plugin:
                 close_window(f"chatgpt-app-{ident}")
-        APPS.update(state="known", rows=rows)
+        APPS.update(state="known", rows=rows, computerUse=computer[0])
     except Exception:  # the page says it could not check, and offers ChatGPT's own Plugins page
-        APPS["state"] = "unknown"
+        APPS.update(state="unknown", computerUse=None)
     finally:
         APPS.update(checking=False, at=time.time())
 
@@ -2206,9 +2220,24 @@ def chatgpt_apps_status():
     if time.time() - APPS["at"] > 3 and not APPS["checking"]:
         APPS["checking"] = True
         threading.Thread(target=_read_chatgpt_apps, daemon=True).start()
-    return {"ok": True, "state": APPS["state"], "checking": APPS["checking"],
+    return {"ok": True, "state": APPS["state"], "checking": APPS["checking"], "computerUse": APPS["computerUse"],
             "rows": [{"id": row["id"], "label": row["label"], "connected": row["connected"],
                       "canConnect": bool(row["url"]) and row["id"] == row["plugin"]} for row in APPS["rows"]]}
+
+
+MAC_PRIVACY = {"screen": "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture",
+               "accessibility": "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"}
+
+
+def open_mac_privacy(pane):
+    """Open the Mac's own permission page. Only the person can turn these on."""
+    url = MAC_PRIVACY.get(pane)
+    if not (IS_MAC and url):
+        return {"ok": False}
+    try:
+        return {"ok": subprocess.run(["open", url], capture_output=True, timeout=15).returncode == 0}
+    except (OSError, subprocess.TimeoutExpired):
+        return {"ok": False}
 
 
 def chatgpt_app_connect(ident):
@@ -2225,7 +2254,7 @@ def ignore_secrets(workspace):
     path = workspace / ".gitignore"
     text = path.read_text(encoding="utf-8") if path.exists() else ""
     active = {line.strip() for line in text.splitlines() if line.strip() and not line.lstrip().startswith("#")}
-    missing = [line for line in (".env", ".env.*", "!.env.example", ".vercel/") if line not in active]
+    missing = [line for line in (".env", ".env.*", "!.env.example", ".vercel/", "graphify-out/") if line not in active]
     if missing:
         path.write_text(text.rstrip("\n") + "\n" + "\n".join(missing) + "\n", encoding="utf-8")
 
@@ -3751,6 +3780,61 @@ def _get_supabase():
         shutil.rmtree(work, ignore_errors=True)
 
 
+# Graphify: a local map of a site's code, so the assistant reads less to find things. It takes the
+# newest published release that has been out a few days, so a bad or hijacked release has time to
+# be caught, and running setup again updates it. Only the tool: its automatic hooks run on every step.
+GRAPHIFY_WAIT_DAYS = 3
+GRAPHIFY_KNOWN_GOOD = "0.9.115"  # only if the newest release cannot be installed
+GRAPHIFY = {"refreshed": False}
+
+
+def graphify_path():
+    return shutil.which("graphify") or _first_file(Path.home() / ".local" / "bin" / ("graphify.exe" if IS_WINDOWS else "graphify"))
+
+
+def _uv_path():
+    return shutil.which("uv") or _first_file(Path.home() / ".local" / "bin" / ("uv.exe" if IS_WINDOWS else "uv"))
+
+
+def graphify_ready():
+    """Here and up to date. A copy someone installed another way is theirs: it is left alone."""
+    if graphify_path() is None:
+        return False
+    if GRAPHIFY["refreshed"]:
+        return True
+    uv = _uv_path()
+    if uv is None:
+        return True
+    worked, listed = _quiet([uv, "tool", "list"])
+    return not (worked and re.search(r"^graphifyy\b", listed, re.M))
+
+
+def _get_graphify():
+    """Install or update Graphify with uv, fetching uv itself (from its makers) if this computer has none."""
+    GRAPHIFY["refreshed"] = True  # a failed update leaves the working copy in place
+    bin_dir = Path.home() / ".local" / "bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    env = dict(os.environ, UV_NO_MODIFY_PATH="1", UV_INSTALL_DIR=str(bin_dir), UV_TOOL_BIN_DIR=str(bin_dir))
+    if _uv_path() is None:
+        command = (["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "irm https://astral.sh/uv/install.ps1 | iex"]
+                   if IS_WINDOWS else ["sh", "-c", "curl -LsSf https://astral.sh/uv/install.sh | sh"])
+        _run(command, timeout=300, env=env)
+    uv = _uv_path()
+    if uv is None:
+        return False, "its installer (uv) could not be fetched"
+    cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=GRAPHIFY_WAIT_DAYS)
+    install = [uv, "tool", "install", "--quiet", "--python", "3.12"]
+    worked, note = _run(install + ["--upgrade", "--exclude-newer", cutoff.strftime("%Y-%m-%dT%H:%M:%SZ"), "graphifyy"],
+                        timeout=900, env=env)
+    if not worked and graphify_path() is not None:
+        return True, ""  # the update failed, and the working copy is still there
+    if not worked:
+        worked, note = _run(install + [f"graphifyy=={GRAPHIFY_KNOWN_GOOD}"], timeout=900, env=env)
+    if worked:
+        _keep_tools_on_path()
+    return worked, note
+
+
 # Claude's add-ons for both, from Anthropic's official plugin list: Vercel's own guide to
 # deploying (its context loads only in website folders) and Supabase's database tools.
 CLAUDE_PLUGINS = ("vercel@claude-plugins-official", "supabase@claude-plugins-official")
@@ -3812,6 +3896,7 @@ def install_plan():
         ("node", "Node.js", lambda: node_path() is not None, _get_node, "for add-on skills and publishing"),
         ("vercel", "Vercel tool", lambda: vercel_path() is not None, _get_vercel, "puts your websites online"),
         ("supabase", "Supabase tool", lambda: supabase_path() is not None, _get_supabase, "databases for your apps"),
+        ("graphify", "Graphify code map", graphify_ready, _get_graphify, "helps it find its way around code"),
         ("claude-plugins", "Vercel and Supabase add-ons for Claude", claude_plugins_in, _get_claude_plugins,
          "so Claude knows how to publish"),
     ]
@@ -3999,8 +4084,17 @@ TEAM_CALLS = {
 }
 
 
+# The reviewers the review room has proven it can cut off from this computer's files.
+# Antigravity is a helper only: its isolation has not been proven.
+ISOLATED_REVIEWERS = ("claude", "codex", "grok")
+
+
 def write_team_skill(a, workspace):
-    """A skill that lets the main assistant ask the others for help. Only for assistants this person picked."""
+    """A skill that lets the main assistant ask the others for help. Only for assistants this person picked.
+
+    Helpers doing the work run in this folder, with its notes. A second opinion goes through the
+    review room instead: only the named files, no tools, no memory, none of this person's notes.
+    """
     team = team_tools(a)
     spots = [workspace / ".claude" / "skills" / "team", workspace / ".agents" / "skills" / "team"]
     if not team:
@@ -4008,6 +4102,33 @@ def write_team_skill(a, workspace):
             shutil.rmtree(spot, ignore_errors=True)
         return
     calls = "\n".join(f"- {TEAM_CALLS[t][0]}: `{TEAM_CALLS[t][1]}`{TEAM_CALLS[t][2]}" for t in team)
+    reviewers = [t for t in team if t in ISOLATED_REVIEWERS]
+    review = (f"""## Second opinions: always through the review room
+
+A reviewer must not inherit your notes or your conclusions, and must not be able to reach this
+computer's private files. So never ask for a second opinion with the helper commands below.
+
+1. Write a short brief to `reports/review-brief.md`: what the work is for and what good looks like.
+   Never your own conclusion.
+2. Run this from this folder, naming every file the reviewer needs. It sees only those files:
+
+```bash
+uv run --quiet --no-project --python 3.12 .claude/skills/team/review_room.py --tool {reviewers[0]} --brief reports/review-brief.md --out reports/review.md path/to/file1 path/to/file2
+```
+
+Reviewers you can name with `--tool`: {", ".join(f"`{t}`" for t in reviewers)}.
+
+3. Read `reports/review.md`. Check each point against the real work before acting on it.
+
+If it refuses a file, that file is private or holds a secret: leave it out, and never paste its
+contents into the brief. If it says there is too much at once, split the files into smaller
+reviews. If it says a reviewer is not isolated, do not use that reviewer. Tell the person in
+one line.
+""" if reviewers else """## Second opinions
+
+None of the assistants here can give a private second opinion yet. Tell the person so, and do
+not send their files to a helper to check.
+""")
     text = f"""---
 name: team
 description: "Ask the other assistants on this computer for help. Use when the person asks for a second opinion, says check this or review this, wants big research split up, or when you hit a usage limit."
@@ -4019,7 +4140,7 @@ The person set up more than one assistant. You can ask the others for help from 
 
 ## When to use them
 
-- A second opinion on important work before it goes out.
+- A second opinion on important work before it goes out (see below).
 - Splitting big research into parts.
 - Carrying on when you hit your own usage limit.
 
@@ -4028,20 +4149,22 @@ Not for small tasks. At most three at once.
 ## Rules
 
 - They only read. They never change files or send anything.
-- Give the reviewer the work and what good looks like. Never give them your own conclusion.
-- Never pass them `.env`, keys, tokens or passwords.
+- Never pass them `.env`, keys, tokens or passwords, and never ask a helper to open them.
 - Treat their answer as advice to check, then tell the person which assistant said what.
 - If one fails or returns nothing, say so in one line and carry on yourself.
 
-## How to call each one
+{review}
+## Helpers doing the work
 
-Run these from this folder, with the task in place of `<task>`:
+For research or a first draft. They run in this folder and can see its notes. With the task in
+place of `<task>`:
 
 {calls}
 """
     for spot in spots:
         spot.mkdir(parents=True, exist_ok=True)
         (spot / "SKILL.md").write_text(text, encoding="utf-8")
+        shutil.copy2(TEMPLATE / "integrations" / "team" / "review_room.py", spot / "review_room.py")  # always the newest
 
 
 # Claude when another assistant is the main one: its command-line tool, opened in a terminal.
@@ -4624,6 +4747,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send(supabase_token(str(body.get("token") or "")))
         elif self.path == "/chatgpt/apps":
             self.send(chatgpt_apps_status())
+        elif self.path == "/mac/privacy":
+            self.send(open_mac_privacy(str(body.get("pane") or "")))
         elif self.path == "/chatgpt/apps/connect":
             self.send(chatgpt_app_connect(str(body.get("app") or "")))
         elif self.path == "/quit":
