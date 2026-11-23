@@ -80,15 +80,13 @@ const themeFor = (t: Topic): { colors: ThemeColors; unpainted?: string } => {
 
 const THEMES = new Map([...TOPICS, DEFAULT].map(t => [t.id, themeFor(t)]))
 
-// The aurora: soft blobs of the topic's color drifting slowly behind the chat.
-// Each blob rests where the markup puts it, so it looks finished with motion off.
-// The chat's status changes the light: brighter and breathing while Claude works,
-// an amber glow in the top right corner while the chat waits on the person.
+// The aurora: soft blobs of the topic's color resting behind the chat. It stays
+// still because continuous motion cost about 15% GPU and a still one measured 0%.
+// The chat's status changes the light with one short fade: brighter while Claude
+// works, an amber glow in the top right corner while the chat waits on the person.
 const SCENE = 'aurora-'
 
 type Status = 'idle' | 'working' | 'waiting'
-
-const DRIFT = [71, 89, 97, 113]
 
 // How strong the topic's light is in each status.
 const LEVEL: Record<Status, number> = { idle: 0.78, working: 1, waiting: 0.78 }
@@ -107,26 +105,20 @@ const auroraFor = (t: Topic, status: Status, from: Status | 'fresh' | 'same'): s
         `<stop class="c${i}" offset="0.55" stop-opacity="0.46"/><stop class="c${i}" offset="1" stop-opacity="0"/></radialGradient>`,
     )
     .join('')
-  // Start each drift where the clock puts it, so a redraw does not jump the blobs.
-  const now = Date.now() / 1000
-  const drift = DRIFT.map((d, i) => `.b${i}{animation-name:d${i};animation-duration:${d}s;animation-delay:-${(now % (2 * d)).toFixed(1)}s}`).join('')
   // Amber, or a cool white-blue on the warm topics where amber would not show.
   const amber = t.hue <= 80 || t.hue >= 330 ? hex(192, 90, 68) : hex(40, 96, 56)
 
-  // The topic's light: ease from the last level to this one, then breathe while working.
+  // The topic's light: one fade from the last level to this one, then it holds.
   const level = LEVEL[status]
   const fade = from === 'fresh' ? 3.6 : 2.8
   const start = from === 'fresh' ? 0 : from === 'same' ? level : LEVEL[from]
-  const moves: string[] = []
-  if (start !== level) moves.push(`shift ${fade}s ease-in-out 1 both`)
-  if (status === 'working') moves.push(`breathe 6s ease-in-out ${start !== level ? fade : 0}s infinite alternate`)
-  const lv = `.lv{opacity:${level}${moves.length > 0 ? `;animation:${moves.join(',')}` : ''}}`
+  const lv = `.lv{opacity:${level}${start !== level ? `;animation:shift ${fade}s ease-in-out 1 both` : ''}}`
 
   // The amber glow: ease in when the chat starts waiting, ease out when it stops.
   const wasWaiting = from === 'waiting'
   const isWaiting = status === 'waiting'
   const glow = isWaiting
-    ? `.wait{opacity:0.8;animation:${wasWaiting ? '' : `glowin ${fade}s ease-in-out 1 both,`}pulse 4s ease-in-out ${wasWaiting ? 0 : fade}s infinite alternate}`
+    ? `.wait{opacity:0.8${from === 'same' || wasWaiting ? '' : `;animation:glowin ${fade}s ease-in-out 1 both`}}`
     : wasWaiting
       ? `.wait{opacity:0;animation:glowout ${fade}s ease-in-out 1 both}`
       : ''
@@ -136,28 +128,20 @@ const auroraFor = (t: Topic, status: Status, from: Status | 'fresh' | 'same'): s
     `<style>` +
     `.bg{fill:${hex(t.hue, 45 * m, 89)}}${light}` +
     `@media (prefers-color-scheme: dark){.bg{fill:${hex(t.hue, 28 * m, 8)}}${dark}}` +
-    `.b{transform-box:fill-box;transform-origin:center;animation-timing-function:ease-in-out;animation-iteration-count:infinite;animation-direction:alternate}` +
-    drift +
-    `@keyframes d0{from{transform:translate(0,0) scale(1)}to{transform:translate(260px,120px) scale(1.25)}}` +
-    `@keyframes d1{from{transform:translate(0,0) scale(1.1)}to{transform:translate(-300px,160px) scale(0.9)}}` +
-    `@keyframes d2{from{transform:translate(0,0) scale(1)}to{transform:translate(220px,-180px) scale(1.3)}}` +
-    `@keyframes d3{from{transform:translate(0,0) scale(1.2)}to{transform:translate(-240px,-140px) scale(0.95)}}` +
     lv +
     `@keyframes shift{from{opacity:${start}}to{opacity:${level}}}` +
-    `@keyframes breathe{from{opacity:1}to{opacity:0.86}}` +
     glow +
     `@keyframes glowin{from{opacity:0}to{opacity:0.8}}` +
     `@keyframes glowout{from{opacity:0.8}to{opacity:0}}` +
-    `@keyframes pulse{from{opacity:0.8}to{opacity:0.55}}` +
     `</style>` +
     `<defs>${grads}<radialGradient id="ga"><stop offset="0" stop-color="${amber}" stop-opacity="0.95"/>` +
     `<stop offset="0.5" stop-color="${amber}" stop-opacity="0.4"/><stop offset="1" stop-color="${amber}" stop-opacity="0"/></radialGradient></defs>` +
     `<rect class="bg" width="1600" height="1000"/>` +
     `<g class="lv">` +
-    `<ellipse class="b b0" cx="260" cy="170" rx="620" ry="430" fill="url(#g0)"/>` +
-    `<ellipse class="b b1" cx="1380" cy="210" rx="640" ry="460" fill="url(#g1)"/>` +
-    `<ellipse class="b b2" cx="330" cy="900" rx="600" ry="420" fill="url(#g2)"/>` +
-    `<ellipse class="b b3" cx="1320" cy="880" rx="660" ry="440" fill="url(#g3)"/>` +
+    `<ellipse cx="260" cy="170" rx="620" ry="430" fill="url(#g0)"/>` +
+    `<ellipse cx="1380" cy="210" rx="640" ry="460" fill="url(#g1)"/>` +
+    `<ellipse cx="330" cy="900" rx="600" ry="420" fill="url(#g2)"/>` +
+    `<ellipse cx="1320" cy="880" rx="660" ry="440" fill="url(#g3)"/>` +
     `</g>` +
     (isWaiting || wasWaiting ? `<ellipse class="wait" cx="1470" cy="90" rx="560" ry="400" fill="url(#ga)"/>` : '') +
     `</svg>`
@@ -180,6 +164,7 @@ function to($: Api, next: Status): void {
   before = status
   status = next
   changedAt = Date.now()
+  freshAt = 0 // a status change ends the first fade-in
   $.ui.invalidate('ui.render')
 }
 
@@ -365,7 +350,7 @@ export const register: Register = on => {
       freshAt = now
     }
     const from = now - freshAt < 3600 ? 'fresh' : now - changedAt < 2800 ? before : 'same'
-    const alt = status === 'working' ? 'Bright light, Claude is working' : status === 'waiting' ? 'A glow in the corner, waiting on you' : 'Soft colored light drifting slowly'
+    const alt = status === 'working' ? 'Bright light, Claude is working' : status === 'waiting' ? 'A glow in the corner, waiting on you' : 'Soft colored light'
     return h(Svg, { source: auroraFor(topic, status, from), alt, isInteractive: true }) as RenderElement
   })
 
