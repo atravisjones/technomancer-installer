@@ -1,5 +1,9 @@
 # What's new
 
+## 1.2.2 - 2026-11-24
+
+- If your browser tool cannot wait for Roofr's answer, your assistant uses a request that answers at once, and it never asks for anyone else's setup.
+
 ## 1.2.1 - 2026-11-24
 
 - Your assistant reads Roofr and other no-API systems through your own signed-in browser tab, read only, with no key needed.

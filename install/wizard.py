@@ -349,6 +349,8 @@ def system_guide(kind, row, a, research=None):
               "   browser sends their sign-in by itself. Add only plain headers like that team number. Never copy the value",
               "   of an Authorization, cookie, CSRF, XSRF or session header out of the network log; if a request only works",
               "   with one of those, read the page instead. GET requests only. Return only what answers the question.",
+              "   If a script using `fetch` comes back `undefined`, the tool did not wait for it: use a synchronous",
+              "   `XMLHttpRequest` (`open('GET', address, false)`, then `send()` and read `responseText`) instead.",
               f"5. Write what worked in `state/system-notes.md`: the address, its filters and the names of the headers it",
               "   needs, never a header value that signs in, a cookie or a token. Next time, go straight to it.",
               "6. If the browser tool cannot read network requests or run page scripts, read the pages themselves, and for",
@@ -361,7 +363,9 @@ def system_guide(kind, row, a, research=None):
               "- A 401 or 419 answer means they are signed out: ask them to sign in again, then try once more.",
               "- Never copy, save, print or send their cookies, session or any token from the page, and never use them",
               "  outside that tab.",
-              "- Never ask anyone to paste a key or password into a chat, and never print one.", ""]
+              "- Never ask anyone to paste a key or password into a chat, and never print one.",
+              "- Never ask for another person's setup, tools, endpoints, accounts or credentials. If this way does not",
+              "  work, read the pages and say so.", ""]
     return "\n".join(lines)
 
 
@@ -623,7 +627,8 @@ def systems_section(a, workspace=None):
             if kind == "crm" and row["id"] == "roofr":
                 lines += [f"Read Roofr through {a['user']}'s own signed-in Roofr tab, as {guide} explains: Roofr's own web",
                           "endpoints, read only. There is no key, endpoint or credential to ask for, and none is missing.",
-                          USE_CHROME]
+                          "Never ask for anyone else's setup or credentials for it; if the page scripts fail, read the",
+                          f"Roofr pages instead. {USE_CHROME}"]
                 if a.get("crm_name"):
                     lines += ["", f"**{a['user']}'s name in {label}:** {a['crm_name']}. Jobs owned by this name are",
                               f"\"my jobs\" when {a['user']} asks about their own work."]
