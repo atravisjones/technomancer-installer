@@ -155,7 +155,7 @@ INDUSTRIES = {
 ALL = "*"
 INTEGRATIONS = {
     "crm": [
-        {"id": "roofr", "label": "Roofr", "for": ["roofing"], "live": True},
+        {"id": "roofr", "label": "Roofr", "for": ["roofing"]},  # read through the person's own Roofr tab
         {"id": "jobnimbus", "label": "JobNimbus", "for": ["roofing", "general-contractor", "remodeling", "restoration", "solar"]},
         {"id": "acculynx", "label": "AccuLynx", "for": ["roofing", "general-contractor", "restoration"]},
         {"id": "leap", "label": "Leap", "for": ["roofing", "remodeling", "general-contractor", "solar"]},
@@ -241,6 +241,11 @@ GUIDE_API = {
 }
 
 
+USE_CHROME = ("Use the Chrome they are already signed in to: in ChatGPT, `@Chrome` (its Chrome extension); in Claude, "
+              "Claude in Chrome. Never ChatGPT's own built-in browser, which has none of their sign-ins. In Antigravity, use "
+              "its browser, and have them sign in there once.")
+
+
 def systems_research():
     try:
         data = json.loads(SYSTEMS_FILE.read_text(encoding="utf-8"))
@@ -257,8 +262,20 @@ def _guide_text(value):
     return str(value or "").strip() or "not stated"
 
 
+ROOFR_TAB = TEMPLATE / "integrations" / "roofr-tab" / "SKILL.md"
+
+
+def roofr_tab_guide(a):
+    """Roofr's guide: its own web endpoints, called from the person's signed-in Roofr tab, read only."""
+    text = ROOFR_TAB.read_text(encoding="utf-8")
+    user = " ".join(str(a.get("user") or "").replace("{", "").replace("}", "").split()) or "the person"
+    return text.replace("{{CHROME}}", USE_CHROME).replace("{{USER}}", user)
+
+
 def system_guide(kind, row, a, research=None):
     """The skill that connects one CRM or phone system, or works in its website when there is no API."""
+    if kind == "crm" and row["id"] == "roofr" and ROOFR_TAB.exists():
+        return roofr_tab_guide(a)
     label = " ".join(str(system_label(a, kind) or row["label"]).split()) or row["label"]
     key = env_key(kind, row["id"])
     prefix = key[: -len("_API_KEY")]
@@ -302,6 +319,8 @@ def system_guide(kind, row, a, research=None):
                 f"{label}'s entry in Part 3 of `CLAUDE.md` to say it is connected. If it fails, say why in plain words and",
                 "use the website instead until it is fixed.", ""]
         else:
+            lines += [f"When they ask for anything from {label} (this week's sales, a customer, a job), go straight to",
+                      "the website section below. Do not ask for an API key, endpoint or credentials: there are none to give.", ""]
             found = [s for s in steps if s]
             if found:
                 lines += ["## What their docs say", ""] + [f"- {_guide_text(step)}" for step in found] + [""]
@@ -315,20 +334,34 @@ def system_guide(kind, row, a, research=None):
                   f"If it has an API: walk them through making a key one small step at a time, save it in `.env` as `{key}=`",
                   "(they paste it there, never in a chat), and test it with one read-only request.", ""]
         site = f"{label}'s website"
-    lines += ["## Without an API: do the work in the website", "",
-              f"If {label} has no API, their plan does not include it, or the key is not working yet, do the work yourself",
-              "in the website, with the browser tool you have (Claude in Chrome, ChatGPT's Chrome extension, or the browser",
-              f"built into Antigravity) and their own sign-in. Where to sign in, and what is there: {site}", "",
-              f"1. Have them sign in to {label} in that browser themselves. Never type or ask for their password.",
-              f"2. Find what they need the way they would: search, filters, the {what} lists and the reports.",
-              "3. For lots of records, use the site's own export (often a CSV download), then read the downloaded file.",
-              f"4. Write down where things are (menu paths, report names, filters) in `state/system-notes.md`, so next time is faster.",
-              "5. Only read. Change, send or submit something only when they ask for it and confirm, and never get around a",
-              "   security check or a CAPTCHA.", "",
+    lines += ["## Without an API: read it through their own signed-in tab", "",
+              f"If {label} has no API, their plan does not include it, or the key is not working yet, read it the way its own",
+              f"website does: from the browser tab where they are signed in. {USE_CHROME}",
+              f"Where to sign in, and what is there: {site}", "",
+              f"1. They are usually signed in to {label} in Chrome already. If not, have them sign in themselves.",
+              "   Never type or ask for their password.",
+              f"2. Check `state/system-notes.md` first: it may already say which of {label}'s own data addresses answer this.",
+              f"3. Otherwise open the page that shows what they need (the {what} lists, a record, a report) and look at the",
+              "   page's own network requests (Claude in Chrome can read them). The site's data usually comes from requests",
+              "   to the same site that answer with JSON, often under `/api/`. Note each one's address, the filters it sends",
+              "   and any plain header the page adds, such as a team or account number.",
+              "4. Call that same address from the tab with the browser's page-script tool: a same-origin `fetch`, so the",
+              "   browser sends their sign-in by itself. Add only plain headers like that team number. Never copy the value",
+              "   of an Authorization, cookie, CSRF, XSRF or session header out of the network log; if a request only works",
+              "   with one of those, read the page instead. GET requests only. Return only what answers the question.",
+              f"5. Write what worked in `state/system-notes.md`: the address, its filters and the names of the headers it",
+              "   needs, never a header value that signs in, a cookie or a token. Next time, go straight to it.",
+              "6. If the browser tool cannot read network requests or run page scripts, read the pages themselves, and for",
+              "   lots of records use the site's own export (often a CSV download), then read the downloaded file.", "",
               "## Rules", "",
               f"- {NO_OUTSIDE}",
-              "- Never ask anyone to paste a key or password into a chat, and never print one.",
-              "- Read only, unless they ask for a change and confirm it.", ""]
+              "- Read only. Never send a request that changes anything; for a change, do it in the website, and only after",
+              "  they ask and confirm. Never get around a security check or a CAPTCHA.",
+              "- Be gentle: one request at a time, a short pause between pages, and stop once the question is answered.",
+              "- A 401 or 419 answer means they are signed out: ask them to sign in again, then try once more.",
+              "- Never copy, save, print or send their cookies, session or any token from the page, and never use them",
+              "  outside that tab.",
+              "- Never ask anyone to paste a key or password into a chat, and never print one.", ""]
     return "\n".join(lines)
 
 
@@ -583,15 +616,36 @@ def systems_section(a, workspace=None):
                           f"\"my jobs\": use it as the `owner` filter when {a['user']} asks about their own work."]
         elif state == "pending":
             key_name = env_key(kind, row["id"])
-            lines += ([f"A key is saved as `{key_name}` in `.env`. Test it with one read-only request before relying on it."]
-                      if (a.get("keys") or {}).get(kind) or (workspace and env_has_value(workspace, key_name)) else
-                      [f"Not connected yet. The first chat walks {a['user']} through it, and its key goes in `.env`",
-                       f"as `{key_name}`. If they skipped that, offer again when it would help."])
-            lines += [f"How to connect it, and how to work without an API: `.claude/skills/connect-{kind}/SKILL.md`.",
-                      "Never send anyone to an outside automation or integration service.",
+            guide = f"`.claude/skills/connect-{kind}/SKILL.md`"
+            research = systems_research().get(kind)
+            info = research.get(row["id"]) if isinstance(research, dict) else None
+            what = "jobs, sales, customers or appointments" if kind == "crm" else "calls, recordings or transcripts"
+            if kind == "crm" and row["id"] == "roofr":
+                lines += [f"Read Roofr through {a['user']}'s own signed-in Roofr tab, as {guide} explains: Roofr's own web",
+                          "endpoints, read only. There is no key, endpoint or credential to ask for, and none is missing.",
+                          USE_CHROME]
+                if a.get("crm_name"):
+                    lines += ["", f"**{a['user']}'s name in {label}:** {a['crm_name']}. Jobs owned by this name are",
+                              f"\"my jobs\" when {a['user']} asks about their own work."]
+            elif isinstance(info, dict) and info.get("api") in ("none", "partner-only"):
+                lines += [f"{label} has no API that a customer can use, so there is no key, endpoint or credential to ask",
+                          f"for, and none is missing. When a question needs {what} from {label}, follow {guide}:",
+                          f"do it in the {label} website, with {a['user']}'s own sign-in. {USE_CHROME}"]
+            else:
+                lines += ([f"A key is saved as `{key_name}` in `.env`. Test it with one read-only request before relying on it."]
+                          if (a.get("keys") or {}).get(kind) or (workspace and env_has_value(workspace, key_name)) else
+                          [f"Not connected yet: follow {guide} with {a['user']} when it would help. Its key goes in `.env`",
+                           f"as `{key_name}`. Until then, or if it has no API on their plan, do it in the {label} website"])
+                lines += [f"through the browser, with their own sign-in, as {guide} says."] if not (
+                    (a.get("keys") or {}).get(kind) or (workspace and env_has_value(workspace, key_name))) else []
+            keyless = (kind == "crm" and row["id"] == "roofr") or (
+                isinstance(info, dict) and info.get("api") in ("none", "partner-only"))
+            if not keyless:
+                lines += [f"How to connect it, and how to work without an API: {guide}.",
+                          f"Until it works, say so plainly and use the website as {guide} says."]
+            lines += ["Never send anyone to an outside automation or integration service.",
                       "Never ask anyone to paste a key into a chat, and never print one. Read only, unless they",
-                      f"ask for a change and confirm it. Until it works, say so plainly and help with what {a['user']}",
-                      "pastes in or describes."]
+                      "ask for a change and confirm it."]
         else:
             lines += ["Nothing to connect. Help with what they paste in or describe."]
         lines.append("")
@@ -1567,6 +1621,9 @@ def write_systems(a, workspace, log, before=None):
             if a["keys"].get(kind):
                 env[env_key(kind, row["id"])] = a["keys"][kind]
                 log.append(f"{label} key saved.")
+            elif (kind == "crm" and row["id"] == "roofr") or (
+                    (((systems_research().get(kind) or {}).get(row["id"]) or {}).get("api")) in ("none", "partner-only")):
+                log.append(f"{label}: your assistant reads it through your own signed-in browser tab, read only.")
             else:
                 log.append(f"{label} noted. Your assistant connects it with you in your first chat.")
     if not live:

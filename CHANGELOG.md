@@ -1,5 +1,10 @@
 # What's new
 
+## 1.2.1 - 2026-11-24
+
+- Your assistant reads Roofr and other no-API systems through your own signed-in browser tab, read only, with no key needed.
+- Your assistant uses your real Chrome, where you are already signed in, instead of an empty built-in browser.
+
 ## 1.2.0 - 2026-11-24
 
 - Setup asks for approvals in one step, and a Mac shows fewer permission prompts.
