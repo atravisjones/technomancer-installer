@@ -103,6 +103,10 @@ if sys.argv[1:] == ["codex"]:
     check("pending CRM key saved", "JOBBER_API_KEY=test_jobber_key_not_real_123" in read(sol / ".env"))
     check("pending systems marked in CLAUDE.md", "Jobber" in read(sol / "CLAUDE.md") and "JOBBER_API_KEY" in read(sol / "CLAUDE.md"))
     check("no live skill for a pending CRM", not (sol / ".claude" / "skills" / "crm-roofr").exists())
+    guide = read(sol / ".claude" / "skills" / "connect-crm" / "SKILL.md")
+    check("CRM connection guide written, and Codex has it", "Jobber" in guide and "name: connect-crm" in guide
+          and "Jobber" in read(sol / ".agents" / "skills" / "connect-crm" / "SKILL.md"))
+    check("guide never names an outside automation service", "zapier" not in guide.lower())
     spot = (Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "OpenAI" / "Codex" / "bin" / "codex.exe") if os.name == "nt" \
         else (home / ".local" / "bin" / "codex")
     note("Codex installed", shutil.which("codex") is not None or spot.exists())

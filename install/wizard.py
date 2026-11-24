@@ -228,6 +228,110 @@ def system_state(kind, ident):
     return "pending"
 
 
+# --- How to connect each system, from its maker's own docs (integrations/systems.json) ---
+
+SYSTEMS_FILE = TEMPLATE / "integrations" / "systems.json"
+NO_OUTSIDE = ("Never send them to an outside automation or integration service, and never suggest one. "
+              "Either the system's own access works, or you do the work yourself in its website.")
+GUIDE_API = {
+    "self-serve": "Yes. They can make a key themselves.",
+    "app-registration": "Yes, but they register a small private app in the system first, then copy its ID and secret.",
+    "partner-only": "Only for approved partners or as a paid request to the company, so plan on working in the website.",
+    "none": "No public API that a customer can use. Work in the website instead.",
+}
+
+
+def systems_research():
+    try:
+        data = json.loads(SYSTEMS_FILE.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _guide_text(value):
+    if isinstance(value, dict):
+        return "; ".join(f"{k}: {_guide_text(v)}" for k, v in value.items())
+    if isinstance(value, list):
+        return "; ".join(_guide_text(v) for v in value)
+    return str(value or "").strip() or "not stated"
+
+
+def system_guide(kind, row, a, research=None):
+    """The skill that connects one CRM or phone system, or works in its website when there is no API."""
+    label = " ".join(str(system_label(a, kind) or row["label"]).split()) or row["label"]
+    key = env_key(kind, row["id"])
+    prefix = key[: -len("_API_KEY")]
+    research = research if research is not None else systems_research()
+    section = research.get(kind) if isinstance(research, dict) else None
+    info = section.get(row["id"]) if isinstance(section, dict) else None
+    info = info if isinstance(info, dict) else {}
+    what = "jobs, customers and appointments" if kind == "crm" else "calls, recordings and transcripts"
+    about = f"Connect {label} and look things up in it. Use when connecting {label}, or when a question needs {what} from it."
+    lines = ["---", f"name: connect-{kind}", "description: " + json.dumps(about, ensure_ascii=False),
+             "---", "", f"# {label}: connect it and use it", ""]
+    if info:
+        steps = info.get("steps") if isinstance(info.get("steps"), list) else [info.get("steps")]
+        docs = [d for d in (info.get("docs") if isinstance(info.get("docs"), list) else [info.get("docs")]) if d]
+        api = info.get("api")
+        sure = _guide_text(info.get("confidence")).lower()
+        checked = research.get("checked", "setup day") if isinstance(research, dict) else "setup day"
+        if docs and sure.startswith("verified") and "inferred" not in sure:
+            lines += [f"Checked against {label}'s own help pages on {checked}.",
+                      "Screens change: before walking them through, open the help page below and follow it where it differs.", ""]
+        else:
+            lines += [f"Researched on {checked}, but not all of it could be confirmed on {label}'s own pages.",
+                      f"Treat every step below as a lead: confirm it on {label}'s official help or developer pages before",
+                      "walking them through, and never guess a menu, address or plan.", ""]
+        lines += ["## In short", "",
+                  f"- **API access:** {GUIDE_API[api] if isinstance(api, str) and api in GUIDE_API else _guide_text(api)}",
+                  f"- **Plan needed:** {_guide_text(info.get('plan'))}",
+                  f"- **Who can set it up:** {_guide_text(info.get('role'))}",
+                  f"- **How sure this is:** {_guide_text(info.get('confidence'))}", ""]
+        if info.get("api") in ("self-serve", "app-registration"):
+            lines += ["## Connect it", ""] + [f"{n}. {_guide_text(step)}" for n, step in enumerate([s for s in steps if s], 1)] + [
+                "",
+                f"Save what it gives them in `.env` in this folder, never in a chat: add an empty line `{key}=` (or one line",
+                f"per value, such as `{prefix}_CLIENT_ID=` and `{prefix}_CLIENT_SECRET=`), open `.env` for them, have them",
+                "paste each value after its equals sign and save.", "",
+                "## Test it, read only", "",
+                f"- **How a request signs in:** {_guide_text(info.get('auth'))}",
+                f"- **Address:** {_guide_text(info.get('base_url'))}",
+                f"- **One safe test:** {_guide_text(info.get('test'))}", "",
+                "Read the key from `.env` inside the command; never print it. Say what you found in one line, then update",
+                f"{label}'s entry in Part 3 of `CLAUDE.md` to say it is connected. If it fails, say why in plain words and",
+                "use the website instead until it is fixed.", ""]
+        else:
+            found = [s for s in steps if s]
+            if found:
+                lines += ["## What their docs say", ""] + [f"- {_guide_text(step)}" for step in found] + [""]
+            lines += [f"Their {label} plan may still offer access: if they think so, check {label}'s help pages with them.", ""]
+        lines += ["## Sources", ""] + [f"- {_guide_text(d)}" for d in docs if d] + [""]
+        site = _guide_text(info.get("web_app"))
+    else:
+        lines += [f"Setup has no checked guide for {label}. Look up {label}'s official help or developer pages to see",
+                  "whether a customer can get API access, which plan includes it, and who can create it. Use only the",
+                  "maker's own pages, and say plainly what you could not confirm.", "",
+                  f"If it has an API: walk them through making a key one small step at a time, save it in `.env` as `{key}=`",
+                  "(they paste it there, never in a chat), and test it with one read-only request.", ""]
+        site = f"{label}'s website"
+    lines += ["## Without an API: do the work in the website", "",
+              f"If {label} has no API, their plan does not include it, or the key is not working yet, do the work yourself",
+              "in the website, with the browser tool you have (Claude in Chrome, ChatGPT's Chrome extension, or the browser",
+              f"built into Antigravity) and their own sign-in. Where to sign in, and what is there: {site}", "",
+              f"1. Have them sign in to {label} in that browser themselves. Never type or ask for their password.",
+              f"2. Find what they need the way they would: search, filters, the {what} lists and the reports.",
+              "3. For lots of records, use the site's own export (often a CSV download), then read the downloaded file.",
+              f"4. Write down where things are (menu paths, report names, filters) in `state/system-notes.md`, so next time is faster.",
+              "5. Only read. Change, send or submit something only when they ask for it and confirm, and never get around a",
+              "   security check or a CAPTCHA.", "",
+              "## Rules", "",
+              f"- {NO_OUTSIDE}",
+              "- Never ask anyone to paste a key or password into a chat, and never print one.",
+              "- Read only, unless they ask for a change and confirm it.", ""]
+    return "\n".join(lines)
+
+
 def system_label(a, kind):
     row = integration(kind, a.get(kind, ""))
     if row is None:
@@ -483,7 +587,9 @@ def systems_section(a, workspace=None):
                       if (a.get("keys") or {}).get(kind) or (workspace and env_has_value(workspace, key_name)) else
                       [f"Not connected yet. The first chat walks {a['user']} through it, and its key goes in `.env`",
                        f"as `{key_name}`. If they skipped that, offer again when it would help."])
-            lines += ["Never ask anyone to paste a key into a chat, and never print one. Read only, unless they",
+            lines += [f"How to connect it, and how to work without an API: `.claude/skills/connect-{kind}/SKILL.md`.",
+                      "Never send anyone to an outside automation or integration service.",
+                      "Never ask anyone to paste a key into a chat, and never print one. Read only, unless they",
                       f"ask for a change and confirm it. Until it works, say so plainly and help with what {a['user']}",
                       "pastes in or describes."]
         else:
@@ -887,9 +993,15 @@ phone while it is on.
 ### Let ChatGPT use this computer (ChatGPT only)
 
 Computer Use lets you work in desktop programs with the mouse and keyboard. If {user} wants
-it: in the ChatGPT app, Settings, then Computer use, then turn on Any App under Control. On a
-Mac, also turn on Codex Computer Use in System Settings, Privacy & Security, under both Screen
-Recording and Accessibility. On Windows, the computer has to stay unlocked while it works.
+it: in the ChatGPT app, Settings, then Computer use, then turn on Any App under Control. On
+Windows that is all; the computer has to stay unlocked while it works.
+
+On a Mac, Apple lets only the person at the computer allow an app to see the screen and use the
+mouse, so say that two switches are coming. Open each page for them, one at a time, and wait:
+`open "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"`, then
+`open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"`. On each,
+they turn on Codex Computer Use (the Mac may ask for its password, and ChatGPT may need to
+restart). If a page does not open, they go to System Settings, then Privacy & Security.
 
 ### Add another AI they already pay for
 
@@ -924,21 +1036,22 @@ list. This check only reads: never send, change or delete anything.
 ## {n + 2}. Connect their business systems
 
 Look at Part 3 of `CLAUDE.md`. Do not assume {user} has an API key, or knows what one is. For
-each system marked "Not connected yet" (their CRM, their phone system), one at a time:
+each system marked "Not connected yet" (their CRM, their phone system), one at a time, follow its
+guide: `.claude/skills/connect-crm/SKILL.md` for the CRM, `.claude/skills/connect-phone/SKILL.md`
+for the phone system.
 
 1. Ask whether they want to connect it now, and whether they have admin access to it. If
    someone else does, write down who to ask in `state/todos.md` and move on.
-2. Look up on that product's official help pages how it gives API access, and whether their
-   plan includes it. If it has none, say so plainly and offer what still works: reading it
-   through the browser, or exports they hand you.
-3. Walk them through getting a key, one small step at a time. If you can use the browser, open
-   the right settings page for them. Creating the key is their click.
-4. Never have them paste a key into this chat. Add the empty line Part 3 names (for example
-   `JOBBER_API_KEY=`) to `.env` in this folder, open that file for them, and have them paste
-   the key after the equals sign and save.
-5. Test it with one read-only request, without printing the key, and say what you found in one
-   line. Then update that system's entry in Part 3 of `CLAUDE.md` to say it is connected.
-6. If it does not work, or they would rather not now, add it to `state/todos.md` and carry on.
+2. Tell them in one line what the guide says about access: whether there is an API and which
+   plan or role it needs.
+3. If there is one, walk them through it one small step at a time. If you can use the browser,
+   open the right settings page for them. Creating the key is their click. Never have them paste
+   a key into this chat: they paste it into `.env`, as the guide says. Then test it, read only.
+4. If there is none, or their plan lacks it, show them it still works: have them sign in to the
+   website in the browser, and look up one real record there yourself, reading only.
+5. Never send them to an outside automation or integration service, and never suggest one.
+6. If something does not work, or they would rather not now, add it to `state/todos.md` and
+   carry on.
 
 ## {n + 3}. Write it down
 
@@ -1262,9 +1375,15 @@ def write_systems(a, workspace, log):
             if other_kind == kind and not (state == "live" and ident == row["id"]):
                 shutil.rmtree(workspace / ".claude" / "skills" / skill, ignore_errors=True)
                 shutil.rmtree(workspace / ".agents" / "skills" / skill, ignore_errors=True)
+        guide_dirs = [workspace / where / "skills" / f"connect-{kind}" for where in (".claude", ".agents")]
+        for folder in guide_dirs:  # rewritten below when wanted; Codex and Antigravity get a fresh copy later
+            shutil.rmtree(folder, ignore_errors=True)
         if row is None:
             continue
         label = system_label(a, kind) or row["label"]
+        if state == "pending":
+            guide_dirs[0].mkdir(parents=True, exist_ok=True)
+            (guide_dirs[0] / "SKILL.md").write_text(system_guide(kind, row, a), encoding="utf-8")
         if state == "live":
             live.add(kind)
             skill = LIVE_SKILL[(kind, row["id"])]

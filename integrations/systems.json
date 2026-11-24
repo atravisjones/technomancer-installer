@@ -1,0 +1,647 @@
+{
+ "checked": "2026-11-24",
+ "crm": {
+  "roofr": {
+   "name": "Roofr",
+   "api": "none",
+   "plan": "not stated",
+   "role": "not stated",
+   "steps": [
+    "No official Roofr page describing a customer API key was found.",
+    "Ask Roofr support or sales whether any programmatic access exists."
+   ],
+   "auth": "not stated",
+   "base_url": "not stated",
+   "test": "not stated",
+   "docs": [
+    "https://roofr.com/resources",
+    "https://apis.io/providers/roofr/ (unofficial)",
+    "https://roofrhelp.zendesk.com/hc/en-us (returned 403 to fetch)"
+   ],
+   "web_app": "https://app.roofr.com (sign-in URL not verified from an official page). An assistant in the owner's logged-in browser could read job/lead lists, job cards, proposals and measurement reports on screen; official CSV export options not verified.",
+   "confidence": "inferred - no official Roofr API page found; absence is from search only and the help center was not fetchable"
+  },
+  "jobnimbus": {
+   "name": "JobNimbus",
+   "api": "self-serve",
+   "plan": "not stated (the Authorization page names no plan)",
+   "role": "not stated; key inherits the permissions of the access profile chosen at creation",
+   "steps": [
+    "Log in to JobNimbus.",
+    "Go to Settings > API Keys.",
+    "Click Create API Key and choose the access profile (key can only do what that profile allows).",
+    "Copy the key and store it securely (third-party sources say it is shown once and expires after 1 year; not on the fetched official page)."
+   ],
+   "auth": "Authorization: Bearer {your_api_key}; add Content-Type: application/json when sending a body",
+   "base_url": "https://api.jobnimbus.com",
+   "test": "GET https://api.jobnimbus.com/{service}/v1/{endpoint} is the official pattern. A concrete read example such as GET /contacts/v1 is not stated on the fetched page (inferred); success = HTTP 200 with JSON.",
+   "docs": [
+    "https://developer.jobnimbus.com/",
+    "https://developer.jobnimbus.com/docs/authorization.md"
+   ],
+   "web_app": "https://app.jobnimbus.com (not verified from fetched page). Browser sign-in could read contacts, jobs, boards and reports; export options not verified.",
+   "confidence": "verified for steps, header and base URL; inferred for the specific test endpoint"
+  },
+  "acculynx": {
+   "name": "AccuLynx",
+   "api": "self-serve",
+   "plan": "Official docs do not state a plan. A third-party guide (Alivo) says keys live in the paid AppConnections add-on; the official page links to my.acculynx.com/market/addons/app-connections, consistent with an add-on.",
+   "role": "Location or Company Administrator",
+   "steps": [
+    "Sign in to AccuLynx as a Location or Company Administrator.",
+    "Open the API Keys page (official docs link to https://my.acculynx.com/market/addons/app-connections; Account Settings is also mentioned).",
+    "Create a key and give it a descriptive name (one key per location).",
+    "Copy it immediately (third-party says shown once)."
+   ],
+   "auth": "Authorization: Bearer <your API key>",
+   "base_url": "https://api.acculynx.com/api/v2",
+   "test": "GET https://api.acculynx.com/api/v2/company-settings with the Bearer header; success = 200 JSON with companySettings (companyId, name, timeZoneInfo, hasInsurance).",
+   "docs": [
+    "https://apidocs.acculynx.com/docs/authentication",
+    "https://apidocs.acculynx.com/docs/api-integrations-for-developers",
+    "https://apidocs.acculynx.com/reference/getcompanysettings.md",
+    "https://apidocs.acculynx.com/llms.txt",
+    "https://help.alivo.ai/help-center/how-to-create-an-api-key-in-acculynx (third-party, plan claim only)"
+   ],
+   "web_app": "https://my.acculynx.com. Browser sign-in could read jobs, contacts, leads, reports; exports not verified.",
+   "confidence": "verified for who, auth, base URL and test; exact menu click path and plan are inferred (docs omit or sources differ)"
+  },
+  "leap": {
+   "name": "Leap (leaptodo.com)",
+   "api": "self-serve",
+   "plan": "not stated",
+   "role": "Admin account (per third-party guide); not stated officially",
+   "steps": [
+    "Sign in to Leap as an admin.",
+    "Go to Settings > Developers.",
+    "Click Generate Token (top right).",
+    "Copy the token right away."
+   ],
+   "auth": "not official)",
+   "base_url": "not stated",
+   "test": "not stated",
+   "docs": [
+    "https://heavysettech.zendesk.com/hc/en-us/articles/49704423905683-Leap-CRM-Integration-Setup-Configuration-Guide (third-party; 403 to fetch, seen in search snippet)"
+   ],
+   "web_app": "Sign-in URL not verified (leaptodo.com is the vendor site). Browser sign-in could read jobs, contacts, estimates; exports not verified.",
+   "confidence": "inferred - only third-party guides found, no official Leap page"
+  },
+  "servicetitan": {
+   "name": "ServiceTitan",
+   "api": "app-registration",
+   "plan": "not stated",
+   "role": "User needs the permissions 'Generate API Application Key' and 'Manage API Application Access' (an admin enables them)",
+   "steps": [
+    "Go to developer.servicetitan.io and click Login to My Apps.",
+    "Under ServiceTitan Customers choose Login as Production Environment User and sign in with your ServiceTitan account (Enterprise Hub and Partner Portal logins do not work).",
+    "In My Apps click +New App; fill details, add your tenant ID under Tenant(s), pick endpoints under API Scope (choose read-only scopes).",
+    "Copy Keys > Application Key.",
+    "In ServiceTitan click the Settings gear, search Integrations, open API Application Access.",
+    "Click Connect New App, select your app, Connect, then Allow Access.",
+    "Under Application Details copy Client ID, and click Generate under Client Secret."
+   ],
+   "auth": "OAuth 2.0 client credentials: exchange <client_id>/<client_secret> for an access token, then send Authorization: Bearer <access_token> and ST-App-Key: <application_key>. The header name ST-App-Key and the token URL are from memory (inferred); the official page says only to pass the app key with the token.",
+   "base_url": "not stated on fetched page (inferred pattern https://api.servicetitan.io/...)",
+   "test": "not stated; a read-only GET of a list endpoint in a granted scope, success = 200 JSON",
+   "docs": [
+    "https://help.servicetitan.com/docs/get-started-with-api-dev-portal-v2",
+    "https://help.servicetitan.com/docs/how-do-i-log-into-the-servicetitan-developer-portal.md",
+    "https://developer.servicetitan.io/docs/get-going-first-api-call/ (returned no usable content)"
+   ],
+   "web_app": "https://go.servicetitan.com (not verified from fetched page). Browser sign-in could read jobs, customers, invoices and reports; exports not verified.",
+   "confidence": "verified for the click path and permissions (page is flagged stale); inferred for header names, token URL, base URL and test"
+  },
+  "housecall-pro": {
+   "name": "Housecall Pro",
+   "api": "self-serve",
+   "plan": "MAX plan only (official: API is available only to Pros on a MAX plan)",
+   "role": "Admin",
+   "steps": [
+    "Sign in as an Admin.",
+    "Go to My Apps > All Apps.",
+    "Find API Key Management and open it.",
+    "Click Generate API Key, name it, choose Full access or Read-only (choose Read-only).",
+    "Click Generate key and copy it."
+   ],
+   "auth": "not stated on fetched official pages (docs.housecallpro.com is a client-rendered page that returned no content)",
+   "base_url": "not stated",
+   "test": "not stated",
+   "docs": [
+    "https://help.housecallpro.com/en/articles/8505035-api-overview",
+    "https://help.housecallpro.com/en/articles/6790722-how-to-make-an-api-key (404 on direct fetch; seen in search results)",
+    "https://docs.housecallpro.com/"
+   ],
+   "web_app": "https://pro.housecallpro.com (not verified from fetched page). Browser sign-in could read customers, jobs, estimates, invoices, reports.",
+   "confidence": "verified for plan, role and menu path (overview page); inferred for the Generate-key button wording (search snippet); auth and base URL not found"
+  },
+  "jobber": {
+   "name": "Jobber",
+   "api": "app-registration",
+   "plan": "not stated; the help article lists no plan requirement; no personal access token found",
+   "role": "Developer Center account (separate from a Jobber login); the customer then authorizes the app by logging in",
+   "steps": [
+    "Create a Developer Center account at developer.getjobber.com (enable 2FA).",
+    "For an unpublished custom app, the client logs in to Jobber and completes the Authorization Code Link step.",
+    "Alternative for exploration: Manage Apps > Test in GraphiQL (token valid 60 minutes, testing only)."
+   ],
+   "auth": "OAuth 2.0 authorization code: Authorization: Bearer <access_token> plus header X-JOBBER-GRAPHQL-VERSION: <version> (version header and endpoint are from memory; official pages returned 403)",
+   "base_url": "not stated on a fetched page (inferred https://api.getjobber.com/api/graphql)",
+   "test": "not stated; a read-only GraphQL query such as { account { name } } (inferred)",
+   "docs": [
+    "https://help.getjobber.com/hc/en-us/articles/25924078048151-Developer-Center",
+    "https://developer.getjobber.com/docs/building_your_app/app_authorization (403)",
+    "https://developer.getjobber.com/docs/custom_integrations/ (403, seen in search)"
+   ],
+   "web_app": "https://secure.getjobber.com (not verified from fetched page). Browser sign-in could read clients, jobs, quotes, invoices and Reports; CSV exports not verified.",
+   "confidence": "verified that custom integrations go through the Developer Center (help article); inferred for endpoint, headers and no-PAT conclusion"
+  },
+  "buildertrend": {
+   "name": "Buildertrend",
+   "api": "partner-only",
+   "plan": "not stated",
+   "role": "not stated",
+   "steps": [
+    "No official Buildertrend help or developer page for customer API access was found.",
+    "Ask the Buildertrend account rep or support whether API access exists for your account."
+   ],
+   "auth": "not stated",
+   "base_url": "not stated",
+   "test": "not stated",
+   "docs": [
+    "https://buildertrend.com/help-articles",
+    "https://www.usecarly.com/blog/buildertrend-api/ (third-party, no public API claim)",
+    "https://supergood.ai/api-report-card/buildertrend (third-party)"
+   ],
+   "web_app": "buildertrend.com sign-in (exact app URL not verified). Browser sign-in could read jobs, schedules, budgets, daily logs; report and export options not verified.",
+   "confidence": "inferred - based on absence of official docs plus third-party claims; the buildertrend.com blog URL returned 404"
+  },
+  "jobtread": {
+   "name": "JobTread",
+   "api": "self-serve",
+   "plan": "not stated (a third-party article quotes JobTread help as available for anyone to use)",
+   "role": "not stated; a signed-in user with Settings access (inferred)",
+   "steps": [
+    "Sign in at app.jobtread.com.",
+    "Go to Settings > Integrations > API > Grants (app.jobtread.com/settings/integrations/api/grants).",
+    "Create a grant key.",
+    "Copy it immediately (shown once; expires after 3 months of inactivity)."
+   ],
+   "auth": "Key is sent in the JSON body at query.$.grantKey, not a header. Content-Type: application/json.",
+   "base_url": "https://api.jobtread.com/pave",
+   "test": "POST https://api.jobtread.com/pave with body {\"query\":{\"$\":{\"grantKey\":\"<grant_key>\"},\"currentGrant\":{\"id\":{}}}} (field names inferred - confirm in docs). Credential-free check {\"query\":{\"version\":{}}} returns a version string.",
+   "docs": [
+    "https://www.usecarly.com/blog/jobtread-api/ (third-party)",
+    "https://www.jobtread.com/integrations/open-api",
+    "https://app.jobtread.com/docs (not readable)",
+    "https://www.jobtread.com/resources/training/certifications/api-developer"
+   ],
+   "web_app": "https://app.jobtread.com. Browser sign-in could read jobs, customers, documents, budgets, schedules; exports not verified.",
+   "confidence": "inferred - key path, endpoint and body format come from a third-party article; the official pages fetched only confirm grant keys and the Pave query language exist"
+  },
+  "fieldedge": {
+   "name": "FieldEdge",
+   "api": "partner-only",
+   "plan": "not stated",
+   "role": "not stated",
+   "steps": [
+    "The developer portal is behind a Request Access form; partners start with FieldEdge's onboarding form.",
+    "Portal text says Members (customers) typically build private integrations with their own technical teams, but the process for Members is not described.",
+    "Contact FieldEdge to ask about Member access (a partner email seen in search results: feintegrations@xplortechnologies.com)."
+   ],
+   "auth": "Partner flow: POST https://fieldedge.withgobo.com/oauth/token with client_id, client_secret, target_id, grant_type=client_credentials (form-encoded); then Authorization: Bearer <jwt> (token valid about 8 hours). Credentials come from the Partner Portal, not from a customer account.",
+   "base_url": "not stated",
+   "test": "not stated",
+   "docs": [
+    "https://docs-dev.fieldedge.com/partner-authentication-guide-1981952m0",
+    "https://docs-dev.fieldedge.com/welcome-to-the-fieldedge-developer-portal-1966285m0",
+    "https://docs.api.fieldedge.com/"
+   ],
+   "web_app": "FieldEdge web sign-in URL not verified. Browser sign-in could read customers, work orders, invoices and reports; exports not verified.",
+   "confidence": "verified that credentials are partner-issued via Marketplace/Partner Portal; inferred that a customer cannot self-serve (Member process not stated)"
+  },
+  "service-fusion": {
+   "name": "Service Fusion",
+   "api": "self-serve",
+   "plan": "not stated",
+   "role": "not stated in the API docs; the credential pages live under the admin site (admin.servicefusion.com/developerSettings), so presumably an account admin",
+   "steps": [
+    "Sign in at admin.servicefusion.com.",
+    "Open https://admin.servicefusion.com/developerSettings/oauthConsumer (the OAuth Consumer page) and copy the Client ID and Client Secret generated for your user. (Docs call this the 'Client Credentials Grant'. Menu label inside the app is not stated.)",
+    "Exchange them for a token: POST https://api.servicefusion.com/oauth/access_token with JSON {\"grant_type\":\"client_credentials\",\"client_id\":\"<CLIENT_ID>\",\"client_secret\":\"<CLIENT_SECRET>\"}. Response has access_token, token_type Bearer, expires_in 3600 (1 hour) and refresh_token.",
+    "When the token expires, POST the same endpoint with {\"grant_type\":\"refresh_token\",\"refresh_token\":\"<REFRESH_TOKEN>\"}, or repeat the client_credentials call. Rate limit 60 requests per minute per token.",
+    "Alternative (only if building a login-popup app): register an app at https://admin.servicefusion.com/developerSettings/oauthApps via 'Add New OAuth App' (Authorization Code grant). Not needed for one business reading its own data."
+   ],
+   "auth": "Authorization: Bearer <ACCESS_TOKEN> (or ?access_token=<ACCESS_TOKEN> query param; do not use both). Token is short-lived (1 hour).",
+   "base_url": "https://api.servicefusion.com/v1",
+   "test": "GET https://api.servicefusion.com/v1/me with the Authorization header. Success is HTTP 200 with a JSON body describing the authenticated user (resource /me exists with a GET method in the RAML; exact body fields not read). 401 'Your request was made with invalid credentials.' means the token is wrong or expired. Other read lists: /customers, /jobs, /estimates, /invoices, /techs (list responses are {items:[...],_meta:{...}}).",
+   "docs": [
+    "https://docs.servicefusion.com/ (RAML spec read from https://docs.servicefusion.com/api.json)"
+   ],
+   "web_app": "https://admin.servicefusion.com (admin site; the exact customer sign-in URL for field/office users was not verified). With a browser sign-in an assistant could read the schedule, customers, jobs, estimates, invoices and reports on screen; export options were not researched.",
+   "confidence": "verified"
+  },
+  "workiz": {
+   "name": "Workiz",
+   "api": "self-serve",
+   "plan": "Requires the 'Developer API' add-on, enabled from the Feature Center (per Workiz help article as quoted in search results; price not stated)",
+   "role": "not stated (help article page returned 403 to my fetch)",
+   "steps": [
+    "Sign in to Workiz and open the Feature Center; enable the 'Developer API' add-on.",
+    "Click your profile icon, then Settings, then Integrations, then Developer.",
+    "The page has two tabs. Use the v2 tab: create a named key, set an expiration and the permissions it needs (read-only permissions for this purpose).",
+    "Copy the key immediately; once you leave the page it is no longer shown. (The older v1 tab shows an API Token plus API Secret pair and uses the v1 API instead.)"
+   ],
+   "auth": "v2: Authorization: Bearer <API_KEY> (header marked 'Bearer Token' on every endpoint in the official spec). A 403 with message 'This API key does not have permission to access this resource' means the key lacks that permission.",
+   "base_url": "https://api.workiz.com/crm/api",
+   "test": "GET https://api.workiz.com/crm/api/v2/jobtypes with Authorization header. Success is HTTP 200 with a paginated list of Job Types (ids like 'JT-...'). Path is the spec's '/v2/jobtypes' appended to the spec's server URL. Other read paths in the spec: /v2/jobs, /v2/clients, /v2/leads, /v2/estimates, /v2/invoices, /v2/payments, /v2/calls.",
+   "docs": [
+    "https://developer.workiz.com (OpenAPI spec, fetched)",
+    "https://help.workiz.com/hc/en-us/articles/50737427251473-Accessing-your-Workiz-API-credentials (403 to my fetch; content only seen in search summary)"
+   ],
+   "web_app": "https://app.workiz.com is believed to be the sign-in (not verified in docs I fetched). Browser sign-in could read jobs, clients, leads, schedule and reports on screen; exports not researched.",
+   "confidence": "inferred"
+  },
+  "pestpac": {
+   "name": "PestPac (WorkWave)",
+   "api": "partner-only",
+   "plan": "Not a plan feature. WorkWave says a one-time setup fee applies, plus ongoing costs by data access and calls per day; 30-day free trial available. Exact prices not stated.",
+   "role": "Must be a PestPac customer or an approved developer working for one or more PestPac customers. Who inside the customer account may request it is not stated.",
+   "steps": [
+    "There is no self-serve key creation. Email APISales@workwave.com to request a 30-day trial or purchase API access, stating that you are a PestPac customer.",
+    "WorkWave grants access after accepting its API Terms and Conditions (https://www.workwave.com/api-terms). Credentials and how to authenticate are given through the developer portal login at https://developer.workwave.com/ after approval; the public page does not describe the auth method."
+   ],
+   "auth": "not stated (public developer portal page does not describe authentication)",
+   "base_url": "not stated",
+   "test": "not stated; cannot give a verified read-only request without portal access.",
+   "docs": [
+    "https://developer.workwave.com/",
+    "https://www.pestpac.com/why-pestpac/api",
+    "https://www.workwave.com/api-terms"
+   ],
+   "web_app": "PestPac sign-in URL not verified. Per a WorkWave checklist, reports live at Menu > Reports > Report Gallery, and Report Writer builds custom reports that can be emailed on a schedule. An assistant on the owner's browser sign-in could read screens and run/export those reports; per-report export formats were not verified.",
+   "confidence": "verified"
+  },
+  "gorilladesk": {
+   "name": "GorillaDesk",
+   "api": "self-serve",
+   "plan": "API is an add-on available to Pro plan users (help center article). Add-on price not stated.",
+   "role": "not stated",
+   "steps": [
+    "Sign in to GorillaDesk.",
+    "Go to Add-Ons, then API (the API add-on page; the spec links it as https://beta.gorilladesk.com/addons/api). Activate the add-on.",
+    "Click the add API Key button, enter a name, click Create API Key.",
+    "Copy the key right away; deleted keys cannot be retrieved. You can rename a key, toggle inbound lead notifications, or delete it (revokes access) from the same page. Keys are per company."
+   ],
+   "auth": "Authorization: Bearer <API_KEY> (OpenAPI security scheme is HTTP bearer; docs say 'Token authentication').",
+   "base_url": "https://api.gorilladesk.com/v1",
+   "test": "GET https://api.gorilladesk.com/v1/company with the Authorization header. Success is HTTP 200 with JSON {\"data\": {company profile}}; 401 means a bad key. Other read paths: /customers, /jobs, /invoices, /estimates, /payments, /users, /schedules. A GorillaDesk MCP server is documented at https://api.gorilladesk.com/mcp/v1/docs.",
+   "docs": [
+    "https://intercom.help/gorilladesk/en/articles/16530507-gorilladesk-api",
+    "https://api.gorilladesk.com/docs",
+    "https://api.gorilladesk.com/v1/specs (OpenAPI, fetched)"
+   ],
+   "web_app": "Sign-in URL not verified (the spec references beta.gorilladesk.com for the add-ons page). Browser sign-in could read customers, jobs, schedule, invoices and reports on screen; exports not researched.",
+   "confidence": "verified"
+  },
+  "lmn": {
+   "name": "LMN (landscaping)",
+   "api": "none",
+   "plan": "No public API found.",
+   "role": "Security Admin permission is needed to see the Integrations settings page.",
+   "steps": [
+    "No documented way to call LMN directly. Do not rely on it.",
+    "Use the web app instead (see web_app)."
+   ],
+   "auth": "not stated",
+   "base_url": "not stated",
+   "test": "not stated; no verified direct read request exists.",
+   "web_app": "https://my.golmn.com/lmn (account login; Customer Portal and Crew App have separate logins). Per LMN help pages (seen in search results, not fetched), an assistant on the owner's browser sign-in could use Reports > CRM and the exports there (e.g. Todo Export, Jobsites Export; Excel download after choosing a date range). Reports tab needs a role granting it (Settings > Users).",
+   "confidence": "inferred"
+  },
+  "hubspot": {
+   "name": "HubSpot",
+   "api": "self-serve",
+   "plan": "not stated for Service Keys (public beta since Feb 10 2026). API call limits by tier: Free/Starter 100 per 10s per app and 250,000 per day; Professional 190 per 10s and 625,000 per day; Enterprise 190 per 10s and 1,000,000 per day.",
+   "role": "Super Admin, or a user with Developer Tools access.",
+   "steps": [
+    "In HubSpot go to Settings > Integrations > Service Keys (it may also appear in the left nav under Development > Keys > Service Keys).",
+    "Click Create a service key.",
+    "Name it, add only read scopes you need (for example crm.objects.contacts.read; a key can only get scopes the creator already has), review, click Create.",
+    "Copy the key immediately (starts with pat-). If exposed, click Rotate. Note: legacy private apps can no longer be created (disabled Oct 26 2026 for existing accounts), so do not send customers to the old private-app path."
+   ],
+   "auth": "Authorization: Bearer <SERVICE_KEY> (same format as legacy private-app tokens).",
+   "base_url": "https://api.hubapi.com",
+   "test": "GET https://api.hubapi.com/crm/v3/objects/contacts?limit=1 with the Authorization header. Success is HTTP 200 with JSON {\"results\":[{\"id\",\"properties\",\"createdAt\",\"updatedAt\",\"archived\"}],\"paging\":{...}}. Needs scope crm.objects.contacts.read.",
+   "docs": [
+    "https://developers.hubspot.com/changelog/service-keys",
+    "https://developers.hubspot.com/changelog/legacy-private-app-creation-sunset",
+    "https://developers.hubspot.com/blog/hubspot-service-keys-the-right-api-credential-for-data-integrations",
+    "https://developers.hubspot.com/docs/api/private-apps",
+    "https://developers.hubspot.com/docs/api/crm/contacts"
+   ],
+   "web_app": "https://app.hubspot.com. Browser sign-in could read contacts, companies, deals, tickets and reports, and use the export function on record lists; exports not researched in detail.",
+   "confidence": "verified"
+  },
+  "salesforce": {
+   "name": "Salesforce",
+   "api": "app-registration",
+   "plan": "not stated (API access depends on edition; not researched in a fetched page)",
+   "role": "A Salesforce admin (Setup access) creates the app; a run-as integration user is assigned. Exact permission names not stated.",
+   "steps": [
+    "Since Spring '26 creating new Connected Apps is restricted; Salesforce recommends External Client Apps. This is the simplest supported one-org route I found: an External Client App using the OAuth 2.0 Client Credentials flow.",
+    "In Setup, open External Client Apps > External Client App Manager and create a new app (a guide says you may first need to allow creation in External Client Apps > Settings; label wording varies by release).",
+    "Enable OAuth settings, add the 'Manage user data via APIs (api)' scope, and tick 'Enable Client Credentials Flow'; accept the warning and save.",
+    "Edit Policies and choose the Run As user for the client credentials flow (Enterprise Edition: an integration user with API Only User permission). Use a read-only profile/permission set for that user.",
+    "Open the app's Settings, expand OAuth Settings/Policies, click Consumer Key and Secret (identity verification may be asked) and copy both.",
+    "Request a token: POST to the org's My Domain token endpoint (https://<MY_DOMAIN>.my.salesforce.com/services/oauth2/token) with grant_type=client_credentials and the key/secret (Basic auth header is the more secure option). The endpoint path is from general Salesforce knowledge and was not stated in the pages I could read."
+   ],
+   "auth": "Authorization: Bearer <ACCESS_TOKEN>, sent to the instance_url returned with the token.",
+   "base_url": "<INSTANCE_URL> returned in the token response (https://<MY_DOMAIN>.my.salesforce.com)",
+   "test": "GET <INSTANCE_URL>/services/data/v<API_VERSION>/query?q=SELECT+Name+FROM+Account+LIMIT+1 with the Authorization header. Success is HTTP 200 with JSON containing totalSize, done and records. Pattern comes from Salesforce's Query resource doc via search results; I did not see a full sample.",
+   "docs": [
+    "https://help.salesforce.com/s/articleView?language=en_US&id=xcloud.remoteaccess_oauth_client_credentials_flow.htm&type=5 (search summary only; page failed to load)",
+    "https://help.salesforce.com/s/articleView?id=sf.meta_configure_client_credentials_flow_for_external_client_apps.htm&language=en_US&type=5 (fetched; metadata/CLI route)",
+    "https://developer.salesforce.com/docs/platform/api-rest/guide/resources-query.html (search summary)"
+   ],
+   "web_app": "https://login.salesforce.com or the company's My Domain URL. Browser sign-in could read accounts, contacts, opportunities, cases and dashboards, and use Reports > Export on report results; exports not researched in detail.",
+   "confidence": "inferred"
+  },
+  "gohighlevel": {
+   "name": "GoHighLevel (HighLevel)",
+   "api": "self-serve",
+   "plan": "not stated",
+   "role": "Agency admins by default; an admin's access can be restricted in Settings > Team > [admin] > Roles & Permissions. Available for agency and sub-accounts.",
+   "steps": [
+    "Go to Settings and open Private Integrations (agency level; for a sub-account, open Settings in that sub-account). If you do not see it, enable it under Labs.",
+    "Click Create new Integration.",
+    "Enter a name and description.",
+    "Select only the scopes needed (read-only ones such as contacts.readonly).",
+    "Copy the token; it cannot be viewed again. Rotating every 90 days is recommended."
+   ],
+   "auth": "Authorization: Bearer <PRIVATE_INTEGRATION_TOKEN> plus Version: 2021-07-28 and Accept: application/json.",
+   "base_url": "https://services.leadconnectorhq.com",
+   "test": "GET https://services.leadconnectorhq.com/contacts/?locationId=<LOCATION_ID>&limit=1 with Authorization, Version: 2021-07-28 and Accept headers; needs scope contacts.readonly. Success is HTTP 200 with a JSON list of contacts. Note: the docs mark this endpoint deprecated in favour of POST /contacts/search, but it was the read-only call I could verify. locationId is the sub-account ID.",
+   "docs": [
+    "https://marketplace.gohighlevel.com/docs/Authorization/PrivateIntegrationsToken",
+    "https://raw.githubusercontent.com/GoHighLevel/highlevel-api-docs/main/apps/contacts.json"
+   ],
+   "web_app": "https://app.gohighlevel.com (not confirmed on a fetched page). Browser sign-in could read contacts, opportunities, conversations and calendars per sub-account; Contacts > Export Contacts produces a CSV (admin only, current columns only, link expires after 30 days, per HighLevel help center via search summary).",
+   "confidence": "verified"
+  },
+  "zoho": {
+   "name": "Zoho CRM",
+   "api": "app-registration",
+   "plan": "not stated",
+   "role": "Any user who can sign in to api-console.zoho.com with Zoho CRM credentials; the generated token carries that user's CRM access. Admin not stated.",
+   "steps": [
+    "Open https://api-console.zoho.com (use the console for your data center) and sign in with Zoho CRM credentials.",
+    "Choose Self Client, click Create Now, click OK in the pop-up.",
+    "The Client ID and Client Secret appear under the Client Secret tab.",
+    "Open the Generate Code tab, enter scopes comma-separated (read-only: ZohoCRM.modules.{module_name}.READ per module), choose a time duration, add a description, click Create, pick the portal/environment/organization, click Create.",
+    "Copy the grant code and exchange it before it expires: POST https://accounts.zoho.com/oauth/v2/token (accounts.zoho.eu, .in, .com.au etc. for other data centers) with form fields grant_type=authorization_code, client_id, client_secret, code. (Fields confirmed for the redirect flow; the Self Client page itself did not list them.) Response has access_token, refresh_token, api_domain, expires_in 3600.",
+    "Save the refresh_token (does not expire) and use it to mint new access tokens."
+   ],
+   "auth": "Authorization: Zoho-oauthtoken <ACCESS_TOKEN> (access token lasts 1 hour).",
+   "base_url": "the api_domain returned with the token, e.g. https://www.zohoapis.com for US, plus /crm/v8",
+   "test": "GET <API_DOMAIN>/crm/v8/Contacts?fields=Last_Name,Email&per_page=1 with the Authorization header. Success is HTTP 200 with JSON {\"data\":[{id,...}],\"info\":{page,per_page,count,more_records}}. 'fields' is required. Module name Contacts is the standard module (docs use {module_api_name}).",
+   "docs": [
+    "https://www.zoho.com/crm/developer/docs/api/v8/auth-request.html",
+    "https://www.zoho.com/crm/developer/docs/api/v8/access-refresh.html",
+    "https://www.zoho.com/crm/developer/docs/api/v8/get-records.html"
+   ],
+   "web_app": "https://crm.zoho.com (varies by data center; not confirmed). Browser sign-in could read leads, contacts, deals, reports and use Export from module list views per the user's profile permission; exports not researched in detail.",
+   "confidence": "verified"
+  }
+ },
+ "phone": {
+  "ctm": {
+   "name": "CallTrackingMetrics",
+   "api": "self-serve",
+   "plan": "not stated (one aggregator says paying customers; unverified)",
+   "role": "not stated; Account Settings access (admin) implied",
+   "steps": [
+    "Sign in to the CTM web app",
+    "Go to Settings, then Account Settings",
+    "Find the API Integration section and click Enable API Access",
+    "Copy the Access Key; click Show Secret Key and copy the Secret Key",
+    "Agencies with sub-accounts: use Agency/Parent Settings for multi-account keys",
+    "Reset API Access button invalidates old keys immediately"
+   ],
+   "auth": "Authorization: Basic <base64(ACCESS_KEY:SECRET_KEY)>",
+   "base_url": "https://api.calltrackingmetrics.com/api/v1",
+   "test": "GET /api/v1/accounts.json returns the account list (documented in CTM Postman). To list recent calls: GET /api/v1/accounts/{ACCOUNT_ID}/calls.json?per_page=10 (success = 200 JSON with a calls array); transcript: GET /api/v1/accounts/{ACCOUNT_ID}/calls/{CALL_ID}/transcription.json. The calls paths are NOT in the fetched official page; they are taken from working code in the MARVIN repo.",
+   "docs": [
+    "https://postman.calltrackingmetrics.com/view/metadata/UVsSLhnS",
+    "https://calltrackingmetrics.zendesk.com/hc/en-us/articles/6349290257805-API-Keys (search snippet only; fetch returned 403)"
+   ],
+   "web_app": "https://app.calltrackingmetrics.com (CTM is moving to app.ctm.com). Calls page shows call log with recordings and transcripts; CSV export not verified from an official page in this research.",
+   "confidence": "verified for auth and base URL (Postman page fetched); key click path from official help-center search snippet (fetch 403); inferred for calls.json and transcription paths"
+  },
+  "callrail": {
+   "name": "CallRail",
+   "api": "self-serve",
+   "plan": "Free tier 0-1500 API calls/month at no charge; Premium 1501-12000 calls/month $80/month (support snippet). Transcripts need Premium Conversation Intelligence (apidocs). Recording must be enabled on the tracking number.",
+   "role": "not stated; keys are tied to the individual user; API access can be limited to admins by CallRail support request (snippet)",
+   "steps": [
+    "Sign in to CallRail",
+    "Open the Integrations icon in the left navigation, then API Keys under Data Access (some third-party guides say My Profile > API Keys; menu may vary)",
+    "Click Create New API v3 Key",
+    "Copy the key immediately; it is shown only once (one article says 15 minutes)",
+    "New keys are read-only by default; leave Allow Writes OFF"
+   ],
+   "auth": "Authorization: Token token=\"YOUR_API_KEY\"",
+   "base_url": "https://api.callrail.com/v3",
+   "test": "GET /v3/a.json (list accounts) to get ACCOUNT_ID, then GET /v3/a/{ACCOUNT_ID}/calls.json?per_page=5&fields=transcription ; success = 200 JSON with page, per_page, total_records and a calls array (recording, recording_player, transcription fields).",
+   "docs": [
+    "https://apidocs.callrail.com/",
+    "https://support.callrail.com/hc/en-us/articles/5711821845389-CallRail-s-API (search snippet; fetch 403)"
+   ],
+   "web_app": "https://app.callrail.com. Call log with recordings and filters; CSV export not verified here.",
+   "confidence": "verified for auth, base URL, calls endpoint, recording/transcript fields (apidocs fetched); inferred for key click path and plan (help-center snippets only, fetch 403); /v3/a.json not fetched"
+  },
+  "ringcentral": {
+   "name": "RingCentral",
+   "api": "app-registration",
+   "plan": "not stated",
+   "role": "Developer Console access with a developer account or role; Developer Admins can create credentials for others. Account-wide call log also needs a RingCentral user role with the matching permission (snippet).",
+   "steps": [
+    "Sign in to the RingCentral Developer Console (developers.ringcentral.com); ask the account admin if no access",
+    "Console/Apps > Create App > REST API App > Next",
+    "Authentication: JWT auth flow; add permission ReadCallLog (and ReadCallRecording for recordings); mark the app Private",
+    "Note Client ID and Client Secret on the app dashboard",
+    "Hover your name top right > Credentials > Create JWT; choose which apps may use it > Create; copy the JWT"
+   ],
+   "auth": "Exchange JWT: POST https://platform.ringcentral.com/restapi/oauth/token, Content-Type application/x-www-form-urlencoded, Authorization: Basic <base64(CLIENT_ID:CLIENT_SECRET)>, body grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=<JWT>. Then Authorization: Bearer <ACCESS_TOKEN>",
+   "base_url": "https://platform.ringcentral.com/restapi",
+   "test": "GET /restapi/v1.0/account/~/extension/~/call-log?view=Detailed&dateFrom=<ISO>&dateTo=<ISO> ; success = 200 JSON with a records array. Account-wide: /v1.0/account/{accountId}/call-log (ReadCallLog); recordings need ReadCallRecording at account level.",
+   "docs": [
+    "https://developers.ringcentral.com/guide/authentication/jwt/quick-start",
+    "https://developers.ringcentral.com/guide/authentication/jwt-flow",
+    "https://developers.ringcentral.com/guide/getting-started/create-credential",
+    "https://developers.ringcentral.com/guide/voice/call-log/quick-start",
+    "https://developers.ringcentral.com/guide/voice/call-log/access"
+   ],
+   "web_app": "https://service.ringcentral.com (admin portal). Call log and recordings viewable/downloadable there; not verified from a fetched page.",
+   "confidence": "verified for app steps, JWT credential steps, token request, extension call-log path; base URL derived from token URL; account call-log permission mapping from search snippet"
+  },
+  "dialpad": {
+   "name": "Dialpad",
+   "api": "self-serve",
+   "plan": "not stated; help article says if API Keys is missing, check plan or contact Customer Success",
+   "role": "Company Admin only",
+   "steps": [
+    "Sign in to Dialpad as a Company Admin",
+    "Admin Settings > My Company > Authentication > API Keys",
+    "Click Add Key",
+    "Name the key, set expiration, select additional scopes (include calls:list; add recording/transcript scopes as needed; scopes cannot be changed later)",
+    "Save and copy the key now; it is never shown again"
+   ],
+   "auth": "Authorization: Bearer <API_KEY>",
+   "base_url": "https://dialpad.com (sandbox: https://sandbox.dialpad.com)",
+   "test": "GET https://dialpad.com/api/v2/call?started_after=<ms epoch> ; success = 200 JSON with items (calls, newest first; includes was_recorded, recording_details, transcription_text) and cursor. Transcript endpoint reference listed in llms.txt: Call Transcript - Get (transcriptsget), not fetched.",
+   "docs": [
+    "https://developers.dialpad.com/reference/calllist.md",
+    "https://developers.dialpad.com/docs/api-key-generation",
+    "https://developers.dialpad.com/llms.txt"
+   ],
+   "web_app": "https://dialpad.com/app (admin: Admin Settings). Call history, recordings, transcripts in app; export not verified.",
+   "confidence": "verified (developer docs fetched for key steps, auth, endpoint); plan not stated; web app URL inferred"
+  },
+  "quo": {
+   "name": "Quo (formerly OpenPhone)",
+   "api": "self-serve",
+   "plan": "Any plan with an active subscription (support article); messaging needs prepaid credits, reading calls does not appear to",
+   "role": "Workspace Owner or Admin",
+   "steps": [
+    "Sign in to Quo",
+    "Workspace Settings > API tab",
+    "Click Generate API key",
+    "Name it descriptively (no spaces)",
+    "Copy and store the key"
+   ],
+   "auth": "Authorization: <API_KEY> (no Bearer prefix); the 2026-03-30 API version also requires header Quo-Api-Version: 2026-03-30",
+   "base_url": "https://api.quo.com",
+   "test": "GET /calls?limit=5 with headers Authorization and Quo-Api-Version: 2026-03-30; success = 200 JSON with data array and nextCursor. Older API: GET /v1/calls requires phoneNumberId, participants and maxResults. Recordings and transcripts: 'List recordings for a call' and 'List transcripts for a call' exist under the 2026-03-30 docs (paths not fetched).",
+   "docs": [
+    "https://www.quo.com/docs/api-reference/authentication",
+    "https://www.quo.com/docs/2026-03-30/calls/list-calls.md",
+    "https://www.quo.com/docs/api-reference/calls/list-calls",
+    "https://support.quo.com/core-concepts/integrations/api.md",
+    "https://www.quo.com/docs/llms.txt"
+   ],
+   "web_app": "https://my.quo.com (not verified from a fetched page). Call history, recordings, transcripts and summaries in app.",
+   "confidence": "verified for key steps, role, plan, auth, list calls; web app URL inferred"
+  },
+  "grasshopper": {
+   "name": "Grasshopper",
+   "api": "none",
+   "plan": "not stated",
+   "role": "not stated",
+   "steps": [
+    "No public API key or token was found. Use the web portal instead."
+   ],
+   "auth": "not stated",
+   "base_url": "not stated",
+   "test": "not applicable; no public API found. A third-party grader notes only an undocumented mobile API used by Grasshopper's own apps (do not use).",
+   "docs": [
+    "https://support.grasshopper.com/help/view-call-history (only the title was retrievable)",
+    "https://support.grasshopper.com/help/enable-call-recording (search snippet)",
+    "https://www.quo.com/blog/grasshopper-call-recording/ (competitor blog, snippet)"
+   ],
+   "web_app": "Sign in to the Grasshopper web portal, Messages & Calls > All calls / Missed calls. Recordings: More menu next to a recording lets you download one at a time; no bulk export confirmed. Portal URL not confirmed from a fetched page.",
+   "confidence": "inferred: absence of docs plus search snippets; official help pages could not be fetched in full"
+  },
+  "nextiva": {
+   "name": "Nextiva",
+   "api": "none",
+   "plan": "not stated",
+   "role": "Administrator for portal call history",
+   "steps": [
+    "No customer self-serve API key for Voice call history was found.",
+    "Portal path: NextOS client login from nextiva.com > Voice > Call History > Get Calls > View details > Download CSV (366-day max)",
+    "Older NP3 admin: My Account > Call History > View All Details; CSV under Downloaded CSV Files",
+    "Recordings: Recorder portal supports single and bulk export; Nextiva can set up recurring SFTP transfers on request",
+    "Transcripts: NextivaONE Reports > Transcription, Download CSV"
+   ],
+   "auth": "not stated (a vendor integration uses the XSI API with admin credentials, not documented by Nextiva in what I found)",
+   "base_url": "not stated",
+   "test": "not applicable",
+   "docs": [
+    "https://help.nextiva.com/article/call-history",
+    "https://help.nextiva.com/article/call-recording-using-the-recorder-portal",
+    "https://help.nextiva.com/article/nextivaone-transcription-and-summarization-reporting",
+    "https://developer.nextiva.com/ (SDK/contact-center only)"
+   ],
+   "web_app": "Client Login at https://www.nextiva.com leads to NextOS. Call history (CSV), recordings (Recorder portal, bulk export), transcription report (CSV).",
+   "confidence": "inferred for api=none (no doc found; developer portal covers contact-center SDK only); portal steps from search snippets, one help page fetched"
+  },
+  "aircall": {
+   "name": "Aircall",
+   "api": "self-serve",
+   "plan": "Not stated for API keys. Transcription/AI features may require AI Assist; recording needs live recording enabled on the Number.",
+   "role": "One doc says only an Aircall account is needed; another says integrations are Admin-only. Treat as Admin/Owner.",
+   "steps": [
+    "Sign in to the Aircall Dashboard",
+    "Integrations > API Keys",
+    "Click Generate API key (top right)",
+    "Copy the API ID and API Token; the token is shown only once"
+   ],
+   "auth": "Authorization: Basic <base64(API_ID:API_TOKEN)>",
+   "base_url": "https://api.aircall.io",
+   "test": "GET /v1/ping first, then GET /v1/calls?per_page=5&order=desc ; success = 200 with meta and calls array. Call objects carry recording and voicemail mp3 URLs (valid 1 hour). Transcript: GET /v1/calls/{call_id}/transcription.",
+   "docs": [
+    "https://developer.aircall.io/docs/basic-authentication",
+    "https://developer.aircall.io/docs/your-first-api-call",
+    "https://developers.aircall.io/api-references"
+   ],
+   "web_app": "https://dashboard.aircall.io (URL inferred). Call history, recordings, voicemails; analytics export needs Analytics+.",
+   "confidence": "verified for key steps, auth, base URL, calls and transcription paths; dashboard URL and role inferred"
+  },
+  "zoom-phone": {
+   "name": "Zoom Phone",
+   "api": "app-registration",
+   "plan": "Zoom Phone license; account-level call history/recordings: Pro or higher plus Zoom Phone license and account owner/admin (docs/snippets)",
+   "role": "Account admin; needs permission to view/edit Server-to-Server OAuth apps (enable the S2S OAuth role) plus admin-level scopes",
+   "steps": [
+    "Sign in to the Zoom App Marketplace (marketplace.zoom.us) as an admin with the S2S OAuth role",
+    "Developers (lower left) > Created Apps > plus > Build an app",
+    "Choose Server-to-Server OAuth app > Create",
+    "Copy Account ID, Client ID, Client Secret",
+    "Fill Information (name, contact email)",
+    "Scopes > Add Scopes: phone:read:list_call_logs:admin (call history) and phone:read:list_call_recordings:admin (recordings)",
+    "Activate the app"
+   ],
+   "auth": "Token: POST https://zoom.us/oauth/token, Authorization: Basic <base64(CLIENT_ID:CLIENT_SECRET)>, body grant_type=account_credentials&account_id=<ACCOUNT_ID>. Then Authorization: Bearer <ACCESS_TOKEN> (valid 1 hour)",
+   "base_url": "https://api.zoom.us/v2",
+   "test": "GET /v2/phone/call_history?from=YYYY-MM-DD&to=YYYY-MM-DD ; success = 200 JSON listing calls. Recordings: GET /v2/phone/recordings. Old /phone/call_logs was sunset 2025-11-30.",
+   "docs": [
+    "https://developers.zoom.us/docs/internal-apps/s2s-oauth/",
+    "https://developers.zoom.us/docs/internal-apps/create/",
+    "https://developers.zoom.us/docs/phone/understanding-call-history.md",
+    "https://developers.zoom.us/docs/api/phone/"
+   ],
+   "web_app": "https://zoom.us (web portal, Phone System Management > Call Logs / Recordings); exact path not verified from a fetched page.",
+   "confidence": "verified for S2S steps, token request, call_history path and scope; recordings scope and from/to params from search snippet; web portal path inferred"
+  },
+  "google-voice": {
+   "name": "Google Voice",
+   "api": "none",
+   "plan": "Not applicable. Workspace organizations can also search Voice data in Google Vault (snippet).",
+   "role": "Account owner; Workspace super admin for organization data",
+   "steps": [
+    "No public Google Voice API was found.",
+    "Use Google Takeout (takeout.google.com), select Voice, to download call logs, texts, voicemails and voicemail transcripts",
+    "Takeout delivers per-call HTML files (community report, not official)"
+   ],
+   "auth": "not stated",
+   "base_url": "not stated",
+   "test": "not applicable",
+   "docs": [
+    "https://support.google.com/voice/answer/10130510",
+    "https://support.google.com/vault/answer/9753346 (snippet)"
+   ],
+   "web_app": "https://voice.google.com. Calls tab shows call history; voicemail transcripts shown. Export via Takeout is a one-off archive, not live data.",
+   "confidence": "verified that the help page lists export contents and mentions no API; inferred that no API exists (absence of docs); Takeout format from a community source"
+  }
+ }
+}

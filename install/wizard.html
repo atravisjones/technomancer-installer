@@ -137,6 +137,8 @@
   .nav { display: flex; gap: 12px; justify-content: space-between; margin-top: 4px; }
   .nav .go { width: auto; min-width: 150px; padding: 13px 22px; }
   .nav .go.next, .nav #go, .nav #finish { margin-left: auto; }
+  .checklist-return { margin: 0 0 16px; }
+  .checklist-return .go { width: auto; padding: 10px 18px; }
   details.what { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 20px; margin-bottom: 16px; }
   details.what summary { cursor: pointer; font-weight: 600; }
   details.what ul.done { margin-top: 12px; }
@@ -440,6 +442,7 @@
 <main>
   <p class="progress" id="progress" aria-live="polite"></p>
   <div class="bar" id="bar" aria-hidden="true"></div>
+  <p class="checklist-return" id="to-checklist" hidden><button type="button" class="go quiet" id="to-checklist-go">Back to the checklist</button></p>
 
   <div class="page" data-page="0">
     <div class="intro">
@@ -666,7 +669,7 @@
       <p id="cx-text" style="margin:0">Checking whether you are already signed in…</p>
       <button class="step" id="cx-login" style="margin-top:12px" hidden>Sign in to ChatGPT</button>
     </section>
-    <button class="go" id="cx-open">Open ChatGPT</button>
+    <button class="go" id="cx-open">Open the ChatGPT app</button>
     <p class="hint" id="cx-note" style="text-align:center;margin:12px 0 20px" role="status">Setup installs the ChatGPT app for you if it is not on this computer yet. Open it once and sign in if it asks.</p>
     <section>
       <h2>Connect your apps</h2>
@@ -982,6 +985,8 @@ $('dock-head').onclick = () => {
 // What each later step ended up as, for the last screen.
 const done = { chrome: 0, drill: false, connectors: 0, connectorsKnown: false, github: false }
 const doneState = done
+// A step opened from the final checklist goes back to it, not on through the rest of setup.
+let fromChecklist = false
 // Set up from a copy saved on another computer: its questions are already answered.
 let restored = false, movedKeys = 0, wbFound = null, wbRepo = '', wbRestoredRepo = ''
 const RESTORED_SKIP = [4.2, 7, 9]
@@ -1174,7 +1179,7 @@ function showFinale() {
     if (!on && go) {
       const fix = Object.assign(document.createElement('button'), { type: 'button', className: 'copy',
         textContent: tool ? 'Open it' : act ? 'Add it' : 'Finish it' })
-      fix.onclick = tool ? () => openTool(tool) : act || (() => show(go))
+      fix.onclick = tool ? () => openTool(tool) : act || (() => show(go, true))
       li.append(fix)
     }
     return li
@@ -1223,10 +1228,13 @@ function restoredRoute(n) {
   while (RESTORED_SKIP.includes(all[i])) i += step
   return all[i] === undefined ? 0.2 : all[i]
 }
-function show(n) {
+function show(n, fromList = false) {
   if (agyMain()) n = agyRoute(n, page)
   if (restored) n = restoredRoute(n)
   page = n
+  // Only a "Finish it" click sets this; any other move (Back, a step's own buttons) clears it.
+  fromChecklist = fromList && n !== 10 && n !== 11
+  $('to-checklist').hidden = !fromChecklist
   if (n === 0.2) {
     post('/installs/status').then(showInstalls)
     setTimeout(showWelcome, 0)
@@ -1281,6 +1289,7 @@ for (const button of document.querySelectorAll('button[data-go]')) {
   // With Codex as the main assistant, the Claude-only pages are skipped: GitHub's Back goes to the ChatGPT page.
   button.onclick = () => {
     const to = Number(button.dataset.go)
+    if (fromChecklist && button.classList.contains('next')) { show(10); return }
     // The ready step comes once, unless Claude was added after it ran.
     if (to === 0.7) {
       readyNext = page === 0 ? 0.2 : 1
@@ -1776,7 +1785,7 @@ $('rs-next').onclick = async () => {
   const saved = await post('/company/profile', { about: $('rs-about').value, problems, other: $('rs-other').value })
   if (saved.ok === false) { $('rs-saved').textContent = saved.error; return }
   done.profile = Boolean(saved.saved)
-  show(5)
+  show(fromChecklist ? 10 : 5)
 }
 
 // --- The company's GitHub organization ------------------------------------------------
@@ -1941,14 +1950,15 @@ function showApps(s) {
     const yes = Boolean(row && row.connected)
     li.classList.toggle('on', yes)
     const button = li.querySelector('button')
-    if (button) button.hidden = yes || !(row && row.canConnect)
+    if (button) button.hidden = yes
     if (yes) on += 1
   }
   done.apps = on
   if (cxError && rows.some(r => r.id === cxError.app && r.connected)) cxError = null
   $('cx-apps-note').textContent = cxError ? cxError.text : s.state === 'signed-out' ? 'Sign in to ChatGPT first. Then each one can be connected here.'
     : s.state === 'known' ? (on === APP_TOTAL ? 'All of them are connected.' : 'Click Connect and sign in, with your work Google account for the Google ones. Each one ticks here when it is done.')
-      : s.checking ? 'Checking what is connected. This can take a minute.' : 'Setup could not check these. In the ChatGPT app, open Plugins and connect them there.'
+      : s.checking ? 'Checking what is connected. This can take a minute.'
+        : 'Setup cannot see these from here, so they will not tick. Click Connect to open ChatGPT in Chrome. Your first chat checks them.'
   if (page === 4.5 && codexMain() && on < APP_TOTAL) appsTimer = setTimeout(watchApps, 3000)
 }
 async function watchApps() {
@@ -1968,8 +1978,12 @@ for (const button of $('cx-apps').querySelectorAll('button')) {
     cxError = null
     let reply = {}
     try { reply = await post('/chatgpt/apps/connect', { app }) } catch (error) {}
-    if (!reply.ok) {
-      cxError = { app, text: 'That page could not be opened. In the ChatGPT app, open Plugins and connect it there.' }
+    if (!reply.ok) {  // no link of its own for this app: ChatGPT's website, and where to click there
+      const name = button.closest('li').querySelector('b').textContent
+      const site = await post('/window/open', { page: 'chatgpt' }).catch(() => ({}))
+      cxError = { app, text: site.ok
+        ? `ChatGPT opened in Chrome. Sign in if it asks, then open Settings, then Plugins (on some versions it is called Apps), pick ${name} and click Connect.`
+        : `That page did not open. In Chrome, go to chatgpt.com, open Settings, then Plugins (or Apps), pick ${name} and click Connect.` }
       $('cx-apps-note').textContent = cxError.text
     }
   }
@@ -2397,6 +2411,8 @@ $('rh-done').onclick = () => {
   $('rh-note').textContent = 'Marked done by you. Setup cannot confirm this install. The first time you need help, Google shows Generate Code if it worked.'
 }
 
+$('to-checklist-go').onclick = () => show(10)
+
 $('copy-folder').onclick = async () => {
   try {
     await navigator.clipboard.writeText(result.folder)
@@ -2416,7 +2432,7 @@ function showChatGPTApp(row) {
     if (button === $('final-open') && !codexMain()) continue
     button.disabled = busy
     if (busy) button.textContent = 'Installing ChatGPT…'
-    else if (button.textContent === 'Installing ChatGPT…') button.textContent = button === $('final-open') ? finalLabel() : 'Open ChatGPT'
+    else if (button.textContent === 'Installing ChatGPT…') button.textContent = button === $('final-open') ? finalLabel() : 'Open the ChatGPT app'
   }
   if (busy) {
     $('cx-note').textContent = `Setup is installing the ChatGPT app (${row.note || 'starting'}). The button works as soon as it is done.`
@@ -2426,7 +2442,7 @@ function showChatGPTApp(row) {
     wantChatGPT = false
     openChatGPT()
   } else if ($('cx-note').textContent.startsWith('Setup is installing')) {
-    $('cx-note').textContent = 'The ChatGPT app is installed. Click Open ChatGPT.'
+    $('cx-note').textContent = 'The ChatGPT app is installed. Click Open the ChatGPT app.'
   }
 }
 async function openChatGPT() {
