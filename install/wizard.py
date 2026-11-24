@@ -1202,6 +1202,173 @@ def merge_env(path, values):
         path.chmod(0o600)
 
 
+# --- Updates: setup's own files are refreshed unless the person changed them ---------------
+#
+# Every file setup copies into `.claude` is recorded in `.assistant-managed.json` with a hash of
+# what was copied. On a later run or /sync, a file still matching its record, or matching any
+# earlier released version (install/known-hashes.json, for folders set up before the record
+# existed), is replaced with the new one. A file the person edited is kept and reported.
+
+MANAGED_FILE = ".assistant-managed.json"
+KNOWN_HASHES = TEMPLATE / "install" / "known-hashes.json"
+
+
+def text_hash(data):
+    """Line endings do not count: Windows and Mac copies of one file hash the same."""
+    import hashlib
+    return hashlib.sha256(data.replace(b"\r\n", b"\n")).hexdigest()
+
+
+def atomic_write(path, text):
+    """Write a whole file or nothing: an interruption leaves the old one in place."""
+    temp = path.with_name(path.name + ".writing")
+    temp.write_text(text, encoding="utf-8")
+    os.replace(temp, path)
+
+
+def _load_json(path):
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+        return loaded if isinstance(loaded, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def sync_template(workspace, skip=()):
+    """Copy setup's `.claude` files in: add new ones, refresh untouched ones, keep edited ones.
+
+    Returns (report, before): the lists of what happened, and the earlier bytes of each file it
+    replaced (Codex's and Antigravity's copies are refreshed from those).
+    """
+    manifest = _load_json(workspace / MANAGED_FILE)
+    known = _load_json(KNOWN_HASHES)
+    report, before = {"added": [], "updated": [], "kept": []}, {}
+    source = TEMPLATE / ".claude"
+    for item in sorted(p for p in source.rglob("*") if p.is_file()):
+        rel_parts = item.relative_to(source).parts
+        if any(part in skip or part == "__pycache__" for part in rel_parts):
+            continue
+        rel = "/".join((".claude",) + rel_parts)
+        dest = workspace / rel
+        data = item.read_bytes()
+        new = text_hash(data)
+        if not dest.exists():
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(item, dest)
+            manifest[rel] = new
+            report["added"].append(rel)
+            continue
+        current_bytes = dest.read_bytes()
+        current = text_hash(current_bytes)
+        if current == new:
+            manifest[rel] = new
+        elif manifest.get(rel) == current or current in (known.get(rel) or []):
+            before[rel] = current_bytes
+            shutil.copy2(item, dest)
+            manifest[rel] = new
+            report["updated"].append(rel)
+        else:
+            report["kept"].append(rel)
+    atomic_write(workspace / MANAGED_FILE, json.dumps(manifest, indent=1, sort_keys=True) + "\n")
+    return report, before
+
+
+def _version(path):
+    try:
+        return path.read_text(encoding="utf-8").strip() or "0.0.0"
+    except OSError:
+        return "0.0.0"
+
+
+def _version_key(text):
+    return tuple(int(n) for n in re.findall(r"\d+", str(text))[:3]) or (0,)
+
+
+def changes_between(old, new):
+    """The CHANGELOG lines for every version after `old`, up to and including `new`."""
+    try:
+        text = (TEMPLATE / "CHANGELOG.md").read_text(encoding="utf-8")
+    except OSError:
+        return []
+    lines, keep = [], False
+    for line in text.splitlines():
+        heading = re.match(r"##\s+v?(\d+(?:\.\d+){0,2})", line)
+        if heading:
+            keep = _version_key(old) < _version_key(heading.group(1)) <= _version_key(new)
+        elif keep and line.strip().startswith(("- ", "* ")):
+            lines.append(line.strip()[2:].strip())
+    return lines
+
+
+def refresh_guide(workspace, name, a, main):
+    """Setup's own START-HERE. One the person rewrote no longer starts with setup's heading and is left alone."""
+    guide = workspace / "START-HERE.md"
+    current = guide.read_text(encoding="utf-8", errors="ignore") if guide.exists() else ""
+    if not current or current.startswith("# Start here\n"):
+        guide.write_text(start_here(name, a, main), encoding="utf-8")
+
+
+def _env_value(path, name):
+    """One value from a .env file. Only the named line is read; nothing is printed."""
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.startswith(name + "="):
+                return line.split("=", 1)[1].strip().strip("\"'")
+    except OSError:
+        pass
+    return ""
+
+
+def update_assistant(folder):
+    """/sync: bring a finished setup up to the copy in this setup folder. Prints one line of JSON."""
+    try:
+        return _update_assistant(folder)
+    except Exception as error:  # one plain line, never a traceback; nothing here holds a secret
+        print(json.dumps({"ok": False, "error": f"The update stopped ({type(error).__name__}). Your assistant still works. Try again, or ask for help."}))
+        return 1
+
+
+def _update_assistant(folder):
+    global BRIDGE_URL, INSTALLER_TOKEN
+    workspace = Path(folder).resolve()
+    name_file = workspace / ".assistant-name"
+    if workspace.parent != Path.home().resolve() or not name_file.is_file():
+        print(json.dumps({"ok": False, "error": "Run this from your assistant's folder."}))
+        return 1
+    name = name_file.read_text(encoding="utf-8").strip()
+    a = restored_answers(workspace, name)
+    a.setdefault("user", "the owner of this computer")
+    a.setdefault("role", "Team member")
+    log = []
+    clean_business(a, log)
+    # A business whose systems read through the data bridge keeps it: its address and token are in .env.
+    env = workspace / ".env"
+    if not bridge_ready() and _env_value(env, "TM_BRIDGE_URL") and _env_value(env, "TM_BRIDGE_TOKEN"):
+        BRIDGE_URL, INSTALLER_TOKEN = _env_value(env, "TM_BRIDGE_URL"), _env_value(env, "TM_BRIDGE_TOKEN")
+    old, new = _version(workspace / "VERSION"), _version(TEMPLATE / "VERSION")
+    skip = () if role_kit_name(a["role"]) == "Developer" else ("the-boys.md",)
+    report, before = sync_template(workspace, skip)
+    # Without the saved answers there is no telling which systems they use: leave that part alone
+    # rather than disconnect anything.
+    answered = any(_load_json(workspace / file) for file in (".company.json", ".assistant-setup.json"))
+    if answered:
+        write_systems(a, workspace, log, before)
+        refresh_guide(workspace, name, a, chosen_main(a))
+    write_sync_files(workspace)
+    write_license_ref(workspace)
+    (workspace / ".marvin-source").write_text(str(TEMPLATE) + "\n", encoding="utf-8")
+    if any(tool in ("codex", "agy") for tool in chosen_extras(a)):
+        write_agent_skills(workspace, before)
+    if (TEMPLATE / "VERSION").exists():
+        shutil.copy2(TEMPLATE / "VERSION", workspace / "VERSION")
+    if not answered:
+        report["kept"].append("Part 3 of CLAUDE.md (setup's saved answers were missing, so the systems were left as they are)")
+    print(json.dumps({"ok": True, "from": old, "to": new, "whatsNew": changes_between(old, new),
+                      "added": report["added"], "updated": report["updated"], "kept": report["kept"],
+                      "template": str(TEMPLATE)}))
+    return 0
+
+
 def copy_missing(src, dst, skip=()):
     """Copy a folder, never replacing a file the person already has."""
     for item in src.rglob("*"):
@@ -1364,7 +1531,7 @@ def clean_business(a, log):
                 log.append(f"That {KIND_WORD[kind].lower()} key did not look right, so it was not saved.")
 
 
-def write_systems(a, workspace, log):
+def write_systems(a, workspace, log, before=None):
     """Save each system's access, add the skills for the live ones, and refresh CLAUDE.md's list."""
     env, live = {}, set()
     for kind in ("crm", "phone"):
@@ -1391,6 +1558,8 @@ def write_systems(a, workspace, log):
             if source.exists():
                 dest = workspace / ".claude" / "skills" / skill / "SKILL.md"
                 dest.parent.mkdir(parents=True, exist_ok=True)
+                if before is not None and dest.exists():  # so Codex's and Antigravity's copy follows it
+                    before.setdefault(f".claude/skills/{skill}/SKILL.md", dest.read_bytes())
                 shutil.copy2(source, dest)  # always the newest guide: it is ours, not the person's
             env.update(TM_BRIDGE_URL=BRIDGE_URL, TM_BRIDGE_TOKEN=INSTALLER_TOKEN)
             log.append(f"{label} connected: {a['assistant']} can look things up in it now.")
@@ -1411,7 +1580,7 @@ def write_systems(a, workspace, log):
         if SYSTEMS_START in current and SYSTEMS_END in current:
             head, rest = current.split(SYSTEMS_START, 1)
             tail = rest.split(SYSTEMS_END, 1)[1]
-            claude.write_text(head + systems_section(a, workspace).rstrip("\n") + tail, encoding="utf-8")
+            atomic_write(claude, head + systems_section(a, workspace).rstrip("\n") + tail)
 
 
 def company_settings(a):
@@ -1461,7 +1630,7 @@ def configure(a):
 
     # The swarm layer stays out of employee installs: it needs other paid accounts.
     skip = () if role_kit_name(a["role"]) == "Developer" else ("the-boys.md",)
-    copy_missing(TEMPLATE / ".claude", workspace / ".claude", skip=skip)
+    _, before = sync_template(workspace, skip)
     copy_missing(TEMPLATE / "state", workspace / "state")
     for folder in ("sessions", "reports", "content"):
         (workspace / folder).mkdir(exist_ok=True)
@@ -1479,10 +1648,9 @@ def configure(a):
 
     # Setup's own guide, so a re-run refreshes it (new commands, a different main app). One the
     # person rewrote themselves no longer starts with setup's heading and is left alone.
-    guide = workspace / "START-HERE.md"
-    current_guide = guide.read_text(encoding="utf-8", errors="ignore") if guide.exists() else ""
-    if not current_guide or current_guide.startswith("# Start here\n"):
-        guide.write_text(start_here(name, a, main), encoding="utf-8")
+    refresh_guide(workspace, name, a, main)
+    if (TEMPLATE / "VERSION").exists():
+        shutil.copy2(TEMPLATE / "VERSION", workspace / "VERSION")
 
     if existed:
         log.append(f"{workspace} already had a CLAUDE.md, so your notes and profile were kept as they are.")
@@ -1501,7 +1669,7 @@ def configure(a):
         (workspace / "state" / "first-chat.md").write_text(first_chat(name, a, main), encoding="utf-8")
         log.append(f"Created {name}'s folder: {workspace}")
 
-    write_systems(a, workspace, log)
+    write_systems(a, workspace, log, before)
 
     mod_dir = workspace / ".mods" / "session-tint"
     if with_claude and a.get("colors", True):
@@ -1520,7 +1688,7 @@ def configure(a):
     if with_claude:
         write_settings(a, mod_dir, log)
     extras = chosen_extras(a)
-    write_extras(a, workspace, name, extras, log)
+    write_extras(a, workspace, name, extras, log, before)
     if not os.environ.get("ASSISTANT_SKIP_INSTALLS"):
         # Claude's pieces, if they were not started with the page; the desktop app only for the main one.
         run_installs(claude=with_claude, claude_app=main == "claude",
@@ -4775,33 +4943,59 @@ def write_codex_settings(workspace, never_asks, log):
     path.write_text("\n".join(top + rest).strip("\n") + "\n", encoding="utf-8")
 
 
-def write_agent_skills(workspace):
+def _command_skill(stem, text):
+    """A command file turned into the skill Codex and Antigravity run for it."""
+    described = re.match(r"---\s*\n(.*?)\n---\s*\n", text, re.S)
+    about = re.search(r"^description:\s*(.+)$", described.group(1), re.M) if described else None
+    body = text[described.end():] if described else text
+    summary = (about.group(1).strip() if about else f"What to do when the person types /{stem}").replace('"', "'")
+    return (f'---\nname: {stem}\ndescription: "{summary.rstrip(".")}. Use when the person types /{stem}."\n---\n\n'
+            + body.lstrip("\n"))
+
+
+def write_agent_skills(workspace, before=None):
     """Codex finds skills in .agents/skills. Copy the folder's skills there, and its commands as skills.
 
     Codex has no custom slash commands any more, so /start, /save and the rest each become a
-    skill of the same name. Anything already there is kept.
+    skill of the same name. A copy already there is kept, unless an update just replaced the
+    `.claude` file it came from and the copy still matches that earlier file (nobody edited it).
     """
+    before = before or {}
     target = workspace / ".agents" / "skills"
     source = workspace / ".claude" / "skills"
+    manifest = _load_json(workspace / MANAGED_FILE)
+
+    def put(dest, data, earlier):
+        rel = dest.relative_to(workspace).as_posix()
+        if dest.exists():
+            current = text_hash(dest.read_bytes())
+            if current == text_hash(data):
+                manifest[rel] = current
+                return
+            untouched = manifest.get(rel) == current or (earlier is not None and current == text_hash(earlier))
+            if not untouched:
+                return
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(data)
+        manifest[rel] = text_hash(data)
+
     if source.is_dir():
         for skill in sorted(p for p in source.iterdir() if p.is_dir() and (p / "SKILL.md").is_file()):
-            copy_missing(skill, target / skill.name)
+            for item in sorted(p for p in skill.rglob("*") if p.is_file()):
+                rel = item.relative_to(source)
+                put(target / rel, item.read_bytes(), before.get(".claude/skills/" + rel.as_posix()))
     commands = workspace / ".claude" / "commands"
     for command in sorted(commands.glob("*.md")) if commands.is_dir() else []:
-        dest = target / command.stem / "SKILL.md"
-        if dest.exists() or not re.fullmatch(r"[a-z0-9-]{1,40}", command.stem):
+        if not re.fullmatch(r"[a-z0-9-]{1,40}", command.stem):
             continue
-        text = command.read_text(encoding="utf-8", errors="ignore")
-        described = re.match(r"---\s*\n(.*?)\n---\s*\n", text, re.S)
-        about = re.search(r"^description:\s*(.+)$", described.group(1), re.M) if described else None
-        body = text[described.end():] if described else text
-        summary = (about.group(1).strip() if about else f"What to do when the person types /{command.stem}").replace('"', "'")
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(f'---\nname: {command.stem}\ndescription: "{summary.rstrip(".")}. Use when the person types /{command.stem}."\n---\n\n'
-                        + body.lstrip("\n"), encoding="utf-8")
+        earlier = before.get(".claude/commands/" + command.name)
+        old = _command_skill(command.stem, earlier.decode("utf-8", "ignore").replace("\r\n", "\n")).encode("utf-8") if earlier else None
+        text = command.read_text(encoding="utf-8", errors="ignore").replace("\r\n", "\n")
+        put(target / command.stem / "SKILL.md", _command_skill(command.stem, text).encode("utf-8"), old)
+    atomic_write(workspace / MANAGED_FILE, json.dumps(manifest, indent=1, sort_keys=True) + "\n")
 
 
-def write_extras(a, workspace, name, extras, log):
+def write_extras(a, workspace, name, extras, log, before=None):
     """Point each chosen assistant at this folder's notes and leave a file that opens it here."""
     main = chosen_main(a)
     claude_side = uses_claude(a) and main != "claude"
@@ -4828,12 +5022,12 @@ def write_extras(a, workspace, name, extras, log):
         # As the main assistant, Antigravity follows the Permissions choice, the way Codex does.
         write_agy_settings(workspace, a.get("mode", "bypassPermissions") == "bypassPermissions" if main == "agy"
                            else never_asks, log)
-        write_agent_skills(workspace)  # Antigravity runs .agents/skills/<name> when you type /<name>
+        write_agent_skills(workspace, before)  # Antigravity runs .agents/skills/<name> when you type /<name>
     if "codex" in extras:
         # As the main assistant, Codex follows the Permissions choice, the way Claude does.
         as_main = chosen_main(a) == "codex"
         write_codex_settings(workspace, a.get("mode", "bypassPermissions") if as_main else never_asks, log)
-        write_agent_skills(workspace)
+        write_agent_skills(workspace, before)
     names = [EXTRAS[tool]["short"] for tool in extras]
     log.append(" and ".join([", ".join(names[:-1]), names[-1]] if len(names) > 1 else names)
                + f" set up for this folder: open {'it' if len(names) == 1 else 'each'} with its \"Open ...\" file there"
@@ -5130,8 +5324,12 @@ def main():
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--no-browser", action="store_true")
     parser.add_argument("--add-assistant", help="add codex, agy or grok to a finished setup")
-    parser.add_argument("--folder", default=".", help="the assistant's folder, for --add-assistant")
+    parser.add_argument("--folder", default=".", help="the assistant's folder, for --add-assistant or --update")
+    parser.add_argument("--update", action="store_true", help="bring a finished setup up to this copy (/sync)")
     args = parser.parse_args()
+
+    if args.update:
+        sys.exit(update_assistant(args.folder))
 
     if args.add_assistant is not None:
         sys.exit(add_assistant(args.add_assistant, args.folder))

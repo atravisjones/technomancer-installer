@@ -1,0 +1,116 @@
+{
+ ".claude/agents/_template.md": [
+  "3a38c6af5a4c2423ed4b8b653e9d861a3e65f970bfabd7a1f283892aee7230e5"
+ ],
+ ".claude/agents/content-agent.md": [
+  "b94d73498f61a9b604fb284a611bd91bddd25592918f78eb7b065175c056e2ea"
+ ],
+ ".claude/agents/events-agent.md": [
+  "7409b54ad85fe65018ef17bb0d013898efad4e94f15ceacf5bca8820e810980d"
+ ],
+ ".claude/agents/research-agent.md": [
+  "24faeef8fba5556630505e0f18f2fba068d0e98c97396597488818bfb1042ccd"
+ ],
+ ".claude/agents/the-boys.md": [
+  "b693512bb8fa1dc6da6e3f7c9b610844a900dcf9b8c4a0ea15e82e9855fb52d6",
+  "fe517dccfb1ce9f8cab5970e89ec3253a7efe57b461a45a9effe0ff32d52407d"
+ ],
+ ".claude/commands/add-assistant.md": [
+  "25d97ebe1e841a99f511dd1d161b4366114a82f92a09182af09f70a7b91b0eb4"
+ ],
+ ".claude/commands/add-computer.md": [
+  "8fc515a725d5e84447ab085790fb6cca0c5cba00cce22e449fdcd202e5dbcde4"
+ ],
+ ".claude/commands/code.md": [
+  "1e0aeac22e0e3fca25215fc2e8762a995d53467345a287c87c4c7767f0191cac",
+  "7e72077b0a97abd97a191bafe7e968de3170e4b61adf12c5ecd59d7f33575523",
+  "ed59625da00f2a8abfa566e5e3ac3a6eea5fdcd1b0d7efdccaf7b9e196b93cd6"
+ ],
+ ".claude/commands/commit.md": [
+  "080940b83d280628a4b838dda1c4651aaf69032079d8b74a9fd20e619d7f8d80"
+ ],
+ ".claude/commands/get-help.md": [
+  "ca5903fe2e507849eb0d72934b150eeb52f4ee83b9c0b65aa2ae755f48e6bb03"
+ ],
+ ".claude/commands/harden.md": [
+  "5cf3a5e41a631b5ff11db16d050efcb34c7abc83d7fbfc7fe7ad3f6d087767b4"
+ ],
+ ".claude/commands/help.md": [
+  "0685bc54a065a87c7b8f3905573300a835fa02d89ad47fcace593dd00c637e9d",
+  "66df3611dc21412416439318c4b2e88a0b314e480911f9944521d34bf59b2439",
+  "6df2804ed99df1a64ef3b0108b2c618411e05c098c7ad91a4b72410077428e22",
+  "7743757922d6bd96af3558b6bf8e6a59398346b8c80bf5bc04fc69f41b0a5f62",
+  "f4554749d879c9acb55d632e5cbfd7adcfb9bf1d017e086fbfb2befaf343b2f1"
+ ],
+ ".claude/commands/new-project.md": [
+  "94486a874952b25a2873940e64b751163acbaa8c87bf84220f682182c0a5ba01",
+  "c442ce0c08b762665da1c4c1c1369528245044bad107225a0c6afb4fa8283788"
+ ],
+ ".claude/commands/publish.md": [
+  "31bfbc4122e671f524a662b9a94b6358d6483e97aa07d0625635e046a8bcc698",
+  "edadae675f3a6441c718211c2291b7f41ff4b52deb64030bb0301212053bc6ac"
+ ],
+ ".claude/commands/report.md": [
+  "4fffab3a3249bd3a49c908b75627a3132cd3024132be27acbccd93f84b493e3f"
+ ],
+ ".claude/commands/save.md": [
+  "2b35dc53a875ba7e6fe95eb310b2c427a905bab112896c5cd75730ac84a4a521",
+  "f2af4c9056429cecd462eb828f692bb1cdd9749726b00017e55e2a72804b3fa7"
+ ],
+ ".claude/commands/skills.md": [
+  "70c9bc4ca245117e5babd82222bc3bcdc62c7047941244d2d4475ad603042777"
+ ],
+ ".claude/commands/start.md": [
+  "18171b5cef29fc7f01bd1bf258984d8cdb7d14856867a6fcd41520cce57f2068",
+  "47d8ae2af6175f07f51dc9ba2d3a9a3e1e0ecc6f60bfee07810aede939796973",
+  "5b7e2fa1315a4636fe4a4b9c49169ead9e8e2d9a982c18690e64b6e364eca860",
+  "6a28a87b00a998ccdd317a14e32ef76bedf3a689b2e8ad361ca3910b9b35a460"
+ ],
+ ".claude/commands/status.md": [
+  "a403e5a778b29e6e3cb66421a70f3d9589eb3f8b4ccaed0d6ca1a756445d412b",
+  "b949ca159fa7494cfa7171c036fc7cc58a3d82ff37f983aa1cd395ba439efb0e",
+  "d06ad1ccba84c4a6846a7c26c5bab65f3e4b963dde1640446fcf9744bd041c3f"
+ ],
+ ".claude/commands/sync.md": [
+  "1a07c9b3ec50c63453e374c2b668c3a629055a92d3d4f6a95942db86e9ad745c",
+  "77271e62c6720a1fbe8381186ccb666a5c11531a0c556ca3ec17f79f441b9268",
+  "cb94f3b16c3663fa4f4eab495f3d40215bd6abbbfff21644a2a51a3add6597ab",
+  "d924545f20b1cd03506108afae325ba35ca962cc999b3dac857d1a45dbc9fb42"
+ ],
+ ".claude/commands/update.md": [
+  "59bd5ddc6d2e431c0e323267595a2beb18587c3c5584c31269756feede0f3978"
+ ],
+ ".claude/skills/_template.md": [
+  "4ffc09cf513f7483305fbe527ecacb9d3269e7a8ce11c0a17692a11c4d2533cf"
+ ],
+ ".claude/skills/content-shipped.md": [
+  "77925ee4e7d589873ac892cc459886bf18f5686e8c82101d7d6d9e05e3dfe76b"
+ ],
+ ".claude/skills/daily-briefing.md": [
+  "8a2ad5adb28054a3133d714783a39821520a88e70e70c93dd0143d9bd0fef954"
+ ],
+ ".claude/skills/github-team/SKILL.md": [
+  "9ea3774542bd6c615d15a2ad7c0b6e9237fba9b56773796531891b2e44824ea5"
+ ],
+ ".claude/skills/graphify/SKILL.md": [
+  "8099dd0a8a3b344116d8d8528d2cface787ef1a39d16ad48a57792523fadd672"
+ ],
+ ".claude/skills/skill-creator.md": [
+  "2d930ccd30b3e160f57ba080fcb1ffa115e104f75b10f825b59baaaeb70f6b07",
+  "839cd6fe8519d4bfdb27e70e564ab567c38098073824dadea629092a36b772be"
+ ],
+ ".claude/skills/software-engineering/SKILL.md": [
+  "09a8274279dfbe08843bbdd244c2b0fc5c47f95baa78e14c731b3cc89ef0832d",
+  "532ad762e8e586b657d2b5552cab2c51dc15e73c01af041161926c7e835b7ce2"
+ ],
+ ".claude/skills/status.md": [
+  "98c4202e6ca84f20f391695201430bed64d7a910b74c3a9ba98055bfa3eca237",
+  "b01582a5ec5ffbe6d967f1025b1c9c4c818016ce2c0b3e22129c2026bb46f41e"
+ ],
+ ".claude/tools/computers.py": [
+  "edb05c0acd989bad60d2d66949fccc829d53322a38d7fc96970d2ca984960d1b"
+ ],
+ ".claude/tools/get-updates.py": [
+  "2e1effbe21789af79ac1668c4b77cb89295ef6f702b41a106243a38ebc26e6ba"
+ ]
+}

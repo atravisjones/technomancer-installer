@@ -24,6 +24,15 @@ It prints one line of JSON. Act on `state`:
 - Never use `git push --force`, `git reset --hard` or `git checkout --` on these notes.
 - Anything else, or the command is missing: say so in one line and carry on.
 
+### Then: check for updates (quietly, once a week)
+If `.claude/tools/check-updates.py` exists, run:
+```bash
+uv run --quiet --no-project --python 3.12 .claude/tools/check-updates.py
+```
+If `uv` is not found, run the same file with `python3`, or `python` on Windows. It prints one line
+of JSON. If `update` is true, put one line in the briefing: "An update is ready (version {to}).
+Type `/sync` to get it." (`$sync` in ChatGPT.) Otherwise say nothing about updates.
+
 ### 0. First chat (once)
 If `state/first-chat.md` exists, this is the person's first chat. Do steps 1 and 3 below
 (today's date, then read the notes), then follow `state/first-chat.md` instead of steps
