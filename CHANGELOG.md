@@ -1,5 +1,12 @@
 # What's new
 
+## 1.2.5 - 2026-11-25
+
+- You can now pick Grok Bot as your main assistant. Setup gets your folder ready, and its last page ticks once your Bot has read it.
+- Every text box in setup has a mic, so you can talk instead of typing (in Chrome).
+- In Claude, each app on the connect page has its own Connect button, and it ticks by itself once connected.
+- The color choice only shows when Claude is your main assistant, since that is the only place it appears.
+
 ## 1.2.4 - 2026-11-25
 
 - If you use the Grok Bot app, your folder has a ready message that connects your Bots to it, and your first chat checks they really can read it.

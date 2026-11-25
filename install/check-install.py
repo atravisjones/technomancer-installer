@@ -113,6 +113,26 @@ if sys.argv[1:] == ["codex"]:
     check("ChatGPT extension offered to Chrome", offered("hehggadaopoacecdllhhajmbjkdcmajg"))
     finish()
 
+if sys.argv[1:] == ["grokbot"]:
+    juno = home / "juno"
+    print("Grok Bot as the main assistant")
+    check("workspace folder ~/juno", (juno / "CLAUDE.md").exists() and "JUNO" in read(juno / "CLAUDE.md"))
+    page = read(juno / "Connect your Grok Bots.md")
+    check("Grok Bot page makes the Bot the assistant and starts the first chat",
+          "From now on you are Juno" in page and "first-chat.md" in page and str(juno.resolve()) in page
+          and "not your cloud computer" in page and ".claude/commands" in page and "{" not in page)
+    check("folder ready for the Bot's check line", (juno / "reports").is_dir())
+    guide = read(juno / "START-HERE.md")
+    check("START-HERE explains Grok Bot, with words not slash commands",
+          "Bot in the Grok Bot app" in guide and '"start"' in guide and "`/start`" not in guide)
+    first = read(juno / "state" / "first-chat.md")
+    check("first chat is told it runs in Grok Bot, with no Chrome extension demo",
+          "You are a Bot in the Grok Bot app" in first and "Show them Chrome" not in first and "{" not in first)
+    check("current notes point at the Grok Bot page", "Connect your Grok Bots.md" in read(juno / "state" / "current.md"))
+    check("no shortcut: there is nothing to open on the folder", shortcut("Juno") == "")
+    check("Claude's color modes left out", not (juno / ".mods").exists())
+    finish()
+
 if sys.argv[1:] == ["agy"]:
     nova = home / "nova"
     ending = ".cmd" if os.name == "nt" else ".command"

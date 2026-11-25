@@ -877,6 +877,44 @@ it can do in Chrome, and checks that its tools work. Give it about fifteen minut
 """
 
 
+START_HERE_GROKBOT = """# Start here
+
+{name} is your AI assistant, running as a Bot in the Grok Bot app from xAI. You talk to it in
+plain English, on this computer or on your phone.
+
+## How it works
+
+- **Grok Bot must be open on this computer.** Your Bot lives in the cloud and reaches this
+  folder, where its notes are, only while the Grok Bot app is open here.
+- **The first message connects it.** Setup put a page called `Connect your Grok Bots.md` in this
+  folder. It holds one message: send it to a Bot and that Bot becomes {name}. The first chat
+  starts right after.
+- **Words instead of commands.** Say these in the chat:
+
+| Say this | When | What happens |
+|----------|------|--------------|
+| "start" | First thing, each day | {name} reads its notes and tells you where things stand |
+| "save" | When you are done | {name} writes a summary, so the next chat picks up from here |
+| "update" | In the middle of work | A quick checkpoint, so nothing is lost |
+| "report" | End of the week | A summary of your week |
+| "publish" | When it built a page | Puts a web page or small app online and gives you the link |
+
+## Things to try
+
+{examples}
+- "Remember that I work Tuesday to Saturday."
+
+## Good to know
+
+- **It remembers.** Tell it something once and it writes it down in this folder.
+- **It asks before it sends.** {name} will check with you before sending a message,
+  deleting anything, or changing a company system.
+- **Grok Bot asks before each command** on this computer unless you change it in Grok Bot's
+  Settings, then Computer. "Ask every time" is the safe choice.
+- **More Bots.** Send the same message to another Bot and it reads the same notes.
+- **Stuck?** Type "I'm stuck" and say what you were trying to do, or send {contact} a screenshot.
+"""
+
 START_HERE_AGY = """# Start here
 
 {name} is your AI assistant, running in Google Antigravity. You talk to it in plain English.
@@ -986,7 +1024,12 @@ for this browser instance", then use `/browser` here and click Allow within 60 s
 that does not work, say so in one line and finish this chat without it.
 
 """
+    if main == "grokbot":  # a Bot has its own computer and browser; there is no Chrome extension to show
+        chrome, chrome_on = "", False
     n = 5 if chrome_on else 4
+    opener = ("You are a Bot in the Grok Bot app. The message that\nconnected you asked you to follow "
+              "this file once, as the first chat. When it is done, delete\nthis file." if main == "grokbot" else
+              "The start command (`/start`, or `$start` in ChatGPT)\nfollows this file instead of its usual briefing, once.")
     signin = supabase_signin_file(Path(".")).name
     folder_app = "File Explorer" if IS_WINDOWS else "Finder"
     grok_file, grok_check = GROK_BOT_FILE, GROK_BOT_CHECK.as_posix()
@@ -995,8 +1038,7 @@ that does not work, say so in one line and finish this chat without it.
                       '"/Applications/Grok Bot.app" or "~/Applications/Grok Bot.app"')
     return f"""# First chat
 
-This is {user}'s first chat with you. The start command (`/start`, or `$start` in ChatGPT)
-follows this file instead of its usual briefing, once. It is a conversation, not a form:
+This is {user}'s first chat with you. {opener} It is a conversation, not a form:
 warm, plain and unhurried, about fifteen minutes in all. Ask one question at a time and
 wait for the answer. Follow up once if an answer is vague, then move on. If {user} wants to
 skip a part, skip it; if they want to stop, go straight to step {n + 3} and then step {n + 4}.
@@ -1051,6 +1093,9 @@ phone while it is on.
   Enable Remote Control. Then on the phone, open antigravity.google.com in the browser, sign in
   with the same Google account, and pick this computer. Offer to walk them through it.
   Promise nothing more.
+- **In Grok Bot:** the Grok Bot app on their phone already shows the same Bots, signed in with
+  the same account. Anything that needs this folder works only while this computer is on with
+  Grok Bot open.
 - **Either way:** the computer has to be on, awake and online, with the app open. Suggest
   keeping it plugged in and setting it not to sleep while plugged in (on a Mac: System
   Settings, then Battery or Energy; on Windows: Settings, then System, then Power).
@@ -1103,7 +1148,8 @@ list. This check only reads: never send, change or delete anything.
   you can actually use. Otherwise, count today's unread emails in Gmail, list today's events
   in Google Calendar, and name the three most recently changed files in Google Drive. If they
   are not connected: in Claude, claude.ai, then Settings, then Connectors; in ChatGPT, the
-  app's Plugins, then Gmail, Google Calendar and Google Drive, with their Google account.
+  app's Plugins, then Gmail, Google Calendar and Google Drive, with their Google account; in
+  Grok Bot, its settings for connected apps (one connection serves all their Bots).
 - **The company's systems.** For each system in Part 3 of `CLAUDE.md`: if it is connected,
   pull one recent record (a job from the CRM, a call from the phone system) with the skill it
   names, and say what you found in one line. If it is not connected yet, say so: the next
@@ -1180,6 +1226,8 @@ def start_here(name, a, main="claude"):
         return START_HERE_CODEX.format(name=name, examples=examples, contact=CONTACT, help="$get-help")
     if main == "agy":
         return START_HERE_AGY.format(name=name, examples=examples, contact=CONTACT, help="/get-help")
+    if main == "grokbot":
+        return START_HERE_GROKBOT.format(name=name, examples=examples, contact=CONTACT)
     colors = bool(a.get("colors", True))
     tint_row = "| `/tint company` | Colors this chat. Try `company`, `personal`, or `off` |\n" if colors else ""
     colors_line = ("- **Colors mean topics.** Orange is work, green is personal. The shape on\n"
@@ -1574,6 +1622,9 @@ def write_mac_shortcut(name, workspace, log, main="claude"):
 
 
 def write_shortcut(name, workspace, log, main="claude"):
+    if main == "grokbot":  # nothing to open on the folder: the person talks to it in the Grok Bot app
+        log.append(f"No shortcut needed: you talk to {name} in the Grok Bot app.")
+        return
     if IS_MAC:
         write_mac_shortcut(name, workspace, log, main)
         return
@@ -1763,7 +1814,10 @@ def configure(a):
         today = datetime.date.today().isoformat()
         (workspace / "state" / "current.md").write_text(
             f"# Current State\n\nLast updated: {today}\n\n## Active Priorities\n\n"
-            f"1. Get to know {name}: try `{'$start' if main == 'codex' else '/start'}`, then ask a question about your work\n\n"
+            + (f"1. Get to know {name}: in the Grok Bot app, send a Bot the message in `{GROK_BOT_FILE}`\n\n"
+               if main == "grokbot" else
+               f"1. Get to know {name}: try `{'$start' if main == 'codex' else '/start'}`, then ask a question about your work\n\n")
+            +
             "## Open Threads\n\n- None yet\n", encoding="utf-8")
         # A new folder's first /start checks the tools and asks about the work (it deletes this).
         (workspace / "state" / "first-chat.md").write_text(first_chat(name, a, main), encoding="utf-8")
@@ -1790,7 +1844,7 @@ def configure(a):
     extras = chosen_extras(a)
     write_extras(a, workspace, name, extras, log, before)
     write_supabase_signin(workspace)
-    write_grok_bot_guide(workspace, name)
+    write_grok_bot_guide(workspace, name, main)
     if not os.environ.get("ASSISTANT_SKIP_INSTALLS"):
         # Claude's pieces, if they were not started with the page; the desktop app only for the main one.
         run_installs(claude=with_claude, claude_app=main == "claude",
@@ -1828,6 +1882,9 @@ def configure(a):
     if main in APP_WHERE:
         tools.append({"id": main, "label": EXTRAS[main]["label"], "account": EXTRAS[main]["account"],
                       "where": APP_WHERE[main]})
+    elif main == "grokbot":
+        tools.append({"id": main, "label": "Grok Bot", "account": "a Grok plan of your own that includes Grok Bot",
+                      "where": "in the Grok Bot app"})
     return {"ok": True, "log": log, "folder": str(workspace), "assistant": name, "main": main,
             "tools": tools,
             "user": a["user"] if a["user"] != "the owner of this computer" else "",
@@ -4857,24 +4914,36 @@ GROK_BOT_FILE = "Connect your Grok Bots.md"
 GROK_BOT_CHECK = Path("reports") / "grok-bot-check.md"
 
 
-def write_grok_bot_guide(workspace, name):
+def write_grok_bot_guide(workspace, name, main="claude"):
     """A page in the folder with the message that connects someone's Grok Bots (xAI's Grok Bot app) to
     this folder. Bots live in the cloud and reach this computer only while the app is open here, and
     only when told to use the local computer, so the message says so. The check file it asks for lets
-    the assistant confirm a Bot really read the folder before it shows a check mark."""
+    the assistant confirm a Bot really read the folder before it shows a check mark. When Grok Bot is
+    the main assistant, the Bot becomes the assistant itself and runs the first chat once."""
     folder = workspace.resolve()
     machine = "this Windows PC" if IS_WINDOWS else "this Mac"
     check = folder / GROK_BOT_CHECK
+    who = (f"From now on you are {name}, my assistant. Your folder is at {folder}" if main == "grokbot" else
+           f"From now on you're part of my assistant team, together with {name}, my assistant on this "
+           f"computer. {name}'s folder is at {folder}")
+    first = (f" After that, as our first chat, follow {folder / 'state' / 'first-chat.md'} once, step by "
+             f"step, one question at a time." if main == "grokbot" else "")
     message = (
-        f"From now on you're part of my assistant team, together with {name}, my assistant on this "
-        f"computer. {name}'s folder is at {folder} on my local computer ({machine}, not your cloud "
+        f"{who} on my local computer ({machine}, not your cloud "
         f"computer), reached through local computer access. Before any task, read CLAUDE.md in that "
         f"folder first, then the files it points to. Treat them as the truth about me, my work and how "
-        f"I like things done. Never change, move or delete anything in that folder unless I ask, and "
-        f"never copy keys or passwords from it into a chat. Remember this.\n\n"
+        f"I like things done. When I say start, save, update, report or publish, follow the file with "
+        f"that name in the .claude/commands folder there. Never change, move or delete anything in that "
+        f"folder unless I ask or a file there tells you to, and never copy keys or passwords from it "
+        f"into a chat. Remember this.\n\n"
         f"To check it worked: read the folder now on my local computer, then add one line to the end of "
-        f"{check} (make the file if it is not there, and keep any lines already in it) with today's date, "
-        f"my name from CLAUDE.md and your own Bot name. Then tell me you're done.")
+        f"{check} (make the file if it is not there, and keep any lines already in it) with today's date "
+        f"written as YYYY-MM-DD, my name from CLAUDE.md and your own Bot name. Then tell me you're done.{first}")
+    step4 = (f"4. That Bot is now {name}. Its first chat starts by itself after that message: answer\n"
+             f"   its questions there. To connect more Bots later, send each one the same message."
+             if main == "grokbot" else
+             f"4. Do the same for each Bot you want connected. Then tell {name}: it checks that the Bot\n"
+             f"   really read your folder.")
     text = f"""# Connect your Grok Bots
 
 If you use the Grok Bot app from xAI, your Bots can read this folder, so they know what {name}
@@ -4886,8 +4955,7 @@ grok.com cannot reach this computer.
 2. In Grok Bot, open the Bot you want to connect, or click + to make a new one.
 3. Copy the whole message below, paste it to the Bot and send it. If Grok Bot asks to run
    commands on your computer, choose Allow once.
-4. Do the same for each Bot you want connected. Then tell {name}: it checks that the Bot
-   really read your folder.
+{step4}
 
 Grok Bot asks before each command on this computer unless you change it. To check, open Grok
 Bot's Settings, then Computer, then Your computer, and look at "Execution on this computer".
@@ -4933,7 +5001,54 @@ def write_agy_settings(workspace, never_asks, log):
 
 # --- Which assistant is the main one: detected from what is already here ---------------
 
-MAINS = ("claude", "codex", "agy")   # the ones setup can build its walk-through around
+MAINS = ("claude", "codex", "agy", "grokbot")   # the ones setup can build its walk-through around
+
+
+def grok_bot_app():
+    """Where xAI's Grok Bot desktop app is on this computer, or None. Setup never installs it."""
+    if IS_WINDOWS:
+        spots = [Path(os.environ.get(var, "")) / "Grok Bot" / "Grok Bot.exe"
+                 for var in ("ProgramFiles(x86)", "ProgramFiles") if os.environ.get(var)]
+        if os.environ.get("LOCALAPPDATA"):
+            spots.append(Path(os.environ["LOCALAPPDATA"]) / "Programs" / "Grok Bot" / "Grok Bot.exe")
+        return next((str(s) for s in spots if s.is_file()), None)
+    if IS_MAC:
+        return next((str(b / "Grok Bot.app") for b in (Path("/Applications"), Path.home() / "Applications")
+                     if (b / "Grok Bot.app").is_dir()), None)
+    return None
+
+
+def open_grok_bot():
+    app = grok_bot_app()
+    if app is None:
+        return False
+    try:
+        if IS_WINDOWS:
+            os.startfile(app)  # noqa: S606 - a fixed, found path
+        else:
+            subprocess.Popen(["/usr/bin/open", app], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL)
+        return True
+    except OSError:
+        return False
+
+
+def grok_bot_status(folder):
+    """The paste-in message for this folder, and each Bot that has added today's line to the check file."""
+    if not folder:
+        return {"ok": False, "error": "That is not an assistant folder."}
+    workspace = Path(folder).resolve()  # resolved, so ".." or a link cannot point it anywhere else
+    if workspace.parent != Path.home().resolve() or not (workspace / ".assistant-name").is_file():
+        return {"ok": False, "error": "That is not an assistant folder."}
+    guide = workspace / GROK_BOT_FILE
+    text = guide.read_text(encoding="utf-8", errors="replace") if guide.exists() else ""
+    parts = text.split("```")
+    check = workspace / GROK_BOT_CHECK
+    today = datetime.date.today().isoformat()
+    lines = check.read_text(encoding="utf-8", errors="replace").splitlines() if check.exists() else []
+    bots = [line.strip().lstrip("-* ﻿")[:120] for line in lines if today in line]
+    return {"ok": True, "app": grok_bot_app() is not None, "message": parts[1].strip() if len(parts) >= 3 else "",
+            "bots": bots}
 CODEX_LOGIN = {"running": False}
 DETECTED = {}
 OURS = "  # set by assistant setup"
@@ -5003,7 +5118,8 @@ def _assistant_rows():
     return {"claude": {"signedIn": got["claude"], "app": got["claude_app"]},
             "codex": {"signedIn": got["codex"], "app": got["codex_app"]},
             "grok": {"signedIn": got["grok"], "app": None},
-            "agy": {"signedIn": None, "app": got["agy_app"]}}  # nothing proves an Antigravity sign-in
+            "agy": {"signedIn": None, "app": got["agy_app"]},  # nothing proves an Antigravity sign-in
+            "grokbot": {"signedIn": None, "app": grok_bot_app() is not None}}  # nor a Grok Bot one
 
 
 def detect():
@@ -5015,6 +5131,7 @@ def detect():
         "codex": {"installed": tool_path("codex") is not None, "signedIn": bool(rows["codex"]["signedIn"])},
         "grok": {"installed": tool_path("grok") is not None, "signedIn": bool(rows["grok"]["signedIn"])},
         "agy": {"installed": tool_path("agy") is not None, "signedIn": None},  # no quiet way to ask it
+        "grokbot": {"installed": grok_bot_app() is not None, "signedIn": None},
     }
     DETECTED.clear()
     DETECTED.update(found)
@@ -5375,7 +5492,10 @@ class Handler(BaseHTTPRequestHandler):
                                        "account": "your work Claude account",
                                        "on": "claude" in _install_setting("ASSISTANT_DEFAULT_TOOLS", "A-Za-z,").lower().split(",")}]
                           + [{"id": t, "label": s["label"], "maker": s["maker"] + ", " + s.get("where") if s.get("where") else s["maker"] + ", " + APP_WHERE.get(t, "in the terminal"),
-                              "account": s["account"], "on": t in DEFAULT_TOOLS} for t, s in EXTRAS.items()]],
+                              "account": s["account"], "on": t in DEFAULT_TOOLS} for t, s in EXTRAS.items()]
+                          # Main only: Grok Bot is an app setup cannot install, so it is never ticked as an extra.
+                          + [{"id": "grokbot", "label": "Grok Bot", "maker": "xAI's assistant, in the Grok Bot app",
+                              "account": "a Grok plan of your own that includes Grok Bot", "on": False, "extra": False}]],
             })
         else:
             self.send({"ok": False}, code=404)
@@ -5501,6 +5621,10 @@ class Handler(BaseHTTPRequestHandler):
             self.send(chatgpt_apps_status())
         elif self.path == "/chatgpt/apps/connect":
             self.send(chatgpt_app_connect(str(body.get("app") or "")))
+        elif self.path == "/grokbot/status":
+            self.send(grok_bot_status(str(body.get("folder") or "")))
+        elif self.path == "/grokbot/open":
+            self.send({"ok": True, "opened": open_grok_bot()})
         elif self.path == "/quit":
             self.send({"ok": True})
             threading.Thread(target=self.server.shutdown, daemon=True).start()

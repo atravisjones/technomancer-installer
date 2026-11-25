@@ -435,6 +435,32 @@
   .first-steps h2 b { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; color: #fff;
     background: linear-gradient(135deg, hsl(var(--h) 70% 48%), hsl(calc(var(--h) + 30) 70% 42%)); }
   .first-steps #fc-command { font-size: 20px; }
+  .first-steps #fc-command.long { font-size: 14px; white-space: normal; text-align: left; }
+  /* Voice typing: a small mic on every free-text box. The script only adds it when the browser supports speech. */
+  .mic-wrap { position: relative; display: block; }
+  .mic-wrap > input, .mic-wrap > textarea { display: block; padding-right: 50px; }
+  button.mic {
+    position: absolute; right: 9px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; padding: 0;
+    display: grid; place-items: center; cursor: pointer; color: var(--soft); background: transparent;
+    border: 1px solid var(--line); border-radius: 50%; transition: color .2s, border-color .2s, background .2s;
+  }
+  .mic-wrap > textarea ~ button.mic { top: 9px; transform: none; }
+  .mic-wrap > [hidden] ~ button.mic { display: none; }
+  button.mic svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  button.mic:hover { color: var(--accent); border-color: var(--accent); }
+  button.mic[aria-pressed=true] {
+    color: var(--accent-ink); background: var(--accent); border-color: var(--accent);
+    animation: mic-pulse 1.3s ease-out infinite;
+  }
+  @keyframes mic-pulse {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+    100% { box-shadow: 0 0 0 12px color-mix(in srgb, var(--accent) 0%, transparent); }
+  }
+  .mic-note { margin: 6px 0 0; }
+  .mic-note.bad { color: var(--bad); font-weight: 600; }
+  @media (prefers-reduced-motion: reduce) {
+    button.mic[aria-pressed=true] { animation: none; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 30%, transparent); }
+  }
 </style>
 </head>
 <body>
@@ -509,7 +535,7 @@
     <p class="lede">This is the AI you will talk to every day. Setup installs its app, helps you sign in, and adds a shortcut to open it.</p>
     <section>
       <div id="main-list"></div>
-      <p class="hint" style="margin-top:12px">Not sure? Pick the one you already pay for. These are AI assistants from three different companies. Gemini's app is called Antigravity. Already pay for another one too? You can add it in your first chat.</p>
+      <p class="hint" style="margin-top:12px">Not sure? Pick the one you already pay for. These are AI assistants from different companies. Gemini's app is called Antigravity. Grok Bot is xAI's app, where each assistant is called a Bot. Already pay for another one too? You can add it in your first chat.</p>
     </section>
     <section id="team-section" hidden>
       <h2>Your company suggests adding these</h2>
@@ -709,6 +735,27 @@
     <div class="nav"><span></span><button class="go next" data-go="4.2">Next: about your company</button></div>
   </div>
 
+  <div class="page" data-page="4.7" hidden>
+    <h1><span class="the-name">Jarvis</span> is ready</h1>
+    <p class="lede">Grok Bot is xAI's app, and it is where you will talk to <span class="the-name">Jarvis</span>. Each assistant in it is called a Bot. Open it and sign in. Your first chat comes at the end of setup.</p>
+    <p class="note setup-issues" hidden></p>
+    <section>
+      <h2>Your Grok plan</h2>
+      <p style="margin:0">Grok Bot needs a Grok plan that includes it, like SuperGrok. Bots run in the cloud, and they reach <span class="the-name">Jarvis</span>'s folder on this computer only while the Grok Bot app is open here.</p>
+    </section>
+    <ul class="conn" id="gb-app"><li><span class="mark"></span><span class="app"><b>The Grok Bot app</b><small id="gb-app-text">Checking…</small></span></li></ul>
+    <button class="go" id="gb-open">Open Grok Bot</button>
+    <p class="hint" id="gb-note" style="text-align:center;margin:12px 0 20px" role="status">Setup cannot install Grok Bot for you. If it is not on this computer, download it from xAI's website (x.ai), install it, sign in, then come back here.</p>
+    <section>
+      <h2>Check this in Grok Bot</h2>
+      <ol class="next" style="margin-bottom:0">
+        <li><b>How often it asks.</b> Open <b>Settings</b>, then <b>Computer</b>, then <b>Your computer</b>. <b>Execution on this computer</b> set to <b>Ask every time</b> means it checks with you before each command here. That is the safe choice.</li>
+        <li><b>Your other apps.</b> Grok Bot connects to things like Gmail and Google Drive in its own settings. One connection serves all your Bots.</li>
+      </ol>
+    </section>
+    <div class="nav"><span></span><button class="go next" data-go="4.2">Next: about your company</button></div>
+  </div>
+
   <div class="page" data-page="4.2" hidden>
     <h1>About <span class="the-company">your company</span></h1>
     <p class="lede"><span class="the-name">Jarvis</span> looks your company up on the web and lists problems that companies like it often run into. Tick the big ones, so it knows what matters to you from day one.</p>
@@ -891,6 +938,10 @@
       <p style="margin:0 0 10px" id="fc-paste">Paste it into the message box and press Enter.</p>
       <button type="button" class="try" id="fc-copy" style="width:100%"><code id="fc-command">/start</code><small id="fc-copy-tag">Click to copy</small></button>
       <p class="hint" id="fc-note" role="status" style="margin:10px 0 0"></p>
+      <div id="gb-bots-box" hidden>
+        <h2><b>3</b>Wait for the tick</h2>
+        <ul class="conn" id="gb-bots"></ul>
+      </div>
     </section>
 
     <details class="what">
@@ -1006,12 +1057,16 @@ function refreshTools() {
   const claudeOn = pickedTools().includes('claude')
   $('remote').closest('label').hidden = $('tint').closest('label').hidden = !claudeOn
   $('color-hint').hidden = !claudeOn
+  // The color only shows up in Claude's color-coded chats, so it is asked only when Claude is the main one.
+  $('color-label').closest('section').hidden = main !== 'claude'
+  $('style-label').querySelector('b').textContent = main === 'claude' ? '3' : '2'
   const side = claudeOn && main !== 'claude' ? ' (Claude app)' : ''
   $('remote').nextElementSibling.firstChild.textContent = 'Use it from your phone' + side
   $('tint').nextElementSibling.firstChild.textContent = 'Color-coded chats' + side
 }
 const codexMain = () => Boolean(result && result.main === 'codex')
 const agyMain = () => Boolean(result && result.main === 'agy')
+const grokbotMain = () => Boolean(result && result.main === 'grokbot')
 
 // Codex as the main assistant: is it signed in, and open the ChatGPT app on the folder.
 function showCodex(a) {
@@ -1055,9 +1110,13 @@ function presetRow() {
 }
 
 // The first chat starts from one command, copied for them when they open the app.
-const firstCommand = () => (codexMain() ? '$start' : '/start')
-const finalLabel = () => `Open ${codexMain() ? 'ChatGPT' : agyMain() ? 'Antigravity' : 'Claude'} and copy ${firstCommand()}`
+let gbMessage = ''  // Grok Bot: the paste-in message from the folder's own page
+const GROK_PAGE = '"Connect your Grok Bots.md"'
+const firstCommand = () => (grokbotMain() ? gbMessage || 'the message in Connect your Grok Bots.md' : codexMain() ? '$start' : '/start')
+const finalLabel = () => grokbotMain() ? 'Open Grok Bot and copy the message'
+  : `Open ${codexMain() ? 'ChatGPT' : agyMain() ? 'Antigravity' : 'Claude'} and copy ${firstCommand()}`
 async function copyFirst() {
+  if (grokbotMain() && !gbMessage) return false  // never copy a placeholder in place of the message
   try { await navigator.clipboard.writeText(firstCommand()); return true } catch (error) { return false }
 }
 
@@ -1110,12 +1169,17 @@ const remoteRow = () => [false, 'Tech support', done.remote ? 'Marked done by yo
 
 function showFinale() {
   $('final-user').textContent = result && result.user ? `, ${result.user}` : ''
-  $('final-app').textContent = codexMain() ? 'ChatGPT' : agyMain() ? 'Antigravity' : 'Claude'
+  $('final-app').textContent = grokbotMain() ? 'Grok Bot' : codexMain() ? 'ChatGPT' : agyMain() ? 'Antigravity' : 'Claude'
   $('fc-orb').textContent = ((result ? result.assistant : chosenName()).match(/[A-Za-z0-9]/) || ['A'])[0].toUpperCase()
-  $('fc-command').textContent = firstCommand()
-  $('fc-paste').textContent = codexMain() ? 'Paste it into the message box and press Enter. If a list pops up, press Enter again to send.'
+  const long = grokbotMain()
+  $('fc-command').textContent = long && gbMessage ? gbMessage.slice(0, 90) + '…' : firstCommand()
+  $('fc-command').classList.toggle('long', long)
+  $('gb-bots-box').hidden = !long
+  $('fc-paste').textContent = grokbotMain() ? 'In Grok Bot, click + to make a new Bot (or open one you have), paste the message and send it. If it asks to run commands on this computer, choose Allow once.'
+    : codexMain() ? 'Paste it into the message box and press Enter. If a list pops up, press Enter again to send.'
     : 'Paste it into the message box and press Enter.'
-  $('fc-folder').textContent = codexMain() ? 'Not on your assistant\'s folder? Click Choose project under the message box, add a project, and select:'
+  $('fc-folder').textContent = grokbotMain() ? 'The message already names your assistant\'s folder:'
+    : codexMain() ? 'Not on your assistant\'s folder? Click Choose project under the message box, add a project, and select:'
     : agyMain() ? 'Not on your assistant\'s folder? Add this folder as a project in Antigravity:'
       : 'If it asks for a folder, click the Code tab, then Select folder, and choose:'
   if (!$('final-open').dataset.clicked && !$('final-open').disabled) $('final-open').textContent = finalLabel()
@@ -1123,7 +1187,13 @@ function showFinale() {
   const sysWords = sys.length ? ' ' + sys.map(s => `${s.label} ${s.state === 'live' ? 'connected' : 'to connect in your first chat'}`).join(', ') + '.' : ''
   const setUp = restored ? `Its name, voice, notes and company info came from your other computer.${sysWords}`
     : `Its folder, notes and company profile.${sysWords}`
-  const rows = agyMain() ? [
+  const rows = grokbotMain() ? [
+    [true, `${result.assistant} is set up`, setUp, 0],
+    appRow('grokbot', 'The Grok Bot app', 4.7),
+    [Boolean(done.profile), 'What matters to your company', done.profile ? 'Saved in its notes.' : 'Not filled in yet.', 4.2],
+    [Boolean(done.backup), 'Private backup on GitHub', done.backup ? 'Saved to your private GitHub.' : done.github ? 'GitHub is connected. Open its page and click Back up my assistant.' : 'Not connected yet.', 9],
+    [done.publish >= 2, 'Publishing websites', done.publish >= 2 ? 'Vercel and Supabase are connected.' : 'Not finished: this is what lets it put pages online for you.', 9.5],
+  ] : agyMain() ? [
     [true, `${result.assistant} is set up`, setUp, 0],
     accountRow('agy', 'Antigravity account', 4.6),
     appRow('agy', 'The Antigravity app', 4.6),
@@ -1215,7 +1285,15 @@ function agyRoute(n, from) {
   if (n === 8) return from === 9 ? 7 : 9
   return n
 }
-const flowPages = () => agyMain() ? [4.6, 4.2, 5.5, 7, 9, 9.5, 10, 11]
+// Grok Bot as the main assistant: [4.7, 4.2, 5.5, 9, 9.5, 10, 11]. No Chrome extension (5), no slash
+// commands to practise (7) and no Claude connectors (8): a Bot has its own apps and computer.
+function grokRoute(n, from) {
+  if (n === 4) return 4.7
+  if (n === 5) return from === 5.5 ? 4.2 : 5.5
+  if (n === 7 || n === 8) return from === 9 ? 5.5 : 9
+  return n
+}
+const flowPages = () => grokbotMain() ? [4.7, 4.2, 5.5, 9, 9.5, 10, 11] : agyMain() ? [4.6, 4.2, 5.5, 7, 9, 9.5, 10, 11]
   : codexMain() ? [4.5, 4.2, 5, 5.5, 7, 9, 9.5, 10, 11]
     : [4, 4.2, 5, 5.5, 7, 8, 9, 9.5, 10, 11]
 // A restored assistant steps over the pages that were done on the first computer.
@@ -1230,6 +1308,7 @@ function restoredRoute(n) {
 }
 function show(n, fromList = false) {
   if (agyMain()) n = agyRoute(n, page)
+  else if (grokbotMain()) n = grokRoute(n, page)
   if (restored) n = restoredRoute(n)
   page = n
   // Only a "Finish it" click sets this; any other move (Back, a step's own buttons) clears it.
@@ -1268,6 +1347,9 @@ function show(n, fromList = false) {
   if (n !== 9) { stopTimers('gh'); clearTimeout(orgTimer) }
   if (n !== 9.5) clearTimeout(publishTimer)
   if (n !== 10) stopTimers('assist')
+  if (n === 4.7 || (n === 11 && grokbotMain())) watchGrokBot()
+  else if (n === 10 && grokbotMain()) post('/grokbot/status', { folder: result.folder }).then(showGrokBot).catch(() => {})
+  else stopTimers('gb')
   if (n !== 1) {  // leaving the typing greeting: stop it, and leave the full line showing
     clearInterval(sayTimer)
     $('meet').classList.remove('typing')
@@ -1412,7 +1494,8 @@ const LOGOS = {
   agy: `<svg aria-hidden="true" focusable="false" height="1em" style="flex:none;line-height:1" viewBox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z" fill="#3186FF"></path><path d="M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z" fill="url(#lobe-icons-gemini-0-_R_0_)"></path><path d="M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z" fill="url(#lobe-icons-gemini-1-_R_0_)"></path><path d="M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z" fill="url(#lobe-icons-gemini-2-_R_0_)"></path><defs><linearGradient gradientUnits="userSpaceOnUse" id="lobe-icons-gemini-0-_R_0_" x1="7" x2="11" y1="15.5" y2="12"><stop stop-color="#08B962"></stop><stop offset="1" stop-color="#08B962" stop-opacity="0"></stop></linearGradient><linearGradient gradientUnits="userSpaceOnUse" id="lobe-icons-gemini-1-_R_0_" x1="8" x2="11.5" y1="5.5" y2="11"><stop stop-color="#F94543"></stop><stop offset="1" stop-color="#F94543" stop-opacity="0"></stop></linearGradient><linearGradient gradientUnits="userSpaceOnUse" id="lobe-icons-gemini-2-_R_0_" x1="3.5" x2="17.5" y1="13.5" y2="12"><stop stop-color="#FABC12"></stop><stop offset=".46" stop-color="#FABC12" stop-opacity="0"></stop></linearGradient></defs></svg>`,
   grok: `<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" height="1em" style="flex:none;line-height:1" viewBox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M9.27 15.29l7.978-5.897c.391-.29.95-.177 1.137.272.98 2.369.542 5.215-1.41 7.169-1.951 1.954-4.667 2.382-7.149 1.406l-2.711 1.257c3.889 2.661 8.611 2.003 11.562-.953 2.341-2.344 3.066-5.539 2.388-8.42l.006.007c-.983-4.232.242-5.924 2.75-9.383.06-.082.12-.164.179-.248l-3.301 3.305v-.01L9.267 15.292M7.623 16.723c-2.792-2.67-2.31-6.801.071-9.184 1.761-1.763 4.647-2.483 7.166-1.425l2.705-1.25a7.808 7.808 0 00-1.829-1A8.975 8.975 0 005.984 5.83c-2.533 2.536-3.33 6.436-1.962 9.764 1.022 2.487-.653 4.246-2.34 6.022-.599.63-1.199 1.259-1.682 1.925l7.62-6.815"></path></svg>`,
 }
-const NAMES = { claude: 'Claude', codex: 'ChatGPT', agy: 'Gemini', grok: 'Grok' }
+LOGOS.grokbot = LOGOS.grok
+const NAMES = { claude: 'Claude', codex: 'ChatGPT', agy: 'Gemini', grok: 'Grok', grokbot: 'Grok Bot' }
 let logoCopies = 0
 // Gemini's gradients have ids: each copy gets its own, or the second one renders blank.
 const logoFor = id => {
@@ -1433,7 +1516,7 @@ async function load() {
   $('user').value = options.user
   for (const el of document.querySelectorAll('.the-contact')) el.textContent = options.contact || 'your manager'
   setupBusiness()
-  const toolOrder = ['claude', 'codex', 'agy', 'grok']
+  const toolOrder = ['claude', 'codex', 'agy', 'grokbot', 'grok']
   for (const tool of [...(options.tools || [])].sort((a, b) => toolOrder.indexOf(a.id) - toolOrder.indexOf(b.id))) {
     const add = (type, list, checked) => {
       const row = Object.assign(document.createElement('label'), { className: 'check' })
@@ -1450,7 +1533,7 @@ async function load() {
       list.append(row)
     }
     if (tool.canMain) add('radio', $('main-list'), tool.id === options.main)
-    add('checkbox', $('tool-list'), tool.on)
+    if (tool.extra !== false) add('checkbox', $('tool-list'), tool.on)  // Grok Bot is main only
   }
   refreshTools()
   for (const [name, hex] of Object.entries(options.colors)) {
@@ -2216,9 +2299,12 @@ askDrill()
 let connTimer
 function showConnectors(c) {
   let on = 0
+  const names = (c.connected || []).map(name => String(name).trim().toLowerCase())  // Claude's names, any case
   for (const row of $('conn-list').children) {
-    const yes = (c.connected || []).includes(row.dataset.conn)
+    const yes = names.includes(row.dataset.conn.toLowerCase())
     row.classList.toggle('on', yes)
+    const button = row.querySelector('button')
+    if (button) button.hidden = yes
     if (yes) on += 1
   }
   const total = $('conn-list').children.length
@@ -2230,12 +2316,19 @@ function showConnectors(c) {
     : on === total ? 'All of them are connected.' : c.checking ? 'Checking…' : 'Each one gets a tick here once it is connected.'
   clearTimeout(connTimer)
   if (page === 8 && on < total && c.state !== 'unknown') {
-    connTimer = setTimeout(async () => showConnectors(await post('/connectors/status')), 6000)
+    connTimer = setTimeout(async () => showConnectors(await post('/connectors/status')), 4000)
   }
 }
 $('conn-open').onclick = async () => {
   await openSite('connectors')  // opening the page is not a connection: only the checked list ticks
   showConnectors(await post('/connectors/status'))
+}
+// Each row gets its own Connect: it opens Claude's connectors page in Chrome, and the row ticks once it is on.
+for (const row of $('conn-list').children) {
+  const button = Object.assign(document.createElement('button'), { type: 'button', className: 'copy', textContent: 'Connect' })
+  button.style.marginLeft = 'auto'
+  button.onclick = () => $('conn-open').onclick()
+  row.append(button)
 }
 $('conn-check').onclick = async () => showConnectors(await post('/connectors/status', { fresh: true }))
 
@@ -2509,11 +2602,54 @@ async function openAntigravity() {
 }
 $('ag-open').onclick = openAntigravity
 
+// Grok Bot: is the app here (page 4.7), and which Bots have read the folder today (page 11).
+// Only a line the Bot wrote in the folder ticks: a click or a launch never does.
+function showGrokBot(s) {
+  if (!s || !s.ok) return
+  if (s.message) gbMessage = s.message
+  $('gb-app').firstElementChild.classList.toggle('on', s.app === true)
+  $('gb-app-text').textContent = s.app ? 'On this computer.' : 'Not found on this computer yet.'
+  if (page === 11 && grokbotMain()) {
+    $('fc-command').textContent = gbMessage ? gbMessage.slice(0, 90) + '…' : firstCommand()
+    $('fc-command').classList.add('long')
+    $('gb-bots-box').hidden = false
+    const bots = s.bots || []
+    $('gb-bots').replaceChildren(...(bots.length ? bots : ['']).map(line => {
+      const li = document.createElement('li')
+      if (line) li.className = 'on'
+      li.append(Object.assign(document.createElement('span'), { className: 'mark' }),
+        Object.assign(document.createElement('span'), { className: 'app', textContent: line
+          || 'No Bot has read the folder yet. This ticks by itself once your Bot answers. Keep Grok Bot open on this computer.' }))
+      return li
+    }))
+  }
+}
+async function watchGrokBot() {
+  stopTimers('gb')
+  if (!(page === 4.7 || (page === 11 && grokbotMain()))) return
+  try { showGrokBot(await post('/grokbot/status', { folder: result ? result.folder : '' })) } catch (error) {}
+  stopTimers('gb')
+  if (page === 4.7 || (page === 11 && grokbotMain())) timers.gb = setTimeout(watchGrokBot, 3000)
+}
+$('gb-open').onclick = async () => {
+  const reply = await post('/grokbot/open').catch(() => ({}))
+  $('gb-note').textContent = reply.opened ? 'Grok Bot is opening. Sign in if it asks, then come back here and click Next.'
+    : 'Grok Bot is not on this computer yet. Download it from xAI\'s website (x.ai), install it, sign in, then come back here.'
+}
+
 $('final-open').onclick = async () => {
   $('final-open').dataset.clicked = '1'
   const copied = await copyFirst()  // while the click still counts: browsers allow copying only then
-  $('fc-note').textContent = copied ? `${firstCommand()} is copied. Paste it into the message box and press Enter.`
-    : `Type ${firstCommand()} in the message box and press Enter.`
+  $('fc-note').textContent = grokbotMain()
+    ? (copied ? 'The message is copied. In Grok Bot, paste it to a Bot and send it.'
+      : `Open ${GROK_PAGE} in your assistant's folder and copy the message from there.`)
+    : copied ? `${firstCommand()} is copied. Paste it into the message box and press Enter.`
+      : `Type ${firstCommand()} in the message box and press Enter.`
+  if (grokbotMain()) {
+    const reply = await post('/grokbot/open').catch(() => ({}))
+    $('final-open').textContent = reply.opened ? 'Grok Bot is opening…' : 'Open Grok Bot from your Applications or Start menu'
+    return
+  }
   if (agyMain()) {
     const opening = await openAntigravity()
     if (!wantAgy) $('final-open').textContent = opening ? 'Antigravity is opening…' : 'Open Antigravity from your Applications or Start menu'
@@ -2539,6 +2675,143 @@ $('finish').onclick = async () => {
 }
 
 load().then(() => { show(0); startIntro(); post('/installs/status').then(showInstalls) })
+
+// Voice typing. Adds a mic button to every free-text box when the browser has speech recognition (Chrome, Edge).
+// Safari and Firefox get nothing, so nothing broken shows. Opt a box out with the data-no-voice attribute.
+;(() => {
+  const Speech = window.SpeechRecognition || window.webkitSpeechRecognition
+  if (!Speech) return
+  const SKIP = /token|key|code|secret|pass|drill/i // keys, codes, passwords, and the "/start" practice box
+  const FIELDS = 'textarea, input:not([type]), input[type=text]'
+  const ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>'
+  const BLOCKED = 'Chrome blocked the microphone. Click the camera icon in the address bar to allow it.'
+  const WORDS = {
+    'not-allowed': BLOCKED,
+    'service-not-allowed': BLOCKED,
+    'no-speech': 'I did not hear anything. Click the mic and try again.',
+    'audio-capture': 'I could not find a microphone on this computer.',
+    network: 'Voice typing needs an internet connection. Check it and try again.'
+  }
+  const PRIVACY = 'Chrome sends what you say to Google to turn it into text.'
+  let live = null   // the one box that is listening right now
+  let ending = null // a box that was told to stop and is still delivering its last words
+
+  const say = (field, text, bad) => {
+    clearTimeout(field.micNoteTimer)  // a newer message replaces any clean-up still waiting
+    const wrap = field.closest('.mic-wrap')
+    let p = wrap.nextElementSibling
+    if (p && !p.classList.contains('mic-note')) p = null
+    if (!text) return p && p.remove()
+    if (!p) {
+      p = document.createElement('p')
+      p.className = 'hint mic-note'
+      p.setAttribute('role', 'status')
+      wrap.after(p)
+    }
+    p.textContent = text
+    p.classList.toggle('bad', !!bad)
+  }
+
+  const paint = s => {
+    const { field } = s
+    let chunk = [...s.results].map(r => r[0].transcript).join('').trim()
+    const lead = chunk && s.before && !/\s$/.test(s.before) ? ' ' : ''
+    const tail = chunk && s.after && !/^\s/.test(s.after) ? ' ' : ''
+    const room = field.maxLength > 0 ? field.maxLength - s.before.length - s.after.length - lead.length - tail.length : Infinity
+    chunk = chunk.slice(0, Math.max(0, room))
+    let value = s.before + lead + chunk + tail + s.after
+    if (field.maxLength > 0) value = value.slice(0, field.maxLength)
+    field.value = value
+    const caret = Math.min(value.length, (s.before + lead + chunk).length)
+    try { field.setSelectionRange(caret, caret) } catch (e) {}
+    field.dispatchEvent(new Event('input', { bubbles: true })) // so the page's own listeners update
+  }
+
+  // hard = drop it now; otherwise let the last words arrive first
+  const stop = hard => {
+    const s = live
+    if (!s) return
+    live = null
+    s.btn.setAttribute('aria-pressed', 'false')
+    if (!s.error) say(s.field, '')
+    if (hard) { s.aborted = true; try { s.rec.abort() } catch (e) {} }
+    else { ending = s; try { s.rec.stop() } catch (e) {} }
+  }
+
+  const start = (field, btn) => {
+    stop(true)
+    if (ending) { ending.aborted = true; try { ending.rec.abort() } catch (e) {} ending = null }
+    if (field.disabled || field.readOnly) return
+    const rec = new Speech()
+    rec.lang = navigator.language || 'en-US'
+    rec.continuous = true
+    rec.interimResults = true
+    const here = document.activeElement === field // the mic keeps the cursor in the box, so this is true after a mouse click
+    const from = here ? field.selectionStart : field.value.length
+    const to = here ? field.selectionEnd : from
+    const s = { rec, field, btn, results: [], error: false, aborted: false,
+      before: field.value.slice(0, from), after: field.value.slice(to) }
+    rec.onresult = e => { if (!s.aborted) { s.results = e.results; paint(s) } }
+    rec.onerror = e => {
+      if (e.error === 'aborted' || s.aborted) return
+      s.error = true
+      say(field, WORDS[e.error] || 'Voice typing stopped. Click the mic to try again.', true)
+      field.micNoteTimer = setTimeout(() => { if (live !== s) say(field, '') }, 9000)
+    }
+    rec.onend = () => { // Chrome also ends it on its own after a pause
+      if (live === s) stop(true)
+      if (ending === s) ending = null
+    }
+    live = s
+    btn.setAttribute('aria-pressed', 'true')
+    let told = false
+    try { told = localStorage.getItem('micNote') === '1'; localStorage.setItem('micNote', '1') } catch (e) {}
+    say(field, told ? 'Listening. Click the mic again when you are done.' : 'Listening. ' + PRIVACY)
+    try { rec.start() } catch (e) {
+      s.error = true
+      stop(true)
+      say(field, 'Voice typing could not start. Click the mic to try again.', true)
+    }
+  }
+
+  const attach = field => {
+    if (field.dataset.mic || field.hasAttribute('data-no-voice')) return
+    if (SKIP.test(field.id + ' ' + field.name + ' ' + field.autocomplete)) return
+    field.dataset.mic = '1'
+    const wrap = document.createElement('span')
+    wrap.className = 'mic-wrap'
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    btn.className = 'mic'
+    btn.title = 'Speak instead of typing'
+    btn.setAttribute('aria-label', 'Speak instead of typing')
+    btn.setAttribute('aria-pressed', 'false')
+    btn.innerHTML = ICON
+    btn.onmousedown = e => e.preventDefault() // keep the cursor in the box
+    btn.onclick = () => (live && live.btn === btn ? stop() : start(field, btn))
+    // Typing takes over: drop any listening or late words, so they never overwrite what was typed.
+    field.addEventListener('keydown', () => {
+      if (live && live.field === field) stop(true)
+      if (ending && ending.field === field) { ending.aborted = true; try { ending.rec.abort() } catch (e) {} ending = null }
+    })
+    field.before(wrap)
+    wrap.append(field, btn)
+  }
+
+  const scan = root => {
+    if (root.nodeType !== 1) return
+    if (root.matches(FIELDS)) attach(root)
+    for (const f of root.querySelectorAll(FIELDS)) attach(f)
+  }
+  scan(document.body)
+  new MutationObserver(list => { for (const m of list) for (const n of m.addedNodes) scan(n) })
+    .observe(document.body, { childList: true, subtree: true })
+
+  // Going elsewhere ends it: a click on anything but a mic, Escape, or switching tabs.
+  document.addEventListener('click', e => { if (live && !e.target.closest('button.mic')) stop() })
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') stop() })
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stop(true) })
+})()
 </script>
 </body>
 </html>

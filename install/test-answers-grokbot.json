@@ -1,0 +1,17 @@
+{
+  "assistant": "Juno",
+  "user": "Pat",
+  "role": "Sales / Estimator",
+  "style": "Casual",
+  "color": "Teal",
+  "mode": "bypassPermissions",
+  "remote": true,
+  "colors": true,
+  "company": "Example Roofing Co",
+  "industry": "roofing",
+  "crm": "roofr",
+  "crm_name": "Pat Example",
+  "phone": "ctm",
+  "main": "grokbot",
+  "tools": []
+}
