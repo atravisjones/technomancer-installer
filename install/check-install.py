@@ -171,6 +171,11 @@ check("first chat gets to know them, shows Chrome and the phone, checks the tool
       all(words in first for words in ("Get to know them", "outside work", "tab group", "/remote-control",
                                        "Check the tools", "Part 3 of `CLAUDE.md`", "@Chrome", "vercel whoami"))
       and "{" not in first)
+check("first chat offers the Vercel and Supabase sign-ins and a test publish",
+      all(words in first for words in ("vercel login", "Open Supabase sign-in", "never in this chat", "publish-test")))
+signin = work / ("Open Supabase sign-in.cmd" if os.name == "nt" else "Open Supabase sign-in.command")
+check("Supabase sign-in file in the folder", "supabase login" in read(signin)
+      and (os.name == "nt" or os.access(signin, os.X_OK)))
 check("/publish command present, with the Supabase rules",
       all(words in read(work / ".claude" / "commands" / "publish.md") for words in ("vercel --prod --yes", "Row Level Security", "anon")))
 check("optional extras moved to the first chat", all(words in first for words in (

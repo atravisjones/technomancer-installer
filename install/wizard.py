@@ -987,6 +987,8 @@ that does not work, say so in one line and finish this chat without it.
 
 """
     n = 5 if chrome_on else 4
+    signin = supabase_signin_file(Path(".")).name
+    folder_app = "File Explorer" if IS_WINDOWS else "Finder"
     return f"""# First chat
 
 This is {user}'s first chat with you. The start command (`/start`, or `$start` in ChatGPT)
@@ -1088,7 +1090,20 @@ list. This check only reads: never send, change or delete anything.
   over the steps in step {n}.
 - **Publishing.** Run `vercel whoami` and `supabase projects list`. Signed in to both means
   you can put a web page or app online for them today (`/publish`, or `$publish` in
-  ChatGPT). If either is not signed in, say they can sign in the first time they publish.
+  ChatGPT). If either is not signed in, offer to sign in now; if they would rather wait,
+  say they can do it the first time they publish.
+  - Vercel: run `vercel login` in the background, so this chat is not stuck waiting. Show
+    {user} the link it prints, ask them to open it and approve, then run `vercel whoami` again.
+  - Supabase: its sign-in needs a window of its own, which you cannot open from here. Ask
+    {user} to double-click `{signin}` in this folder ({folder_app}). It opens Supabase in the
+    browser; any code it shows goes in that window, never in this chat. When they say it is
+    done, run `supabase projects list` again.
+  - Never ask for a Vercel or Supabase token, key or password in this chat.
+  - Once Vercel is signed in, offer one test, only on a yes: a one-page site that says
+    "Hello from {name}", in a new `publish-test` folder here, put online with
+    `vercel deploy --prod --yes` from that folder. Give them the live link to open, and say
+    they can keep it or delete it in Vercel later. Do not make a Supabase project for the
+    test: the projects list working is enough to show Supabase is ready.
 - **Company GitHub.** Only if this folder has a `.company-github` file: run `gh auth status`
   and say whether it is signed in. Otherwise leave this line out.
 
@@ -1751,6 +1766,7 @@ def configure(a):
         write_settings(a, mod_dir, log)
     extras = chosen_extras(a)
     write_extras(a, workspace, name, extras, log, before)
+    write_supabase_signin(workspace)
     if not os.environ.get("ASSISTANT_SKIP_INSTALLS"):
         # Claude's pieces, if they were not started with the page; the desktop app only for the main one.
         run_installs(claude=with_claude, claude_app=main == "claude",
@@ -4774,6 +4790,42 @@ def write_launcher(tool, workspace, never_asks, main="claude"):
         head = "\n".join(agy_open_lines("$PWD", "sh")) + "\n" if app_first else ""
         target.write_text('#!/bin/bash\ncd "$(dirname "$0")" || exit 1\n'
                           'export PATH="$HOME/.local/bin:$HOME/.grok/bin:$PATH"\n' + head + run + "\n", encoding="utf-8")
+        target.chmod(0o755)
+
+
+def supabase_signin_file(workspace):
+    return workspace / f"Open Supabase sign-in{'.cmd' if IS_WINDOWS else '.command'}"
+
+
+def write_supabase_signin(workspace):
+    """A file in the folder that runs Supabase's own sign-in in a window of its own. Supabase's sign-in
+    needs a real terminal, which an assistant cannot open from a chat; its code is typed there, never in a chat."""
+    target = supabase_signin_file(workspace)
+    if IS_WINDOWS:
+        lines = ["@echo off", "chcp 65001 >nul", "title Supabase sign-in", 'cd /d "%~dp0"',
+                 'set "PATH=%USERPROFILE%\\.local\\bin;%APPDATA%\\npm;%PATH%"',
+                 "echo Supabase opens in your browser. Sign in there, then come back to this window.",
+                 "call supabase login",
+                 "call supabase projects list >nul 2>&1",
+                 "if %errorlevel% neq 0 goto notyet",  # also catches a crash's negative exit code
+                 "echo.", "echo Signed in to Supabase. Close this window and tell your assistant.", "goto done",
+                 ":notyet",
+                 "echo.", "echo Supabase is not signed in yet. Close this window and open this file again to retry.",
+                 ":done", "pause", ""]
+        target.write_bytes("\r\n".join(lines).encode("utf-8"))
+    else:
+        target.write_bytes((
+            '#!/bin/bash\ncd "$(dirname "$0")" || exit 1\n'
+            'export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"\n'
+            'echo "Supabase opens in your browser. Sign in there, then come back to this window."\n'
+            'supabase login\n'
+            'echo\n'
+            'if supabase projects list >/dev/null 2>&1; then\n'
+            '  echo "Signed in to Supabase. Close this window and tell your assistant."\n'
+            'else\n'
+            '  echo "Supabase is not signed in yet. Close this window and open this file again to retry."\n'
+            'fi\n'
+            'read -r -p "Press Enter to close. " _\n').encode("utf-8"))
         target.chmod(0o755)
 
 

@@ -1,5 +1,9 @@
 # What's new
 
+## 1.2.3 - 2026-11-24
+
+- Your first chat offers to sign you in to Vercel and Supabase, and can put a test page online so you see it work.
+
 ## 1.2.2 - 2026-11-24
 
 - If your browser tool cannot wait for Roofr's answer, your assistant uses a request that answers at once, and it never asks for anyone else's setup.
