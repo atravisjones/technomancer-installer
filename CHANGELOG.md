@@ -1,5 +1,9 @@
 # What's new
 
+## 1.2.4 - 2026-11-25
+
+- If you use the Grok Bot app, your folder has a ready message that connects your Bots to it, and your first chat checks they really can read it.
+
 ## 1.2.3 - 2026-11-24
 
 - Your first chat offers to sign you in to Vercel and Supabase, and can put a test page online so you see it work.

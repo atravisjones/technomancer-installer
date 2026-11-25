@@ -989,6 +989,10 @@ that does not work, say so in one line and finish this chat without it.
     n = 5 if chrome_on else 4
     signin = supabase_signin_file(Path(".")).name
     folder_app = "File Explorer" if IS_WINDOWS else "Finder"
+    grok_file, grok_check = GROK_BOT_FILE, GROK_BOT_CHECK.as_posix()
+    grok_bot_spots = ('"%ProgramFiles(x86)%\\Grok Bot\\Grok Bot.exe", "%ProgramFiles%\\Grok Bot\\Grok Bot.exe" or '
+                      '"%LOCALAPPDATA%\\Programs\\Grok Bot\\Grok Bot.exe"' if IS_WINDOWS else
+                      '"/Applications/Grok Bot.app" or "~/Applications/Grok Bot.app"')
     return f"""# First chat
 
 This is {user}'s first chat with you. The start command (`/start`, or `$start` in ChatGPT)
@@ -1063,6 +1067,25 @@ mouse, so say that two switches are coming. Open each page for them, one at a ti
 `open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"`. On each,
 they turn on Codex Computer Use (the Mac may ask for its password, and ChatGPT may need to
 restart). If a page does not open, they go to System Settings, then Privacy & Security.
+
+### Connect their Grok Bots
+
+Only if {user} uses Grok Bot, xAI's app where each assistant is called a Bot. Ask, or look for
+it: {grok_bot_spots}. The regular Grok app and grok.com are different and cannot reach this
+computer, so this step is not for them.
+
+1. Say that Bots live in the cloud and reach this computer only while the Grok Bot app is open
+   here. Ask {user} to open it and keep it open.
+2. Open `{grok_file}` in this folder for them ({folder_app}). It holds one message, already
+   filled in for this folder. They copy it into each Bot they want connected, in the Grok Bot
+   app, and send it. You cannot paste it for them. If Grok Bot asks to run commands on this
+   computer, Allow once is enough.
+3. When they say it is done, read `{grok_check}` in this folder. Each Bot adds one line with
+   the date, {user}'s name and its own Bot name. A check mark for a Bot only if its line is there
+   with today's date. Name each Bot you found, and ask whether any is missing. For a missing Bot,
+   check three things, in order: Grok Bot is open on this computer; they pasted in the Grok Bot
+   app, not the regular Grok app; they allowed the command. Then they ask that Bot to try again.
+4. Never paste keys, codes or passwords into a Bot, and never ask {user} to.
 
 ### Add another AI they already pay for
 
@@ -1767,6 +1790,7 @@ def configure(a):
     extras = chosen_extras(a)
     write_extras(a, workspace, name, extras, log, before)
     write_supabase_signin(workspace)
+    write_grok_bot_guide(workspace, name)
     if not os.environ.get("ASSISTANT_SKIP_INSTALLS"):
         # Claude's pieces, if they were not started with the page; the desktop app only for the main one.
         run_installs(claude=with_claude, claude_app=main == "claude",
@@ -4827,6 +4851,58 @@ def write_supabase_signin(workspace):
             'fi\n'
             'read -r -p "Press Enter to close. " _\n').encode("utf-8"))
         target.chmod(0o755)
+
+
+GROK_BOT_FILE = "Connect your Grok Bots.md"
+GROK_BOT_CHECK = Path("reports") / "grok-bot-check.md"
+
+
+def write_grok_bot_guide(workspace, name):
+    """A page in the folder with the message that connects someone's Grok Bots (xAI's Grok Bot app) to
+    this folder. Bots live in the cloud and reach this computer only while the app is open here, and
+    only when told to use the local computer, so the message says so. The check file it asks for lets
+    the assistant confirm a Bot really read the folder before it shows a check mark."""
+    folder = workspace.resolve()
+    machine = "this Windows PC" if IS_WINDOWS else "this Mac"
+    check = folder / GROK_BOT_CHECK
+    message = (
+        f"From now on you're part of my assistant team, together with {name}, my assistant on this "
+        f"computer. {name}'s folder is at {folder} on my local computer ({machine}, not your cloud "
+        f"computer), reached through local computer access. Before any task, read CLAUDE.md in that "
+        f"folder first, then the files it points to. Treat them as the truth about me, my work and how "
+        f"I like things done. Never change, move or delete anything in that folder unless I ask, and "
+        f"never copy keys or passwords from it into a chat. Remember this.\n\n"
+        f"To check it worked: read the folder now on my local computer, then add one line to the end of "
+        f"{check} (make the file if it is not there, and keep any lines already in it) with today's date, "
+        f"my name from CLAUDE.md and your own Bot name. Then tell me you're done.")
+    text = f"""# Connect your Grok Bots
+
+If you use the Grok Bot app from xAI, your Bots can read this folder, so they know what {name}
+knows about you and your work. This is only for the Grok Bot app. The regular Grok app and
+grok.com cannot reach this computer.
+
+1. Open the Grok Bot app on this computer and keep it open. Bots reach this computer's files
+   only while the app is open here.
+2. In Grok Bot, open the Bot you want to connect, or click + to make a new one.
+3. Copy the whole message below, paste it to the Bot and send it. If Grok Bot asks to run
+   commands on your computer, choose Allow once.
+4. Do the same for each Bot you want connected. Then tell {name}: it checks that the Bot
+   really read your folder.
+
+Grok Bot asks before each command on this computer unless you change it. To check, open Grok
+Bot's Settings, then Computer, then Your computer, and look at "Execution on this computer".
+"Ask every time" is the safe choice.
+
+## The message
+
+```
+{message}
+```
+"""
+    target = workspace / GROK_BOT_FILE
+    if not target.exists():  # running setup again keeps the page as the person left it
+        target.write_bytes(text.encode("utf-8"))
+    (workspace / GROK_BOT_CHECK.parent).mkdir(parents=True, exist_ok=True)
 
 
 def write_agy_settings(workspace, never_asks, log):

@@ -176,6 +176,12 @@ check("first chat offers the Vercel and Supabase sign-ins and a test publish",
 signin = work / ("Open Supabase sign-in.cmd" if os.name == "nt" else "Open Supabase sign-in.command")
 check("Supabase sign-in file in the folder", "supabase login" in read(signin)
       and (os.name == "nt" or os.access(signin, os.X_OK)))
+check("first chat offers to connect Grok Bots and checks the result",
+      all(words in first for words in ("Connect their Grok Bots", "Connect your Grok Bots.md", "reports/grok-bot-check.md")))
+grok_guide = read(work / "Connect your Grok Bots.md")
+check("Grok Bot page in the folder, filled in for this folder and this computer",
+      str(work.resolve()) in grok_guide and "not your cloud computer" in grok_guide
+      and ("this Windows PC" if os.name == "nt" else "this Mac") in grok_guide and "{" not in grok_guide)
 check("/publish command present, with the Supabase rules",
       all(words in read(work / ".claude" / "commands" / "publish.md") for words in ("vercel --prod --yes", "Row Level Security", "anon")))
 check("optional extras moved to the first chat", all(words in first for words in (
