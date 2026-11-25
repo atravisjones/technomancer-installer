@@ -8,6 +8,11 @@ description: Read the business's Roofr job pipeline (jobs, stages, lead sources,
 Read-only access to the business's Roofr pipeline, through its data bridge. The bridge's
 address is `TM_BRIDGE_URL` and its token is `TM_BRIDGE_TOKEN`, both in the workspace `.env`.
 
+Use this first, with no browser: do not open Chrome or Roofr's website for anything it answers.
+It carries jobs, stages, values, owners, lead sources and sold dates. For what it does not carry
+(notes, a job's history, contacts, appointments), or when it answers with an error, use the
+`connect-crm` skill, which reads the person's own signed-in Roofr tab, and say that you switched.
+
 ## Auth
 
 Every request except `/health` needs the header `Authorization: Bearer <token>`.

@@ -36,6 +36,8 @@ BRAND = "The Technomancer"
 BRAND_SITE = "https://thetechnomancer.ai"
 
 # Taken out of the environment so the apps this setup opens do not inherit it.
+# Set but empty means "no bridge": the install file is searched only when it is not set at all.
+_TOKEN_SET = "TM_BRIDGE_TOKEN" in os.environ
 INSTALLER_TOKEN = os.environ.pop("TM_BRIDGE_TOKEN", "")
 os.environ.pop("TM_TICKET", None)
 
@@ -78,13 +80,14 @@ def _install_setting(name, allowed, most=60):
     return re.sub(r"[^" + allowed + r"]", "", named).strip()[:most]
 
 
-if not INSTALLER_TOKEN:
+if not INSTALLER_TOKEN and not _TOKEN_SET:
     INSTALLER_TOKEN = _install_setting("TM_BRIDGE_TOKEN", r"A-Za-z0-9_\-", 200)
-    if len(INSTALLER_TOKEN) < 20:
-        INSTALLER_TOKEN = ""
+if len(INSTALLER_TOKEN) < 20:
+    INSTALLER_TOKEN = ""
 
 # The client's data bridge: one address and token that the live integrations read through.
-BRIDGE_URL = _install_setting("TM_BRIDGE_URL", r"A-Za-z0-9:/._\-", 200)
+BRIDGE_URL = ("" if "TM_BRIDGE_URL" in os.environ and not os.environ["TM_BRIDGE_URL"]
+              else _install_setting("TM_BRIDGE_URL", r"A-Za-z0-9:/._\-", 200))
 if not BRIDGE_URL.startswith("https://"):
     BRIDGE_URL = ""
 
@@ -155,7 +158,8 @@ INDUSTRIES = {
 ALL = "*"
 INTEGRATIONS = {
     "crm": [
-        {"id": "roofr", "label": "Roofr", "for": ["roofing"]},  # read through the person's own Roofr tab
+        # Through the client's data bridge when it has one; otherwise through the person's own Roofr tab.
+        {"id": "roofr", "label": "Roofr", "for": ["roofing"], "live": True},
         {"id": "jobnimbus", "label": "JobNimbus", "for": ["roofing", "general-contractor", "remodeling", "restoration", "solar"]},
         {"id": "acculynx", "label": "AccuLynx", "for": ["roofing", "general-contractor", "restoration"]},
         {"id": "leap", "label": "Leap", "for": ["roofing", "remodeling", "general-contractor", "solar"]},
@@ -265,11 +269,27 @@ def _guide_text(value):
 ROOFR_TAB = TEMPLATE / "integrations" / "roofr-tab" / "SKILL.md"
 
 
-def roofr_tab_guide(a):
-    """Roofr's guide: its own web endpoints, called from the person's signed-in Roofr tab, read only."""
+ROOFR_TAB_BACKUP = (
+    "**Backup only.** This business reads Roofr through its data bridge: use the `crm-roofr` skill first,\n"
+    "with no browser. Come here only when that skill cannot answer: the bridge answers with an error, or\n"
+    "the question needs something it does not carry (notes, a job's history, contacts or appointments).\n"
+    "Say when you switch to the tab.\n")
+
+
+def roofr_tab_guide(a, backup=False):
+    """Roofr's guide: its own web endpoints, called from the person's signed-in Roofr tab, read only.
+    With a data bridge it is the backup, so the assistant reaches for the bridge's skill first."""
     text = ROOFR_TAB.read_text(encoding="utf-8")
     user = " ".join(str(a.get("user") or "").replace("{", "").replace("}", "").split()) or "the person"
-    return text.replace("{{CHROME}}", USE_CHROME).replace("{{USER}}", user)
+    text = text.replace("{{CHROME}}", USE_CHROME).replace("{{USER}}", user)
+    if backup:
+        text = re.sub(r'(?m)^description: .*$', 'description: "Backup for Roofr through the person\'s own signed-in '
+                      'Roofr tab. Use only when the crm-roofr skill cannot answer."', text, count=1)
+        text = text.replace(" There is no key, endpoint or\ncredential to ask for, and none is missing.", "", 1)
+        text = text.replace("\n## Which browser", "\n" + ROOFR_TAB_BACKUP + "\n## Which browser", 1)
+        text = text.replace("and never decide something\n  is missing because `.env` has no Roofr entry: there is none, by design.",
+                            "and never ask anyone for a\n  Roofr key: the bridge's token is already in `.env`.")
+    return text
 
 
 def system_guide(kind, row, a, research=None):
@@ -615,6 +635,11 @@ def systems_section(a, workspace=None):
             lines += [f"Connected, read-only. Use the `{skill}` skill (`.claude/skills/{skill}/SKILL.md`)",
                       "for any question it covers. The address and token are `TM_BRIDGE_URL` and",
                       "`TM_BRIDGE_TOKEN` in `.env`. Never print the token, log it or put it in a reply."]
+            if kind == "crm" and row["id"] == "roofr":
+                lines += ["Use it first, with no browser: do not open Chrome or Roofr's website for anything it answers.",
+                          "Only when it cannot answer (an error, or notes, a job's history, contacts or appointments),",
+                          f"read Roofr through {a['user']}'s own signed-in Roofr tab as `.claude/skills/connect-crm/SKILL.md`",
+                          "explains, and say so."]
             if kind == "crm" and a.get("crm_name"):
                 lines += ["", f"**{a['user']}'s name in {label}:** {a['crm_name']}. Jobs owned by this name are",
                           f"\"my jobs\": use it as the `owner` filter when {a['user']} asks about their own work."]
@@ -1709,6 +1734,9 @@ def write_systems(a, workspace, log, before=None):
                 if before is not None and dest.exists():  # so Codex's and Antigravity's copy follows it
                     before.setdefault(f".claude/skills/{skill}/SKILL.md", dest.read_bytes())
                 shutil.copy2(source, dest)  # always the newest guide: it is ours, not the person's
+            if kind == "crm" and row["id"] == "roofr" and ROOFR_TAB.exists():  # the tab, for what the bridge lacks
+                guide_dirs[0].mkdir(parents=True, exist_ok=True)
+                (guide_dirs[0] / "SKILL.md").write_text(roofr_tab_guide(a, backup=True), encoding="utf-8")
             env.update(TM_BRIDGE_URL=BRIDGE_URL, TM_BRIDGE_TOKEN=INSTALLER_TOKEN)
             log.append(f"{label} connected: {a['assistant']} can look things up in it now.")
         elif state == "pending":

@@ -131,6 +131,10 @@ if sys.argv[1:] == ["grokbot"]:
     check("current notes point at the Grok Bot page", "Connect your Grok Bots.md" in read(juno / "state" / "current.md"))
     check("no shortcut: there is nothing to open on the folder", shortcut("Juno") == "")
     check("Claude's color modes left out", not (juno / ".mods").exists())
+    tab = read(juno / ".claude" / "skills" / "connect-crm" / "SKILL.md")
+    check("with no data bridge, Roofr reads through the person's own tab",
+          "app.roofr.com" in tab and "Backup only" not in tab and not (juno / ".claude" / "skills" / "crm-roofr").exists()
+          and "TM_BRIDGE_TOKEN" not in read(juno / ".env"))
     finish()
 
 if sys.argv[1:] == ["agy"]:
@@ -178,10 +182,12 @@ check("CLAUDE.md names the assistant and the person", "FRIDAY" in read(work / "C
 check("START-HERE.md written", "/save" in read(work / "START-HERE.md") and "/compact" in read(work / "START-HERE.md"))
 check("/save command present, /end gone",
       (work / ".claude" / "commands" / "save.md").exists() and not (work / ".claude" / "commands" / "end.md").exists())
-check("Roofr reads through the person's own tab, CTM through its skill",
-      "app.roofr.com" in read(work / ".claude" / "skills" / "connect-crm" / "SKILL.md")
+tab = read(work / ".claude" / "skills" / "connect-crm" / "SKILL.md")
+check("with a data bridge, Roofr and CTM read through their skills, the Roofr tab only as backup",
+      (work / ".claude" / "skills" / "crm-roofr" / "SKILL.md").exists()
       and (work / ".claude" / "skills" / "phone-ctm" / "SKILL.md").exists()
-      and not (work / ".claude" / "skills" / "crm-roofr").exists())
+      and "app.roofr.com" in tab and "Backup only" in tab and "crm-roofr" in tab.split("---")[1]
+      and "Use it first, with no browser" in read(work / "CLAUDE.md"))
 check("github-team skill present", (work / ".claude" / "skills" / "github-team" / "SKILL.md").exists())
 check("graphify skill present", (work / ".claude" / "skills" / "graphify" / "SKILL.md").exists())
 check("code maps stay out of git", "graphify-out/" in read(work / ".gitignore").split())

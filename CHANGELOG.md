@@ -1,5 +1,9 @@
 # What's new
 
+## 1.2.6 - 2026-11-25
+
+- Roofr reads through the business's data bridge when it has one, with the person's own Roofr tab as the backup; no bridge means the tab, as before
+
 ## 1.2.5 - 2026-11-25
 
 - You can now pick Grok Bot as your main assistant. Setup gets your folder ready, and its last page ticks once your Bot has read it.

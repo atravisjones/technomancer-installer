@@ -72,6 +72,8 @@ jobs:
       - name: Set up a third assistant with Grok Bot as the main one
         shell: bash
         run: |
+          # no data bridge here, so Roofr goes through the person's own tab
+          unset TM_BRIDGE_TOKEN TM_BRIDGE_URL
           python3 install/wizard.py --answers install/test-answers-grokbot.json || python install/wizard.py --answers install/test-answers-grokbot.json
           python3 install/check-install.py grokbot || python install/check-install.py grokbot
 
